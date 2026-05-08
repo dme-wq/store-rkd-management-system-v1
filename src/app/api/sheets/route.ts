@@ -218,7 +218,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { rkdNumber, issueQty, status, itemName, rate, action, vendorName, approvedQty } = await req.json();
+    const body = await req.json();
+    const { rkdNumber, issueQty, status, itemName, rate, action, vendorName, approvedQty } = body;
     console.log(`Processing ${action || 'ISSUE'} for RKD: ${rkdNumber}`);
     
     if (!rkdNumber) throw new Error("Missing rkdNumber");
@@ -328,7 +329,7 @@ export async function POST(req: Request) {
       }
     } else if (action === "WHATSAPP_UPDATE") {
       // Action for the external approval page
-      const { ownerStatus } = await req.json(); // ownerStatus: "Yes" or "No"
+      const { ownerStatus } = body; // Already parsed at the top
       
       // Update Q (Approval Require?) in StoreDataEntry
       await sheets.spreadsheets.values.update({

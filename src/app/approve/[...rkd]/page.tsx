@@ -54,10 +54,10 @@ export default function ApprovalPage() {
       if (json.success) {
         setDone(true);
       } else {
-        alert("Failed to update status: " + json.error);
+        setError(`Failed to update status: ${json.error}`);
       }
     } catch (e) {
-      alert("Network error.");
+      setError("Network error. Please check your connection.");
     } finally {
       setUpdating(false);
     }
