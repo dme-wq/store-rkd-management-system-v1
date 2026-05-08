@@ -210,12 +210,14 @@ export async function POST(req: Request) {
               parents: [PO_DRIVE_FOLDER_ID],
             },
             media: { mimeType: "application/pdf", body: stream },
-            fields: "id, webViewLink",
+            fields: "id",
+            supportsAllDrives: true,
           });
           // Make file publicly viewable
           await drive.permissions.create({
             fileId: fileRes.data.id!,
             requestBody: { role: "reader", type: "anyone" },
+            supportsAllDrives: true,
           });
           pdfUrl = `https://drive.google.com/file/d/${fileRes.data.id}/view?usp=drivesdk`;
           console.log(`[PO] PDF saved to Drive: ${pdfUrl}`);
