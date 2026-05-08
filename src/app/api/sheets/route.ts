@@ -138,9 +138,9 @@ export async function GET() {
         const [imsBatchRes, miscRes] = await Promise.all([
           sheets.spreadsheets.values.batchGet({
             spreadsheetId: IMS_SHEET_ID,
-            ranges: ["IMS!B1:B3000", "IMS!K1:K3000"],
+            ranges: ["IMS!B1:B10000", "IMS!K1:K10000"],
           }),
-          sheets.spreadsheets.values.get({ spreadsheetId: MISC_SHEET_ID, range: "Data!B1:F1000" })
+          sheets.spreadsheets.values.get({ spreadsheetId: MISC_SHEET_ID, range: "Data!B1:F10000" })
         ]);
 
         const stockMap: Record<string, string> = {};
