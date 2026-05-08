@@ -173,7 +173,7 @@ export async function GET() {
       spreadsheetId: STORE_SHEET_ID,
       fields: "sheets(properties(title,gridProperties))"
     });
-    const storeSheet = spreadsheet.data.sheets?.find(s => s.properties?.title === "StoreDataEntry");
+    const storeSheet = spreadsheet.data.sheets?.find((s: any) => s.properties?.title === "StoreDataEntry");
     const totalGridRows = storeSheet?.properties?.gridProperties?.rowCount || 1000;
 
     const lookbackRange = 3000;
@@ -198,10 +198,10 @@ export async function GET() {
     const storeRes = await sheets.spreadsheets.values.get({ spreadsheetId: STORE_SHEET_ID, range });
     const storeRows = storeRes.data.values || [];
 
-    const data = storeRows.map((row, idx) => {
+    const data = storeRows.map((row: any, idx: number) => {
       const actualRowNumber = startRow + idx;
       const obj: any = { _id: idx, rowNumber: actualRowNumber };
-      HEADERS.forEach((h, i) => { obj[h] = row[i] || ""; });
+      HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
       return obj;
     });
 
@@ -238,7 +238,7 @@ export async function POST(req: Request) {
     });
 
     const rkdList = searchRes.data.values || [];
-    const rowIndex = rkdList.findIndex(row => row[0] === rkdNumber);
+    const rowIndex = rkdList.findIndex((row: any) => row[0] === rkdNumber);
     if (rowIndex === -1) throw new Error(`RKD Number ${rkdNumber} not found.`);
 
     const rowNumber = rowIndex + 1;
@@ -288,7 +288,7 @@ export async function POST(req: Request) {
         });
         const recipients = whatsappRes.data.values || [];
         // Skip header
-        const contacts = recipients.slice(1).filter(r => r[1]);
+        const contacts = recipients.slice(1).filter((r: any) => r[1]);
 
         if (contacts.length > 0) {
           // Detect the base URL from the request headers
@@ -352,7 +352,7 @@ export async function POST(req: Request) {
         range: "WhatsappData!B:B",
       });
       const logList = logRes.data.values || [];
-      const logIdx = logList.findIndex(r => r[0] === rkdNumber);
+      const logIdx = logList.findIndex((r: any) => r[0] === rkdNumber);
       if (logIdx !== -1) {
         const logRowNum = logIdx + 1;
         await sheets.spreadsheets.values.update({
