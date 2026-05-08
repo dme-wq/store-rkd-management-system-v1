@@ -36,24 +36,38 @@ export async function GET(req: Request) {
   const action = searchParams.get("action");
   const { sheets } = getClients();
 
+  const YEAR = new Date().getFullYear();
+
+  // Helper: isDataRow — StoreDataEntry has header rows (1-6), data rows have
+  // a numeric value in col A (the row sequence #). We skip anything non-numeric.
+  const isDataRow = (row: any[]) => {
+    const colA = String(row[0] || "").trim();
+    return colA !== "" && !isNaN(Number(colA));
+  };
+
   try {
     // ── 1. GET vendors ──────────────────────────────────────────
     if (action === "vendors") {
+      // Read StoreDataEntry — source of truth for all requirements
       const res = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
-        range: "approvalDataBase!A:T",
+        range: "StoreDataEntry!A:T",
       });
       const rows = res.data.values || [];
-      // Header is row 1 (index 0), data starts at index 1
-      // Col N (index 13) = Vendor Name, Col R (index 17) = Approved Quantity
+
+      // Column indices (0-based in A:T):
+      // A=0:#, B=1:RKDNum, E=4:ItemName, G=6:Units, I=8:Status,
+      // N=13:VendorName, O=14:Rate, Q=16:ApprovalRequire, R=17:ApprovedQty
       const vendorSet = new Set<string>();
-      rows.slice(1).forEach((row: any) => {
-        const vendor = (row[13] || "").trim();
+      rows.forEach((row: any) => {
+        if (!isDataRow(row)) return;
+        const vendor      = (row[13] || "").trim();
         const approvedQty = parseFloat(row[17] || "0");
+        // Include if: vendor assigned AND approved qty > 0
         if (vendor && approvedQty > 0) vendorSet.add(vendor);
       });
 
-      // Fetch vendor addresses from Misc Vendor List tab, col B=Name, col G=Address
+      // Fetch vendor addresses from Misc Vendor List tab — col B=Name, col G=Address
       const vendorListRes = await sheets.spreadsheets.values.get({
         spreadsheetId: MISC_SHEET_ID,
         range: "Vendor List!B:G",
@@ -61,7 +75,7 @@ export async function GET(req: Request) {
       const vendorListRows = vendorListRes.data.values || [];
       const vendorAddressMap: Record<string, string> = {};
       vendorListRows.slice(1).forEach((row: any) => {
-        const name = (row[0] || "").trim();
+        const name    = (row[0] || "").trim();
         const address = (row[5] || "").trim(); // Col G is index 5 in B:G slice
         if (name) vendorAddressMap[name] = address;
       });
@@ -79,26 +93,26 @@ export async function GET(req: Request) {
       const vendor = searchParams.get("vendor") || "";
       const res = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
-        range: "approvalDataBase!A:T",
+        range: "StoreDataEntry!A:T",
       });
       const rows = res.data.values || [];
-      // Headers: B=StoreRKD, D=PersonName, E=ItemName, F=RequireQty, G=Units, 
-      //          H=IssueQty, N=VendorName, O=Price(Rate), R=ApprovedQty
-      const items = rows.slice(1)
+
+      const items = rows
         .filter((row: any) => {
-          const rowVendor = (row[13] || "").trim();
+          if (!isDataRow(row)) return false;
+          const rowVendor   = (row[13] || "").trim();
           const approvedQty = parseFloat(row[17] || "0");
           return rowVendor === vendor && approvedQty > 0;
         })
         .map((row: any) => ({
-          rkdNumber:   row[1]  || "",   // B = Store RKD Number
-          itemName:    row[4]  || "",   // E = Item Name
-          units:       row[6]  || "",   // G = Units
-          approvedQty: row[17] || "0",  // R = Approved Quantity
-          rate:        row[14] || "0",  // O = Price/Rate
+          rkdNumber:   (row[1]  || "").trim(),   // B = Store RKD Number
+          itemName:    (row[4]  || "").trim(),   // E = Item Name
+          units:       (row[6]  || "").trim(),   // G = Units
+          approvedQty: (row[17] || "0").trim(),  // R = Approved Quantity
+          rate:        (row[14] || "0").trim(),  // O = Price/Rate
         }));
 
-      // Fetch GST for each item from Misc Data tab (col B=ItemName, col J=GST)
+      // Fetch GST% per item from Misc Data tab (col B=ItemName, col J=GST%)
       const miscRes = await sheets.spreadsheets.values.get({
         spreadsheetId: MISC_SHEET_ID,
         range: "Data!B:J",
@@ -119,7 +133,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, items: itemsWithGST });
     }
 
-    // ── 3. GET next PO number ───────────────────────────────────
+    // ── 3. GET next PO number (with year) ──────────────────────
     if (action === "nextPO") {
       let nextNum = 1;
       try {
@@ -128,15 +142,17 @@ export async function GET(req: Request) {
           range: "RESPONSES!E:E", // PO No column
         });
         const rows = res.data.values || [];
+        // Match PO_RKD_YYYY_NNN or legacy PO_RKD_NNN
         const nums = rows.slice(1)
           .map((r: any) => {
-            const match = String(r[0] || "").match(/PO_RKD_(\d+)/);
-            return match ? parseInt(match[1], 10) : 0;
+            const s = String(r[0] || "");
+            const m = s.match(/PO_RKD_(?:\d{4}_)?(\d+)/);
+            return m ? parseInt(m[1], 10) : 0;
           })
           .filter((n: number) => n > 0);
         if (nums.length > 0) nextNum = Math.max(...nums) + 1;
       } catch (_) { nextNum = 1; }
-      return NextResponse.json({ success: true, poNumber: `PO_RKD_${nextNum}` });
+      return NextResponse.json({ success: true, poNumber: `PO_RKD_${YEAR}_${nextNum}` });
     }
 
     return NextResponse.json({ success: false, error: "Unknown action" }, { status: 400 });
