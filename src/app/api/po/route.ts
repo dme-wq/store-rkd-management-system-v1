@@ -164,6 +164,11 @@ export async function GET(req: Request) {
 
 // ───────────────────────────── POST ────────────────────────────
 export async function POST(req: Request) {
+  // Validate required env vars first
+  if (!PO_RESPONSES_SHEET_ID) {
+    return NextResponse.json({ success: false, error: "PO_RESPONSES_SHEET_ID env variable is not set in Vercel. Please add it under Settings → Environment Variables." }, { status: 500 });
+  }
+
   try {
     const body = await req.json();
     const { sheets, drive } = getClients();
@@ -172,58 +177,67 @@ export async function POST(req: Request) {
       poNumber, poDate, vendorName, vendorAddress,
       paymentTerms, termsOfDelivery, freightCharges, transporterName,
       quoteRefNo, packingCharges, discount, expectedArrival, poCheckedBy,
-      items, // array: [{rkdNumber, itemName, units, approvedQty, rate, gst}]
-      pdfBase64, // optional: client-generated PDF
+      items,       // array: [{rkdNumber, itemName, units, approvedQty, rate, gst}]
+      pdfBase64,   // optional: client-generated PDF base64
     } = body;
 
-    const CONSIGNEE = "RKD Furnishings Pvt Ltd.\nPlot No. 238-239, Sector-29, Part-II\nHUDA, Panipat-132103, Haryana";
+    const CONSIGNEE = "RKD Furnishings Pvt Ltd., Plot No. 238-239, Sector-29, Part-II, HUDA, Panipat-132103, Haryana";
     const now = new Date();
     const timestamp = now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 
-    // ── Save PDF to Drive ───────────────────────────────────────
+    // ── 1. Save PDF to Drive (fully non-blocking) ───────────────
     let pdfUrl = "";
-    if (pdfBase64 && PO_DRIVE_FOLDER_ID) {
-      try {
-        const pdfBuffer = Buffer.from(pdfBase64, "base64");
-        const { Readable } = await import("stream");
-        const stream = Readable.from(pdfBuffer);
-        const fileRes = await drive.files.create({
-          requestBody: {
-            name: `${poNumber}.pdf`,
-            mimeType: "application/pdf",
-            parents: [PO_DRIVE_FOLDER_ID],
-          },
-          media: { mimeType: "application/pdf", body: stream },
-          fields: "id, webViewLink",
-        });
-        // Make file publicly viewable
-        await drive.permissions.create({
-          fileId: fileRes.data.id!,
-          requestBody: { role: "reader", type: "anyone" },
-        });
-        pdfUrl = fileRes.data.webViewLink || "";
-      } catch (driveErr: any) {
-        console.error("Drive upload failed:", driveErr.message);
+    let driveError = "";
+    if (pdfBase64) {
+      if (!PO_DRIVE_FOLDER_ID) {
+        driveError = "PO_DRIVE_FOLDER_ID not set — PDF not uploaded to Drive.";
+        console.warn(driveError);
+      } else {
+        try {
+          const pdfBuffer = Buffer.from(pdfBase64, "base64");
+          const { Readable } = await import("stream");
+          const stream = Readable.from(pdfBuffer);
+          const fileRes = await drive.files.create({
+            requestBody: {
+              name: `${poNumber}.pdf`,
+              mimeType: "application/pdf",
+              parents: [PO_DRIVE_FOLDER_ID],
+            },
+            media: { mimeType: "application/pdf", body: stream },
+            fields: "id, webViewLink",
+          });
+          // Make file publicly viewable
+          await drive.permissions.create({
+            fileId: fileRes.data.id!,
+            requestBody: { role: "reader", type: "anyone" },
+          });
+          pdfUrl = fileRes.data.webViewLink || "";
+          console.log(`[PO] PDF saved to Drive: ${pdfUrl}`);
+        } catch (driveErr: any) {
+          driveError = `Drive upload failed: ${driveErr.message}`;
+          console.error("[PO] Drive upload failed:", driveErr.message);
+          // Continue — PDF download in browser still works
+        }
       }
     }
 
-    // ── Save rows to RESPONSES sheet (one row per item) ─────────
+    // ── 2. Save rows to RESPONSES sheet (one row per item) ──────
     const rowsToAppend = items.map((item: any) => {
       const qty   = parseFloat(item.approvedQty || "0");
       const rate  = parseFloat(item.rate        || "0");
       const gstPc = parseFloat(item.gst         || "0");
-      const total     = qty * rate;
-      const gstAmt    = total * gstPc / 100;
-      const totalGST  = total + gstAmt;
+      const total    = qty * rate;
+      const gstAmt   = total * gstPc / 100;
+      const totalGST = total + gstAmt;
 
       return [
-        timestamp,           // Timestamp
-        poNumber,            // Unique
-        vendorName,          // Vendor Name
-        CONSIGNEE,           // Consignee Details
-        poNumber,            // PO No
-        poDate,              // PO Date
-        paymentTerms || "",  // Payment Terms
+        timestamp,            // Timestamp
+        poNumber,             // Unique
+        vendorName,           // Vendor Name
+        CONSIGNEE,            // Consignee Details
+        poNumber,             // PO No
+        poDate,               // PO Date
+        paymentTerms || "",   // Payment Terms
         termsOfDelivery || "",
         freightCharges || "",
         transporterName || "",
@@ -232,28 +246,45 @@ export async function POST(req: Request) {
         discount || "",
         expectedArrival || "",
         poCheckedBy || "",
-        item.itemName,       // Item Description
-        item.rkdNumber,      // RKD Request No
-        qty,                 // Quantity
-        item.units,          // Units
-        rate,                // Rate
-        gstPc,               // GST%
-        total.toFixed(2),    // TOTAL
-        gstAmt.toFixed(2),   // GST Amount
-        totalGST.toFixed(2), // TOTAL with GST
-        "",                  // EXCEL URL (blank)
-        pdfUrl,              // PDF URL
+        item.itemName,        // Item Description
+        item.rkdNumber,       // RKD Request No
+        qty,                  // Quantity
+        item.units,           // Units
+        rate,                 // Rate
+        gstPc,                // GST%
+        total.toFixed(2),     // TOTAL
+        gstAmt.toFixed(2),    // GST Amount
+        totalGST.toFixed(2),  // TOTAL with GST
+        "",                   // EXCEL URL (blank)
+        pdfUrl,               // PDF URL
       ];
     });
 
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: PO_RESPONSES_SHEET_ID,
-      range: "RESPONSES!A:Z",
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: rowsToAppend },
-    });
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: PO_RESPONSES_SHEET_ID,
+        range: "RESPONSES!A:Z",
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: rowsToAppend },
+      });
+      console.log(`[PO] Saved ${rowsToAppend.length} rows to RESPONSES sheet`);
+    } catch (sheetErr: any) {
+      // Give a clear actionable error message
+      const msg = sheetErr.message || "";
+      if (msg.includes("not found") || msg.includes("404")) {
+        throw new Error(
+          `RESPONSES sheet not accessible. Please share the sheet (ID: ${PO_RESPONSES_SHEET_ID}) with "${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL}" (Editor access) and ensure the tab name is exactly "RESPONSES".`
+        );
+      }
+      throw sheetErr;
+    }
 
-    return NextResponse.json({ success: true, poNumber, pdfUrl });
+    return NextResponse.json({
+      success: true,
+      poNumber,
+      pdfUrl,
+      driveWarning: driveError || undefined,
+    });
   } catch (err: any) {
     console.error("[PO POST Error]:", err.message);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
