@@ -67,22 +67,28 @@ export async function GET(req: Request) {
         if (vendor && approvedQty > 0) vendorSet.add(vendor);
       });
 
-      // Fetch vendor addresses from Misc Vendor List tab — col B=Name, col G=Address
+      // Fetch vendor details from Misc Vendor List — B=Name, C=ContactPerson, D=ContactNum, E=Email, F=GST, G=Address
       const vendorListRes = await sheets.spreadsheets.values.get({
         spreadsheetId: MISC_SHEET_ID,
         range: "Vendor List!B:G",
       });
       const vendorListRows = vendorListRes.data.values || [];
-      const vendorAddressMap: Record<string, string> = {};
+      const vendorInfoMap: Record<string, any> = {};
       vendorListRows.slice(1).forEach((row: any) => {
-        const name    = (row[0] || "").trim();
-        const address = (row[5] || "").trim(); // Col G is index 5 in B:G slice
-        if (name) vendorAddressMap[name] = address;
+        const name          = (row[0] || "").trim();  // B: Vendor Name
+        const contactPerson = (row[1] || "").trim();  // C: Contact Person Name
+        const contactNumber = (row[2] || "").trim();  // D: Contact Person Number
+        const gstDetails    = (row[4] || "").trim();  // F: GST Details
+        const address       = (row[5] || "").trim();  // G: Vendor Company Address
+        if (name) vendorInfoMap[name] = { contactPerson, contactNumber, gstDetails, address };
       });
 
       const vendors = Array.from(vendorSet).sort().map(v => ({
-        name: v,
-        address: vendorAddressMap[v] || "",
+        name:          v,
+        address:       vendorInfoMap[v]?.address       || "",
+        contactPerson: vendorInfoMap[v]?.contactPerson || "",
+        contactNumber: vendorInfoMap[v]?.contactNumber || "",
+        gstDetails:    vendorInfoMap[v]?.gstDetails    || "",
       }));
 
       return NextResponse.json({ success: true, vendors });
@@ -221,49 +227,70 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── 2. Save rows to RESPONSES sheet (one row per item) ──────
+    // ── 2. Pre-calculate PO-level totals (used in every row per spec) ─────
+    const poSubtotal  = items.reduce((s: number, item: any) => s + parseFloat(item.approvedQty||"0") * parseFloat(item.rate||"0"), 0);
+    const poGSTAmt    = items.reduce((s: number, item: any) => {
+      const sub = parseFloat(item.approvedQty||"0") * parseFloat(item.rate||"0");
+      return s + sub * parseFloat(item.gst||"0") / 100;
+    }, 0);
+    const poGrandTotal = poSubtotal + poGSTAmt;
+
+    // ── 3. Save rows to RESPONSES sheet — one row per item (A through AF) ──
+    // Column spec (A=1 … AF=32):
+    // A=Timestamp, B=Unique(blank), C=VendorName, D=ConsigneeDetails, E=PONo, F=PODate
+    // G=PaymentTerms, H=TermsOfDelivery, I=FreightCharges, J=TransportationName
+    // K=OrderRefNo, L=PackingCharges, M=Discount, N=ExpectedArrival, O=POCheckedBy
+    // P=ItemDescription, Q=Null, R=ItemCode(Null), S=InnerDia(Null), T=RKDRequestNo
+    // U=Quantity, V=Units, W=Rate, X=GST%, Y=TotalAmount(item)
+    // Z=blank, AA=blank
+    // AB=TOTAL(all items without GST), AC=GST(total), AD=TOTAL BILL VALUE
+    // AE=ExcelURL(Null), AF=PDFUrl
     const rowsToAppend = items.map((item: any) => {
-      const qty   = parseFloat(item.approvedQty || "0");
-      const rate  = parseFloat(item.rate        || "0");
-      const gstPc = parseFloat(item.gst         || "0");
-      const total    = qty * rate;
-      const gstAmt   = total * gstPc / 100;
-      const totalGST = total + gstAmt;
+      const qty      = parseFloat(item.approvedQty || "0");
+      const rate     = parseFloat(item.rate        || "0");
+      const gstPc    = parseFloat(item.gst         || "0");
+      const itemTotal = qty * rate; // Y = Total Amount per item (without GST)
 
       return [
-        timestamp,            // Timestamp
-        poNumber,             // Unique
-        vendorName,           // Vendor Name
-        CONSIGNEE,            // Consignee Details
-        poNumber,             // PO No
-        poDate,               // PO Date
-        paymentTerms || "",   // Payment Terms
-        termsOfDelivery || "",
-        freightCharges || "",
-        transporterName || "",
-        quoteRefNo || "",
-        packingCharges || "",
-        discount || "",
-        expectedArrival || "",
-        poCheckedBy || "",
-        item.itemName,        // Item Description
-        item.rkdNumber,       // RKD Request No
-        qty,                  // Quantity
-        item.units,           // Units
-        rate,                 // Rate
-        gstPc,                // GST%
-        total.toFixed(2),     // TOTAL
-        gstAmt.toFixed(2),    // GST Amount
-        totalGST.toFixed(2),  // TOTAL with GST
-        "",                   // EXCEL URL (blank)
-        pdfUrl,               // PDF URL
+        timestamp,               // A: Timestamp
+        "",                      // B: Unique (Blank per spec)
+        vendorName,              // C: Vendor Name
+        vendorAddress,           // D: Consignee Details (Vendor Address)
+        poNumber,                // E: PO No
+        poDate,                  // F: PO Date
+        paymentTerms    || "",   // G: Payment Terms
+        termsOfDelivery || "",   // H: Terms of Delivery
+        freightCharges  || "",   // I: Freight Charges
+        transporterName || "",   // J: Transportation Name
+        quoteRefNo      || "",   // K: Order Ref. No
+        packingCharges  || "",   // L: Packing Charges
+        discount        || "",   // M: Discount
+        expectedArrival || "",   // N: Expected Date of Arrival
+        poCheckedBy     || "",   // O: PO Checked By
+        item.itemName,           // P: Item Description
+        "",                      // Q: Null
+        "",                      // R: ITEM CODE (Null)
+        "",                      // S: Inner Dia mm (Null)
+        item.rkdNumber,          // T: RKD Request No
+        qty,                     // U: Quantity
+        item.units,              // V: Units
+        rate,                    // W: Rate
+        gstPc,                   // X: GST%
+        itemTotal.toFixed(2),    // Y: Total Amount (Rs.) — per item without GST
+        "",                      // Z: blank
+        "",                      // AA: blank
+        poSubtotal.toFixed(2),   // AB: TOTAL (all items without GST)
+        poGSTAmt.toFixed(2),     // AC: GST Amount (PO total)
+        poGrandTotal.toFixed(2), // AD: TOTAL BILL VALUE
+        "",                      // AE: EXCEL URL (Null)
+        pdfUrl,                  // AF: PDF URL
       ];
     });
 
     try {
       await sheets.spreadsheets.values.append({
         spreadsheetId: PO_RESPONSES_SHEET_ID,
-        range: "RESPONSES!A:Z",
+        range: "RESPONSES!A:AF",
         valueInputOption: "USER_ENTERED",
         requestBody: { values: rowsToAppend },
       });

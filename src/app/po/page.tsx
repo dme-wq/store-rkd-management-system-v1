@@ -5,7 +5,13 @@ import { Search, Trash2, FileText, Loader2, CheckCircle, ArrowLeft } from "lucid
 import styles from "./po.module.css";
 
 // ── Types ────────────────────────────────────────────────────
-interface Vendor  { name: string; address: string; }
+interface Vendor  { 
+  name: string; 
+  address: string; 
+  contactPerson?: string; 
+  contactNumber?: string; 
+  gstDetails?: string; 
+}
 interface POItem  {
   rkdNumber: string; itemName: string; units: string;
   approvedQty: string; rate: string; gst: string;
@@ -27,38 +33,63 @@ async function generatePDF(data: any): Promise<string> {
   const W = doc.internal.pageSize.getWidth();
 
   // ── Colors ──
-  const DARK  = [30, 30, 30]  as [number,number,number];
-  const GREEN = [22, 101, 52]  as [number,number,number];
-  const LGRAY = [245, 245, 245] as [number,number,number];
-  const YGOLD = [255, 214, 100] as [number,number,number];
+  const DARK  = [0, 0, 0]  as [number,number,number];
+  const LGRAY = [230, 230, 230] as [number,number,number];
 
   // ── Header band ──
-  doc.setFillColor(...GREEN);
-  doc.rect(0, 0, W, 10, "F");
-  doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-  doc.text("PURCHASE ORDER", W/2, 7, { align:"center" });
+  doc.setFillColor(...LGRAY);
+  doc.rect(W/2 - 25, 8, 50, 6, "F");
+  doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
+  doc.text("PURCHASE ORDER", W/2, 12.5, { align:"center" });
+
+  // Outer border will be drawn at the very end to wrap dynamic height.
+  let y = 16;
+  const startY = y;
 
   // ── Company block ──
-  doc.setTextColor(...DARK);
-  doc.setFontSize(13); doc.setFont("helvetica","bold");
-  doc.text("M/S RKD Furnishings Pvt Ltd.", 14, 20);
-  doc.setFontSize(8.5); doc.setFont("helvetica","normal");
-  doc.setTextColor(0, 100, 60);
-  doc.text("Plot No. 238-239, Sector-29, Part-II, HUDA, Panipat-132103, Haryana", 14, 26);
-  doc.text("GSTIN/UIN: 06AAKCR0233R1Z1", 14, 31);
-  doc.text("Mr. Sachin  /  +91 98120 00642", 14, 36);
+  doc.setFontSize(14); doc.setFont("helvetica","bold");
+  doc.text("M/S RKD Furnishings Pvt Ltd.", 14, y+10);
+  doc.setFontSize(7.5); doc.setFont("helvetica","normal");
+  doc.text("Plot No. 238-239, Sector-29, Part-II,\nHUDA, Panipat-132103, Haryana", 14, y+15);
+  doc.text("GSTIN/UIN: 06AAKCR0233R1Z1\nMr. Sachin  /  +91 98120 00642", 14, y+23);
 
-  // ── RKD Logo box ──
-  doc.setDrawColor(...GREEN); doc.setLineWidth(1.2);
-  doc.rect(W-38, 13, 26, 24);
-  doc.setFontSize(16); doc.setFont("helvetica","bold"); doc.setTextColor(...GREEN);
-  doc.text("RKD", W-25, 24, { align:"center" });
-  doc.setFontSize(7.5); doc.setFont("helvetica","bold");
-  doc.text("GROUP", W-25, 30, { align:"center" });
+  // ── RKD Logo box (Geometric drawing matching the image) ──
+  doc.setDrawColor(0,0,0); doc.setLineWidth(1.2);
+  doc.line(W-38, y+3, W-38, y+15); // Left vertical top-half
+  doc.line(W-38, y+3, W-18, y+3);  // Top horizontal
+  doc.line(W-18, y+3, W-18, y+27); // Right vertical full
+  doc.line(W-38, y+27, W-18, y+27);// Bottom horizontal
+  doc.setFontSize(22); doc.setFont("helvetica","bold"); doc.setTextColor(0,0,0);
+  doc.text("RKD", W-28, y+23, { align:"center" });
+  doc.setFontSize(9);
+  doc.text("GROUP", W-28, y+31, { align:"center" });
 
-  let y = 42;
+  y += 35; // move below header
 
-  // ── Vendor + PO info two-column table ──
+  // ── Vendor + PO info split ──
+  // Left side: Vendor Details
+  doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(0);
+  doc.text("Vendor Details", 14, y+5);
+  doc.setLineWidth(0.3); doc.line(14, y+6, 40, y+6); // Underline
+
+  doc.setFontSize(8); doc.setFont("helvetica","bold");
+  doc.text(data.vendorName || "-", 14, y+10);
+  doc.setFont("helvetica","normal");
+  const addrLines = doc.splitTextToSize(data.vendorAddress || "-", 80);
+  doc.text(addrLines, 14, y+14);
+  const addrH = addrLines.length * 3.5;
+  
+  doc.text(`Contact Number-${data.contactNumber || "-"}`, 14, y+16+addrH);
+  doc.text(`GST No-- ${data.gstDetails || "-"}`, 14, y+20+addrH);
+
+  const delivY = y + 28 + addrH;
+  doc.setFontSize(10); doc.setFont("helvetica","bold");
+  doc.text("Delivery Designation", 14, delivY);
+  doc.line(14, delivY+1, 48, delivY+1); // Underline
+  doc.setFontSize(8); doc.setFont("helvetica","normal");
+  doc.text("RKD Furnishings Pvt Ltd.\nPlot No. 238-239, Sector-29, Part-II,\nHUDA, Panipat-132103, Haryana", 14, delivY+5);
+
+  // Right side: PO Details table
   const infoRows = [
     ["Purchase Order No",    data.poNumber],
     ["Purchase Order Date",  data.poDate],
@@ -70,70 +101,44 @@ async function generatePDF(data: any): Promise<string> {
     ["Packing Charges",      data.packingCharges  || "Nill"],
     ["Discount",             data.discount        || "Nill"],
     ["Expected Date of Arrival", data.expectedArrival || "—"],
-    ["PO Checked By",        data.poCheckedBy     || "—"],
+    ["PO Checked by",        data.poCheckedBy     || "—"],
   ];
 
-  // Left: Vendor Details
-  doc.setFillColor(...LGRAY); doc.rect(10, y, 90, 7, "F");
-  doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
-  doc.text("Vendor Details", 14, y+5);
-
-  // Right: PO details
-  const colX = 105, colW1 = 55, colW2 = 40;
+  const colX = 115, colW1 = 35, colW2 = 45;
   let iy = y;
-  infoRows.forEach(([label, val], idx) => {
-    const bg = idx % 2 === 0 ? [255,255,220] as [number,number,number] : [255,255,255] as [number,number,number];
-    doc.setFillColor(...bg);
-    doc.rect(colX, iy, colW1+colW2, 7, "F");
-    doc.setDrawColor(200,200,200); doc.setLineWidth(0.2);
-    doc.rect(colX, iy, colW1+colW2, 7);
-    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
-    doc.text(label, colX+2, iy+5);
+  doc.setDrawColor(180,180,180); doc.setLineWidth(0.2);
+  infoRows.forEach(([label, val]) => {
+    doc.rect(colX, iy, colW1, 5);
+    doc.rect(colX+colW1, iy, colW2, 5);
+    doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(0);
+    doc.text(label, colX+2, iy+3.5);
     doc.setFont("helvetica","normal");
-    doc.text(String(val), colX+colW1+1, iy+5);
-    iy += 7;
+    doc.text(String(val), colX+colW1+2, iy+3.5);
+    iy += 5;
   });
 
-  // Vendor name/address in left box
-  const vendorBoxH = Math.max(iy - y, 30);
-  doc.setDrawColor(200,200,200); doc.setLineWidth(0.3);
-  doc.rect(10, y+7, 90, vendorBoxH-7);
-  doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...GREEN);
-  doc.text(data.vendorName, 14, y+13);
-  doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...DARK);
-  const addrLines = doc.splitTextToSize(data.vendorAddress || "", 82);
-  doc.text(addrLines, 14, y+19);
-
-  y = Math.max(iy, y + vendorBoxH) + 4;
-
-  // ── Delivery Designation ──
-  doc.setFillColor(...LGRAY); doc.rect(10, y, W-20, 7, "F");
-  doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
-  doc.text("Delivery Designation", 14, y+5);
-  y += 7;
-  doc.setFont("helvetica","normal"); doc.setFontSize(8);
-  const CONSIGNEE = "RKD Furnishings Pvt Ltd.  |  Plot No. 238-239, Sector-29, Part-II, HUDA, Panipat-132103, Haryana";
-  doc.text(CONSIGNEE, 14, y+5);
-  y += 10;
+  const sectionBottom = Math.max(delivY + 15, iy);
+  y = sectionBottom + 5;
 
   // ── Description of Goods ──
-  doc.setFillColor(...GREEN); doc.rect(10, y, W-20, 7, "F");
-  doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-  doc.text("Description of Goods", W/2, y+5, { align:"center" });
-  y += 7;
+  doc.setFillColor(...LGRAY); doc.rect(10, y, W-20, 6, "F");
+  doc.setDrawColor(180,180,180); doc.rect(10, y, W-20, 6);
+  doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(0);
+  doc.text("Description of Goods", W/2, y+4, { align:"center" });
+  y += 6;
 
   const tableBody = data.items.map((item: any, idx: number) => {
     const qty   = parseFloat(item.approvedQty || "0");
     const rate  = parseFloat(item.rate        || "0");
     const gstPc = parseFloat(item.gst         || "0");
-    const total = qty * rate;
+    const total = qty * rate; // without gst per screenshot
     return [
       String(idx+1),
       item.itemName,
       item.rkdNumber,
-      String(qty),
+      qty.toFixed(2),
       item.units,
-      `₹${rate.toFixed(2)}`,
+      rate.toFixed(2),
       `${gstPc}%`,
       `₹${total.toFixed(2)}`,
     ];
@@ -141,24 +146,24 @@ async function generatePDF(data: any): Promise<string> {
 
   autoTable(doc, {
     startY: y,
-    head: [["S.No","Item Description","Request No","Qty","Units","Rate","GST%","Total Amt Rs"]],
+    head: [["S.No","Item Description","Request No","Quantity","Units","Rate","GST%","Total Amount\nRs"]],
     body: tableBody,
     margin: { left: 10, right: 10 },
-    styles: { fontSize: 8, cellPadding: 2.5 },
-    headStyles: { fillColor: [50,50,50], textColor: 255, fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [250,250,250] },
+    theme: "grid",
+    styles: { fontSize: 7.5, cellPadding: 2, textColor: 0, lineColor: [180,180,180], lineWidth: 0.2 },
+    headStyles: { fillColor: [100,100,100], textColor: 255, fontStyle: "bold", halign:"center", valign:"middle" },
     columnStyles: {
       0: { halign:"center", cellWidth: 10 },
-      2: { cellWidth: 30 },
+      2: { halign:"center", cellWidth: 30 },
       3: { halign:"center", cellWidth: 15 },
-      4: { halign:"center", cellWidth: 15 },
-      5: { halign:"right",  cellWidth: 22 },
-      6: { halign:"center", cellWidth: 16 },
-      7: { halign:"right",  cellWidth: 24 },
+      4: { halign:"center", cellWidth: 12 },
+      5: { halign:"right",  cellWidth: 20 },
+      6: { halign:"center", cellWidth: 12 },
+      7: { halign:"right",  cellWidth: 25 },
     },
   });
 
-  const finalY = (doc as any).lastAutoTable.finalY + 5;
+  const finalY = (doc as any).lastAutoTable.finalY;
 
   // ── Totals ──
   const totals = data.items.reduce((acc: any, item: any) => {
@@ -172,34 +177,37 @@ async function generatePDF(data: any): Promise<string> {
   }, { subtotal: 0, gstAmt: 0 });
   const grandTotal = totals.subtotal + totals.gstAmt;
 
-  doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(...DARK);
-  doc.text("GST Amount", W-70, finalY+5); doc.setFont("helvetica","bold");
-  doc.text(`₹${totals.gstAmt.toFixed(2)}`, W-12, finalY+5, { align:"right" });
-  doc.setFontSize(10);
-  doc.text("Total Bill Value", W-70, finalY+13); doc.setFont("helvetica","bold");
-  doc.text(`₹${grandTotal.toFixed(2)}`, W-12, finalY+13, { align:"right" });
+  doc.setFillColor(...LGRAY); doc.rect(10, finalY, W-20, 6, "F");
+  doc.setDrawColor(180,180,180); doc.rect(10, finalY, W-20, 6);
+  doc.setFontSize(8); doc.setFont("helvetica","bold");
+  doc.text(`₹${totals.subtotal.toFixed(2)}`, W-12, finalY+4, { align:"right" });
 
-  doc.setDrawColor(...GREEN); doc.setLineWidth(0.5);
-  doc.line(10, finalY+17, W-10, finalY+17);
+  let ty = finalY + 12;
+  doc.text("GST Amount", W-50, ty, { align:"right" });
+  doc.text(`₹${totals.gstAmt.toFixed(2)}`, W-12, ty, { align:"right" });
+  
+  ty += 6;
+  doc.text("Total Bill Value", W-50, ty, { align:"right" });
+  doc.text(`₹${grandTotal.toFixed(2)}`, W-12, ty, { align:"right" });
+  
+  // Red box around Total Bill Value row area
+  doc.setDrawColor(220,50,50); doc.setLineWidth(0.4);
+  doc.rect(10, ty-4.5, W-20, 6.5); 
 
   // ── Signature box ──
-  const sigY = finalY + 20;
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.5);
-  doc.rect(W-75, sigY, 65, 25);
-  doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
-  doc.text("For RKD FURNISHINGS PVT LTD", W-72, sigY+5);
-  doc.setFontSize(7); doc.setFont("helvetica","normal");
-  doc.text("Authorised Signatory", W-72, sigY+22);
+  const sigY = ty + 10;
+  doc.setDrawColor(0,0,0); doc.setLineWidth(0.5);
+  doc.rect(W-70, sigY, 60, 25);
+  doc.setFontSize(6.5); doc.setFont("helvetica","bold");
+  doc.text("For RKD FURNISHINGS PVT LTD", W-68, sigY+4);
 
   // ── Footer ──
-  doc.setFontSize(8); doc.setFont("helvetica","italic"); doc.setTextColor(120,120,120);
-  doc.text("This is a Computer Generated Copy", W/2, sigY+35, { align:"center" });
+  doc.setFontSize(7.5); doc.setFont("helvetica","bold");
+  doc.text("This is a Computer Generated Copy", W/2, sigY+40, { align:"center" });
 
-  // Footer band
-  const pH = doc.internal.pageSize.getHeight();
-  doc.setFillColor(...GREEN); doc.rect(0, pH-8, W, 8, "F");
-  doc.setFontSize(7); doc.setTextColor(255,255,255); doc.setFont("helvetica","normal");
-  doc.text("RKD Industries | Store Management System", W/2, pH-3, { align:"center" });
+  // Draw main outer box around everything up to here
+  doc.setDrawColor(180,180,180); doc.setLineWidth(0.3);
+  doc.rect(10, startY, W-20, sigY+45-startY);
 
   return doc.output("datauristring").split(",")[1]; // Return base64
 }
