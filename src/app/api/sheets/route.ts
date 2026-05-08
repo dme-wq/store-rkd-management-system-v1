@@ -426,7 +426,7 @@ ${approvalLink}
         });
       }
 
-      // NEW: If Approved, save to approvalDataBase
+      // 3. Save to approvalDataBase if Approved
       if (ownerStatus === "Yes") {
         const fullRowRes = await sheets.spreadsheets.values.get({
           spreadsheetId: STORE_SHEET_ID,
@@ -442,6 +442,58 @@ ${approvalLink}
             values: [rowData]
           }
         });
+      }
+
+      // 4. Notify Doer via WhatsApp (DoerWhatsapp tab)
+      try {
+        const doerRes = await sheets.spreadsheets.values.get({
+          spreadsheetId: WHATSAPP_LOG_SHEET_ID,
+          range: "DoerWhatsapp!A:B",
+        });
+        const doerRows = doerRes.data.values || [];
+        const doerContacts = doerRows.slice(1).filter((r: any) => r[1]); // Skip header, need phone
+
+        if (doerContacts.length > 0) {
+          const isApproved = ownerStatus === "Yes";
+          const statusEmoji = isApproved ? "✅" : "❌";
+          const statusText  = isApproved ? "APPROVED" : "REJECTED";
+          const statusColor = isApproved ? "🟢" : "🔴";
+
+          for (const doer of doerContacts) {
+            const doerName = doer[0] || "Team";
+            let doerPhone = String(doer[1]).replace(/\D/g, "");
+            if (doerPhone.length === 10) doerPhone = "91" + doerPhone;
+            else if (doerPhone.startsWith("0") && doerPhone.length === 11) doerPhone = "91" + doerPhone.slice(1);
+
+            const doerMessage =
+`👋 *Namaste ${doerName} Ji!*
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🏭 *RKD INDUSTRIES — STORE*
+━━━━━━━━━━━━━━━━━━━━━━━
+
+${statusColor} *REQUEST ${statusText}* ${statusEmoji}
+
+🔖 *RKD No:*   ${rkdNumber}
+📦 *Item:*        ${finalItemName}
+🔢 *Qty:*          ${finalQty || approvedQty}
+💰 *Rate:*        Rs. ${finalRate}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+${isApproved
+  ? "✅ Your material request has been *Approved* by the management. It will be processed shortly."
+  : "❌ Your material request has been *Rejected* by the management. Please contact the store for more details."}
+━━━━━━━━━━━━━━━━━━━━━━━
+
+⏰ ${formattedDate}
+🤖 _RKD Store Management System_`;
+
+            await sendWhatsApp(doerPhone, doerMessage);
+          }
+        }
+      } catch (doerErr: any) {
+        // Non-blocking — log but don't fail the whole request
+        console.error("Doer WhatsApp notification failed:", doerErr.message);
       }
     } else if (action === "UPDATE_COLUMN") {
       // Debit Note (S) or Reverse Entry (T) update
