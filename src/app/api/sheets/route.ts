@@ -197,7 +197,7 @@ export async function GET() {
       console.error("Main ID Fetch Failed:", e.message);
       return NextResponse.json({ 
         success: false, 
-        error: `Failed to access Main Sheet (StoreDataEntry!A:A). ID: ${STORE_SHEET_ID}. Error: ${e.message}. Please ensure the sheet is shared with: ${GOOGLE_SERVICE_ACCOUNT_EMAIL}` 
+        error: `Cannot access StoreDataEntry tab. Please share the sheet with the service account. Error: ${e.message}` 
       }, { status: 500 });
     }
 
@@ -230,7 +230,7 @@ export async function GET() {
       stockMap: cachedStockMap || {},
       miscMap: cachedMiscMap || {},
       fetchedAt: new Date().toISOString(),
-      debug: { rangeUsed: range, rowsReturned: storeRows.length, lastDataRow }
+      debug: { rowsReturned: storeRows.length, totalRows }
     };
 
     cachedApiResponse = responseData;
