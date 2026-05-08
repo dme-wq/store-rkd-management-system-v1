@@ -335,7 +335,12 @@ export default function PurchaseOrderPage() {
       link.download = `${poNumber}.pdf`;
       link.click();
 
-      setSuccess(`✅ PO ${json.poNumber} saved! PDF downloaded & uploaded to Drive.`);
+      if (json.driveWarning) {
+        setSuccess(`⚠️ PO ${json.poNumber} saved to sheet, BUT Drive upload failed: ${json.driveWarning}`);
+      } else {
+        setSuccess(`✅ PO ${json.poNumber} saved! PDF downloaded & uploaded to Drive.`);
+      }
+      
       // Refresh PO number for next use
       fetch("/api/po?action=nextPO").then(r => r.json()).then(d => { if(d.success) setPoNumber(d.poNumber); });
     } catch (err: any) {
