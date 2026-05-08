@@ -168,8 +168,16 @@ export async function GET() {
       });
     }
 
-    // 3. Optimized Main Data Fetch (Direct range fetch for speed on Vercel)
-    const range = `StoreDataEntry!A1:T3000`; 
+    // 3. Optimized Main Data Fetch (Fetch last 3000 rows for speed and visibility)
+    const idRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: STORE_SHEET_ID,
+      range: "StoreDataEntry!A:A", // Fast fetch of first column only
+    });
+    const ids = idRes.data.values || [];
+    const lastDataRow = ids.length;
+    const startRow = Math.max(1, lastDataRow - 3000);
+    const range = `StoreDataEntry!A${startRow}:T${lastDataRow}`;
+    
     const storeRes = await sheets.spreadsheets.values.get({ 
       spreadsheetId: STORE_SHEET_ID, 
       range,
@@ -178,7 +186,7 @@ export async function GET() {
     const storeRows = storeRes.data.values || [];
 
     const data = storeRows.map((row: any, idx: number) => {
-      const actualRowNumber = idx + 1; // Simplifed for fixed range A1:T2000
+      const actualRowNumber = startRow + idx;
       const obj: any = { _id: idx, rowNumber: actualRowNumber };
       HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
       return obj;
@@ -190,7 +198,7 @@ export async function GET() {
       stockMap: cachedStockMap || {},
       miscMap: cachedMiscMap || {},
       fetchedAt: new Date().toISOString(),
-      debug: { rangeUsed: range, rowsReturned: storeRows.length }
+      debug: { rangeUsed: range, rowsReturned: storeRows.length, lastDataRow }
     };
 
     cachedApiResponse = responseData;
