@@ -342,10 +342,36 @@ ${approvalLink}
 🤖 _RKD Store Management System_`;
 
           for (const contact of contacts) {
+            const contactName = contact[0] || "Sir/Ma'am";
             let phone = String(contact[1]).replace(/\D/g, "");
             if (phone.length === 10) phone = "91" + phone;
             else if (phone.startsWith("0") && phone.length === 11) phone = "91" + phone.slice(1);
-            await sendWhatsApp(phone, message);
+
+            const personalizedMessage = 
+`👋 *Namaste ${contactName} Ji!*
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🏭 *RKD INDUSTRIES — STORE*
+━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 *APPROVAL REQUEST*
+
+🔖 *RKD No:*       ${rkdNumber}
+📦 *Item:*             ${finalItemName}
+🏪 *Vendor:*        ${finalVendorName}
+🔢 *Qty:*               ${approvedQty}
+💰 *Rate:*             Rs. ${finalRate}
+🧾 *Total Price:*  Rs. ${totalPrice}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+👆 *TAP BELOW TO DECIDE:*
+${approvalLink}
+━━━━━━━━━━━━━━━━━━━━━━━
+
+⏰ ${formattedDate}
+🤖 _RKD Store Management System_`;
+
+            await sendWhatsApp(phone, personalizedMessage);
           }
 
           // Log to WhatsappData with "Pending" status
