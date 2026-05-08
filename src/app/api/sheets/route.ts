@@ -443,6 +443,18 @@ ${approvalLink}
           }
         });
       }
+    } else if (action === "UPDATE_COLUMN") {
+      // Debit Note (S) or Reverse Entry (T) update
+      const { column, value } = body;
+      if (!["S", "T"].includes(column)) throw new Error("Invalid column. Must be S or T.");
+      
+      console.log(`Updating column ${column} for RKD ${rkdNumber} with value: ${value}`);
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!${column}${rowNumber}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [[value]] }
+      });
     } else {
       // Default: ISSUE action
       // Update H (Issue Qty) and I (Status) in StoreDataEntry

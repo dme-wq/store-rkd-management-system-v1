@@ -194,6 +194,8 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
 
   if (!isOpen || !row) return null;
 
+  const disabledStyle = { background: '#f3f4f6', color: '#9ca3af', cursor: 'not-allowed', borderColor: '#e5e7eb' };
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
@@ -203,7 +205,7 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
           </div>
         </div>
         <h3 className={styles.modalTitle}>Manual Issue 📦</h3>
-        <p className={styles.modalMessage}>Update quantity and status for this requirement.</p>
+        <p className={styles.modalMessage}>Only <strong>Issue Qty</strong> and <strong>Status</strong> are editable.</p>
         
         <div className={styles.formInfoBox}>
           <div className={styles.modalInfoItem}><span className={styles.modalLabel}>RKD Number:</span> <span className={styles.modalValue}>{row["Store RKD Number"]}</span></div>
@@ -222,8 +224,9 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
           </div>
         </div>
 
+        {/* EDITABLE */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Issue Quantity</label>
+          <label className={styles.formLabel}>✏️ Issue Quantity <span style={{color:'#2563eb',fontSize:'0.75rem'}}>(Editable)</span></label>
           <input 
             type="number" 
             className={styles.formInput} 
@@ -234,7 +237,7 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Status</label>
+          <label className={styles.formLabel}>✏️ Status <span style={{color:'#2563eb',fontSize:'0.75rem'}}>(Editable)</span></label>
           <select 
             className={styles.formSelect} 
             value={status} 
@@ -278,6 +281,8 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
 
   if (!isOpen || !row) return null;
 
+  const readonlyStyle = { background: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed', borderColor: '#e5e7eb', borderStyle: 'dashed' as const };
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
@@ -287,7 +292,7 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
           </div>
         </div>
         <h3 className={styles.modalTitle}>Manual Approval ✍️</h3>
-        <p className={styles.modalMessage}>Review and approve this requirement with custom details.</p>
+        <p className={styles.modalMessage}>Only <strong>Approved Qty</strong> and <strong>Approval Require?</strong> are editable.</p>
         
         <div className={styles.formInfoBox}>
           <div className={styles.modalInfoItem}><span className={styles.modalLabel}>RKD:</span> <span className={styles.modalValue}>{row["Store RKD Number"]}</span></div>
@@ -295,30 +300,20 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
           <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required:</span> <span className={styles.modalValue}>{row["Require Qty"]} {row["Units"]}</span></div>
         </div>
 
+        {/* READ-ONLY */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Vendor Name</label>
-          <input 
-            type="text" 
-            className={styles.formInput} 
-            value={vendor} 
-            onChange={e => setVendor(e.target.value)}
-            placeholder="Enter vendor name"
-          />
+          <label className={styles.formLabel} style={{ color: '#9ca3af' }}>🔒 Vendor Name <span style={{fontSize:'0.75rem'}}>(Auto-filled)</span></label>
+          <input type="text" className={styles.formInput} value={vendor} readOnly style={readonlyStyle} />
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Rate</label>
-          <input 
-            type="text" 
-            className={styles.formInput} 
-            value={rate} 
-            onChange={e => setRate(e.target.value)}
-            placeholder="Enter rate"
-          />
+          <label className={styles.formLabel} style={{ color: '#9ca3af' }}>🔒 Rate <span style={{fontSize:'0.75rem'}}>(Auto-filled)</span></label>
+          <input type="text" className={styles.formInput} value={rate} readOnly style={readonlyStyle} />
         </div>
 
+        {/* EDITABLE */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Approved Quantity</label>
+          <label className={styles.formLabel}>✏️ Approved Quantity <span style={{color:'#d97706',fontSize:'0.75rem'}}>(Editable)</span></label>
           <input 
             type="number" 
             className={styles.formInput} 
@@ -329,7 +324,7 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Approval Require?</label>
+          <label className={styles.formLabel}>✏️ Approval Require? <span style={{color:'#d97706',fontSize:'0.75rem'}}>(Editable)</span></label>
           <select 
             className={styles.formSelect} 
             value={status} 
@@ -388,6 +383,45 @@ export default function Home() {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isManualApprovalModalOpen, setIsManualApprovalModalOpen] = useState(false);
   const [manualRow, setManualRow] = useState<any>(null);
+
+  // Debit Note / Reverse Entry Modal State
+  const [isDebitNoteOpen, setIsDebitNoteOpen] = useState(false);
+  const [isReverseEntryOpen, setIsReverseEntryOpen] = useState(false);
+  const [dnSelectedRKD, setDnSelectedRKD] = useState<any>(null);
+  const [dnQty, setDnQty] = useState("");
+  const [reSelectedRKD, setReSelectedRKD] = useState<any>(null);
+  const [reQty, setReQty] = useState("");
+  const [columnUpdating, setColumnUpdating] = useState(false);
+
+  const handleColumnUpdate = async (rkdNumber: string, column: "S" | "T", qty: string, requireQty: string) => {
+    const qtyNum = parseFloat(qty);
+    const reqNum = parseFloat(requireQty);
+    if (isNaN(qtyNum) || qtyNum <= 0) { alert("Please enter a valid quantity."); return; }
+    if (qtyNum > reqNum) { alert(`Quantity cannot exceed Required Qty (${requireQty}).`); return; }
+    setColumnUpdating(true);
+    try {
+      const res = await fetch("/api/sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "UPDATE_COLUMN", rkdNumber, column, value: qty })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      setIsDebitNoteOpen(false);
+      setIsReverseEntryOpen(false);
+      setDnSelectedRKD(null); setDnQty("");
+      setReSelectedRKD(null); setReQty("");
+      setModalTitle("Saved! ✅");
+      setModalMsg(`${column === "S" ? "Debit Note" : "Reverse Entry"} Qty updated for ${rkdNumber}.`);
+      setModalData(null); setIsModalOpen(true);
+      setTimeout(() => setIsModalOpen(false), 2500);
+      fetchData(true);
+    } catch (err: any) {
+      alert("Update Failed: " + err.message);
+    } finally {
+      setColumnUpdating(false);
+    }
+  };
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -804,6 +838,41 @@ export default function Home() {
               <div className={styles.appHeaderTitles}>
                 <h2 className={styles.liveTitle}>Live Inward Data</h2>
               </div>
+
+              {/* Debit Note & Reverse Entry Buttons */}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => { setIsDebitNoteOpen(true); setDnSelectedRKD(null); setDnQty(""); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                    color: 'white', border: 'none', borderRadius: '12px',
+                    padding: '9px 18px', fontWeight: 700, fontSize: '0.82rem',
+                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(220,38,38,0.35)',
+                    transition: 'all 0.2s ease', letterSpacing: '0.3px'
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
+                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  <span style={{ fontSize: '1rem' }}>📄</span> Debit Note
+                </button>
+                <button
+                  onClick={() => { setIsReverseEntryOpen(true); setReSelectedRKD(null); setReQty(""); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    color: 'white', border: 'none', borderRadius: '12px',
+                    padding: '9px 18px', fontWeight: 700, fontSize: '0.82rem',
+                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(124,58,237,0.35)',
+                    transition: 'all 0.2s ease', letterSpacing: '0.3px'
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
+                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  <span style={{ fontSize: '1rem' }}>↩️</span> Reverse Entry
+                </button>
+              </div>
+
               <div className={styles.appMetricsInline}>
                 <div className={styles.scorecard}>
                   <span className={styles.scorecardTitle}>Today Indent</span>
@@ -1078,6 +1147,136 @@ export default function Home() {
         updating={updatingRowId !== null && manualRow && updatingRowId === manualRow._id}
         miscMap={miscMap}
       />
+
+      {/* ─── Debit Note Modal ─── */}
+      {isDebitNoteOpen && (
+        <div className={styles.modalOverlay} onClick={() => setIsDebitNoteOpen(false)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalIconBox} style={{ background: 'linear-gradient(135deg,#fee2e2,#fecaca)', color: '#dc2626' }}>
+                <span style={{ fontSize: '2rem' }}>📄</span>
+              </div>
+            </div>
+            <h3 className={styles.modalTitle}>Debit Note Entry</h3>
+            <p className={styles.modalMessage}>Select RKD Number and enter Debit Note Qty <span style={{color:'#dc2626',fontWeight:700}}>(≤ Required Qty)</span></p>
+
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>🔖 Select RKD Store Number</label>
+              <select
+                className={styles.formSelect}
+                value={dnSelectedRKD ? JSON.stringify(dnSelectedRKD) : ""}
+                onChange={e => {
+                  if (!e.target.value) { setDnSelectedRKD(null); setDnQty(""); return; }
+                  const row = JSON.parse(e.target.value);
+                  setDnSelectedRKD(row);
+                  setDnQty(row["Debit Note Qty"] || "");
+                }}
+              >
+                <option value="">— Select RKD Number —</option>
+                {data.map((r: any) => (
+                  <option key={r._id} value={JSON.stringify(r)}>{r["Store RKD Number"]} — {r["Item Name"]}</option>
+                ))}
+              </select>
+            </div>
+
+            {dnSelectedRKD && (
+              <div className={styles.formInfoBox} style={{ margin: '0 0 16px 0' }}>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span><span className={styles.modalValue}>{dnSelectedRKD["Item Name"]}</span></div>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span><span className={styles.modalValue}>{dnSelectedRKD["Person Filling Name"]}</span></div>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{color:'#dc2626',fontWeight:700}}>{dnSelectedRKD["Require Qty"]} {dnSelectedRKD["Units"]}</span></div>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Issue Qty:</span><span className={styles.modalValue}>{dnSelectedRKD["Issue Qty"] || "—"}</span></div>
+              </div>
+            )}
+
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>✏️ Debit Note Qty <span style={{color:'#dc2626',fontSize:'0.75rem'}}>(Max: {dnSelectedRKD?.["Require Qty"] || "—"})</span></label>
+              <input
+                type="number"
+                className={styles.formInput}
+                value={dnQty}
+                onChange={e => setDnQty(e.target.value)}
+                placeholder="Enter debit note quantity"
+                max={dnSelectedRKD?.["Require Qty"]}
+                disabled={!dnSelectedRKD}
+              />
+            </div>
+
+            <button
+              className={styles.submitBtn}
+              style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 15px rgba(220,38,38,0.35)' }}
+              disabled={columnUpdating || !dnSelectedRKD || !dnQty}
+              onClick={() => handleColumnUpdate(dnSelectedRKD["Store RKD Number"], "S", dnQty, dnSelectedRKD["Require Qty"])}
+            >
+              {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : "💾 Save Debit Note"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Reverse Entry Modal ─── */}
+      {isReverseEntryOpen && (
+        <div className={styles.modalOverlay} onClick={() => setIsReverseEntryOpen(false)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalIconBox} style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', color: '#7c3aed' }}>
+                <span style={{ fontSize: '2rem' }}>↩️</span>
+              </div>
+            </div>
+            <h3 className={styles.modalTitle}>Reverse Entry</h3>
+            <p className={styles.modalMessage}>Select RKD Number and enter Reverse Entry Qty <span style={{color:'#7c3aed',fontWeight:700}}>(≤ Required Qty)</span></p>
+
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>🔖 Select RKD Store Number</label>
+              <select
+                className={styles.formSelect}
+                value={reSelectedRKD ? JSON.stringify(reSelectedRKD) : ""}
+                onChange={e => {
+                  if (!e.target.value) { setReSelectedRKD(null); setReQty(""); return; }
+                  const row = JSON.parse(e.target.value);
+                  setReSelectedRKD(row);
+                  setReQty(row["Reverse Entry Qty"] || "");
+                }}
+              >
+                <option value="">— Select RKD Number —</option>
+                {data.map((r: any) => (
+                  <option key={r._id} value={JSON.stringify(r)}>{r["Store RKD Number"]} — {r["Item Name"]}</option>
+                ))}
+              </select>
+            </div>
+
+            {reSelectedRKD && (
+              <div className={styles.formInfoBox} style={{ margin: '0 0 16px 0' }}>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span><span className={styles.modalValue}>{reSelectedRKD["Item Name"]}</span></div>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span><span className={styles.modalValue}>{reSelectedRKD["Person Filling Name"]}</span></div>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{color:'#7c3aed',fontWeight:700}}>{reSelectedRKD["Require Qty"]} {reSelectedRKD["Units"]}</span></div>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Issue Qty:</span><span className={styles.modalValue}>{reSelectedRKD["Issue Qty"] || "—"}</span></div>
+              </div>
+            )}
+
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>✏️ Reverse Entry Qty <span style={{color:'#7c3aed',fontSize:'0.75rem'}}>(Max: {reSelectedRKD?.["Require Qty"] || "—"})</span></label>
+              <input
+                type="number"
+                className={styles.formInput}
+                value={reQty}
+                onChange={e => setReQty(e.target.value)}
+                placeholder="Enter reverse entry quantity"
+                max={reSelectedRKD?.["Require Qty"]}
+                disabled={!reSelectedRKD}
+              />
+            </div>
+
+            <button
+              className={styles.submitBtn}
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 4px 15px rgba(124,58,237,0.35)' }}
+              disabled={columnUpdating || !reSelectedRKD || !reQty}
+              onClick={() => handleColumnUpdate(reSelectedRKD["Store RKD Number"], "T", reQty, reSelectedRKD["Require Qty"])}
+            >
+              {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : "💾 Save Reverse Entry"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
