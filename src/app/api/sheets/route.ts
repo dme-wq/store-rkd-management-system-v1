@@ -314,11 +314,29 @@ export async function POST(req: Request) {
           const protocol = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
           const appUrl = `${protocol}://${host}`;
           
-          // Pass details in URL so owner has context
-          const rawLink = `${appUrl}/approve/${rkdNumber}?qty=${approvedQty}&rate=${finalRate}&vendor=${encodeURIComponent(finalVendorName)}`;
-          const shortLink = await shortenUrl(rawLink);
+          // Direct link — no TinyURL (reliable on Vercel)
+          const approvalLink = `${appUrl}/approve/${rkdNumber}?qty=${approvedQty}&rate=${encodeURIComponent(finalRate)}&vendor=${encodeURIComponent(finalVendorName)}`;
           
-          const message = `🚨 *RKD STORE APPROVAL REQUIRED* 🚨\n\n*RKD No:* ${rkdNumber}\n*Item:* ${finalItemName}\n*Vendor:* ${finalVendorName}\n*Qty:* ${approvedQty}\n*Rate:* ${finalRate}\n\n👉 *Click here to Approve/Reject:* ${shortLink}\n\n_System generated notification_`;
+          const message = 
+`━━━━━━━━━━━━━━━━━━━━━━━
+🏭 *RKD INDUSTRIES — STORE*
+━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 *APPROVAL REQUEST*
+
+🔖 *RKD No:*   ${rkdNumber}
+📦 *Item:*        ${finalItemName}
+🏪 *Vendor:*   ${finalVendorName}
+🔢 *Qty:*          ${approvedQty}
+💰 *Rate:*        Rs. ${finalRate}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+👆 *TAP BELOW TO DECIDE:*
+${approvalLink}
+━━━━━━━━━━━━━━━━━━━━━━━
+
+⏰ ${formattedDate}
+🤖 _RKD Store Management System_`;
 
           for (const contact of contacts) {
             let phone = String(contact[1]).replace(/\D/g, "");
@@ -327,7 +345,7 @@ export async function POST(req: Request) {
             await sendWhatsApp(phone, message);
           }
 
-          // Log to WhatsappData (Log Spreadsheet) with "Pending" status
+          // Log to WhatsappData with "Pending" status
           const rowRes = await sheets.spreadsheets.values.get({
             spreadsheetId: STORE_SHEET_ID,
             range: `StoreDataEntry!F${rowNumber}`,
@@ -339,7 +357,7 @@ export async function POST(req: Request) {
             range: "WhatsappData!A:I",
             valueInputOption: "USER_ENTERED",
             requestBody: {
-              values: [[formattedDate, rkdNumber, finalVendorName, finalItemName, requireQty, approvedQty, finalRate, "Pending Owner Approval", shortLink]]
+              values: [[formattedDate, rkdNumber, finalVendorName, finalItemName, requireQty, approvedQty, finalRate, "Pending Owner Approval", approvalLink]]
             }
           });
         }
