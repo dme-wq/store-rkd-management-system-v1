@@ -346,22 +346,23 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({ success: true, message: "Approval Notification Sent" });
     } else if (action === "WHATSAPP_UPDATE") {
-      // OWNER SIDE: Now we update StoreDataEntry and approvalDataBase
-      const { ownerStatus, approvedQty: finalQty, rate: finalRate, vendor: finalVendor } = body;
+      // OWNER SIDE: Owner clicked the link and decided. NOW we update StoreDataEntry.
+      const { ownerStatus, approvedQty: finalQty, rate: finalOwnRate, vendor: finalVendor } = body;
       
-      // 1. Update StoreDataEntry (Status Q, Qty R, Vendor N, Rate O)
-      console.log(`Owner ${ownerStatus} for RKD: ${rkdNumber}`);
+      console.log(`Owner decision: ${ownerStatus} for RKD: ${rkdNumber}`);
+
+      // 1. Update ONLY Q (Approval Require?) and R (Approved Qty) in StoreDataEntry
+      //    Vendor and Rate in N and O are set from the Miscellaneous list already — don't overwrite
       await sheets.spreadsheets.values.update({
         spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!N${rowNumber}:R${rowNumber}`,
+        range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
         valueInputOption: "USER_ENTERED",
         requestBody: { 
-          values: [[finalVendor, finalRate, "", ownerStatus, finalQty]] 
+          values: [[ownerStatus, finalQty || ""]] 
         }
       });
 
-      // Update WhatsappData log
-      // Find row by RKD in WhatsappData
+      // 2. Update WhatsappData log — set column H to owner's decision
       const logRes = await sheets.spreadsheets.values.get({
         spreadsheetId: WHATSAPP_LOG_SHEET_ID,
         range: "WhatsappData!B:B",
@@ -374,7 +375,7 @@ export async function POST(req: Request) {
           spreadsheetId: WHATSAPP_LOG_SHEET_ID,
           range: `WhatsappData!H${logRowNum}`,
           valueInputOption: "USER_ENTERED",
-          requestBody: { values: [[ownerStatus]] }
+          requestBody: { values: [[ownerStatus === "Yes" ? "Approved" : "Rejected"]] }
         });
       }
 

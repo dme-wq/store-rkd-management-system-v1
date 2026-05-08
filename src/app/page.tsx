@@ -568,22 +568,18 @@ export default function Home() {
           itemName: row["Item Name"],
           vendorName: misc.vendor,
           rate: misc.rate,
-          approvedQty: reqQty
+          approvedQty: reqQty,
+          status: "Yes"  // ← THIS WAS MISSING — WhatsApp never fired without this
         })
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
 
-      // Show Success Popup
-      setModalTitle("Approved Successfully! ✅");
-      setModalMsg(`Requirement for "${row["Item Name"]}" has been approved.`);
+      setModalTitle("WhatsApp Sent! 📢");
+      setModalMsg(`Approval request for "${row["Item Name"]}" sent to owner via WhatsApp. Waiting for owner confirmation.`);
       setModalData(null);
       setIsModalOpen(true);
-
-      // Auto-close after 3 seconds
-      setTimeout(() => {
-        setIsModalOpen(false);
-      }, 3000);
+      setTimeout(() => setIsModalOpen(false), 3000);
     } catch (err: any) {
       alert("Approval Failed: " + err.message);
       setData(originalData);
