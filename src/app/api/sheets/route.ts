@@ -185,22 +185,37 @@ export async function GET() {
       });
     }
 
-    // 3. Optimized Main Data Fetch (Fetch last 3000 rows for speed and visibility)
-    const idRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: STORE_SHEET_ID,
-      range: "StoreDataEntry!A:A", // Fast fetch of first column only
-    });
-    const ids = idRes.data.values || [];
-    const lastDataRow = ids.length;
-    const startRow = Math.max(1, lastDataRow - 3000);
-    const range = `StoreDataEntry!A${startRow}:T${lastDataRow}`;
-    
-    const storeRes = await sheets.spreadsheets.values.get({ 
-      spreadsheetId: STORE_SHEET_ID, 
-      range,
-      majorDimension: "ROWS"
-    });
-    const storeRows = storeRes.data.values || [];
+    // 3. Optimized Main Data Fetch
+    let totalRows = 0;
+    try {
+      const idRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: "StoreDataEntry!A:A",
+      });
+      totalRows = idRes.data.values?.length || 0;
+    } catch (e: any) {
+      console.error("Main ID Fetch Failed:", e.message);
+      return NextResponse.json({ 
+        success: false, 
+        error: `Failed to access Main Sheet (StoreDataEntry!A:A). ID: ${STORE_SHEET_ID}. Error: ${e.message}. Please ensure the sheet is shared with: ${GOOGLE_SERVICE_ACCOUNT_EMAIL}` 
+      }, { status: 500 });
+    }
+
+    const startRow = Math.max(1, totalRows - 2999);
+    let storeRows: any[] = [];
+    try {
+      const storeRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!A${startRow}:T${totalRows}`,
+      });
+      storeRows = storeRes.data.values || [];
+    } catch (e: any) {
+      console.error("Main Data Fetch Failed:", e.message);
+      return NextResponse.json({ 
+        success: false, 
+        error: `Failed to fetch records from Main Sheet (A${startRow}:T${totalRows}). ID: ${STORE_SHEET_ID}. Error: ${e.message}` 
+      }, { status: 500 });
+    }
 
     const data = storeRows.map((row: any, idx: number) => {
       const actualRowNumber = startRow + idx;
