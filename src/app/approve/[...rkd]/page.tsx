@@ -152,10 +152,34 @@ export default function ApprovalPage() {
           <div className={styles.infoRow}>
             <div className={styles.iconBox}><IndianRupee size={20} /></div>
             <div className={styles.infoText}>
-              <label>Proposed Rate</label>
+              <label>Rate / Unit</label>
               <span>Rs. {rate}</span>
             </div>
           </div>
+        </div>
+
+        {/* Total Price Highlight */}
+        <div style={{
+          background: 'linear-gradient(135deg, #166534, #15803d)',
+          borderRadius: '16px',
+          padding: '16px 20px',
+          margin: '12px 0',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white' }}>
+            <span style={{ fontSize: '1.2rem' }}>🧾</span>
+            <span style={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '0.5px' }}>TOTAL PRICE</span>
+          </div>
+          <span style={{ 
+            fontWeight: 900, 
+            fontSize: '1.4rem', 
+            color: '#bbf7d0',
+            letterSpacing: '0.5px'
+          }}>
+            Rs. {(parseFloat(qty) * parseFloat(rate || "0")).toFixed(2)}
+          </span>
         </div>
 
         <div className={styles.divider} />

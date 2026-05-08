@@ -317,6 +317,8 @@ export async function POST(req: Request) {
           // Direct link — no TinyURL (reliable on Vercel)
           const approvalLink = `${appUrl}/approve/${rkdNumber}?qty=${approvedQty}&rate=${encodeURIComponent(finalRate)}&vendor=${encodeURIComponent(finalVendorName)}`;
           
+          const totalPrice = (parseFloat(approvedQty) * parseFloat(finalRate || "0")).toFixed(2);
+
           const message = 
 `━━━━━━━━━━━━━━━━━━━━━━━
 🏭 *RKD INDUSTRIES — STORE*
@@ -324,11 +326,12 @@ export async function POST(req: Request) {
 
 📋 *APPROVAL REQUEST*
 
-🔖 *RKD No:*   ${rkdNumber}
-📦 *Item:*        ${finalItemName}
-🏪 *Vendor:*   ${finalVendorName}
-🔢 *Qty:*          ${approvedQty}
-💰 *Rate:*        Rs. ${finalRate}
+🔖 *RKD No:*       ${rkdNumber}
+📦 *Item:*             ${finalItemName}
+🏪 *Vendor:*        ${finalVendorName}
+🔢 *Qty:*               ${approvedQty}
+💰 *Rate:*             Rs. ${finalRate}
+🧾 *Total Price:*  Rs. ${totalPrice}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 👆 *TAP BELOW TO DECIDE:*
