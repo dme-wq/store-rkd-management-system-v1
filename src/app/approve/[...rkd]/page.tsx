@@ -6,7 +6,10 @@ import { Check, X, Package, User, Hash, DollarSign, Activity, Loader2 } from "lu
 import styles from "./approve.module.css";
 
 export default function ApprovalPage() {
-  const { rkd } = useParams();
+  const params = useParams();
+  // Join catch-all segments back into a single string (e.g. ["RKD","2024","123"] -> "RKD/2024/123")
+  const rkd = Array.isArray(params.rkd) ? params.rkd.join("/") : params.rkd;
+  
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -15,13 +18,14 @@ export default function ApprovalPage() {
 
   useEffect(() => {
     async function load() {
+      if (!rkd) return;
       try {
         const res = await fetch("/api/sheets");
         const json = await res.json();
         if (json.success) {
           const row = json.data.find((r: any) => String(r["Store RKD Number"]) === String(rkd));
           if (row) setData(row);
-          else setError("Record not found or already processed.");
+          else setError(`Record "${rkd}" not found or already processed.`);
         } else {
           setError("Failed to connect to database.");
         }
