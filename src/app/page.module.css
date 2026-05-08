@@ -553,26 +553,53 @@
 }
 
 .scorecard {
-  background-color: #166534; /* Dark Green */
+  background: linear-gradient(135deg, #14532d, #166534, #15803d);
   color: white;
-  padding: 8px 12px;
-  border-radius: 14px;
-  box-shadow: 0 4px 15px rgba(22, 101, 52, 0.3);
+  padding: 14px 20px;
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(22, 101, 52, 0.4);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 125px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.2s;
+  min-width: 150px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: transform 0.2s;
   font-family: var(--font-outfit), sans-serif;
-  animation: pulseCard 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+  animation: scorecardGlow 2.5s ease-in-out infinite;
 }
 
-@keyframes pulseCard {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.03); }
-  100% { transform: scale(1); }
+/* Shimmer sweep overlay */
+.scorecard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: shimmerSweep 2.5s ease-in-out infinite;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+@keyframes scorecardGlow {
+  0%,100% {
+    box-shadow: 0 4px 20px rgba(22, 101, 52, 0.4),
+                0 0 0px rgba(74, 222, 128, 0);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 6px 30px rgba(22, 101, 52, 0.6),
+                0 0 25px rgba(74, 222, 128, 0.5),
+                0 0 50px rgba(22, 101, 52, 0.3);
+    transform: scale(1.04);
+  }
+}
+
+@keyframes shimmerSweep {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
 .scorecard:hover {
@@ -678,20 +705,24 @@
 }
 
 .scorecardTitle {
-  font-size: 0.7rem;
-  text-transform: none; /* Keep Title Case from HTML */
-  opacity: 0.9;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 0.78rem;
+  text-transform: none;
+  opacity: 0.88;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   text-align: center;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .scorecardValue {
-  font-size: 1.25rem;
-  font-weight: 800;
-  margin-top: 0px;
+  font-size: 1.8rem;
+  font-weight: 900;
+  margin-top: 4px;
   text-align: center;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  letter-spacing: -0.5px;
+  line-height: 1;
 }
 
 /* Filter rows inside card */
