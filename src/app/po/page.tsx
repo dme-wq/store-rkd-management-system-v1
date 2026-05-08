@@ -24,6 +24,16 @@ function todayStr() {
   return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 }
 
+const formatCurr = (num: number) => num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const RkdLogo = ({ width = 50, height = 55 }: { width?: number; height?: number }) => (
+  <svg width={width} height={height} viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+    <path d="M 10 45 L 10 10 L 90 10 L 90 85 L 10 85" fill="none" stroke="#0f172a" strokeWidth="6" />
+    <text x="50" y="70" fontFamily="Arial, sans-serif" fontSize="45" fontWeight="bold" textAnchor="middle" fill="#0f172a">RKD</text>
+    <text x="50" y="105" fontFamily="Arial, sans-serif" fontSize="18" fontWeight="bold" textAnchor="middle" fill="#0f172a">GROUP</text>
+  </svg>
+);
+
 async function generatePDF(data: any): Promise<string> {
   // Dynamic import to avoid SSR issues
   const { default: jsPDF } = await import("jspdf");
@@ -138,15 +148,15 @@ async function generatePDF(data: any): Promise<string> {
       item.rkdNumber,
       qty.toFixed(2),
       item.units,
-      rate.toFixed(2),
+      formatCurr(rate),
       `${gstPc}%`,
-      `₹${total.toFixed(2)}`,
+      formatCurr(total),
     ];
   });
 
   autoTable(doc, {
     startY: y,
-    head: [["S.No","Item Description","Request No","Quantity","Units","Rate","GST%","Total Amount\nRs"]],
+    head: [["S.No","Item Description","Request No","Quantity","Units","Rate","GST%","Total Amount Rs"]],
     body: tableBody,
     margin: { left: 10, right: 10 },
     theme: "grid",
@@ -155,11 +165,11 @@ async function generatePDF(data: any): Promise<string> {
     columnStyles: {
       0: { halign:"center", cellWidth: 10 },
       2: { halign:"center", cellWidth: 30 },
-      3: { halign:"center", cellWidth: 15 },
+      3: { halign:"center", cellWidth: 14 },
       4: { halign:"center", cellWidth: 12 },
-      5: { halign:"right",  cellWidth: 20 },
+      5: { halign:"right",  cellWidth: 18 },
       6: { halign:"center", cellWidth: 12 },
-      7: { halign:"right",  cellWidth: 25 },
+      7: { halign:"right",  cellWidth: 26 },
     },
   });
 
@@ -180,15 +190,15 @@ async function generatePDF(data: any): Promise<string> {
   doc.setFillColor(...LGRAY); doc.rect(10, finalY, W-20, 6, "F");
   doc.setDrawColor(180,180,180); doc.rect(10, finalY, W-20, 6);
   doc.setFontSize(8); doc.setFont("helvetica","bold");
-  doc.text(`₹${totals.subtotal.toFixed(2)}`, W-12, finalY+4, { align:"right" });
+  doc.text(formatCurr(totals.subtotal), W-12, finalY+4, { align:"right" });
 
   let ty = finalY + 12;
   doc.text("GST Amount", W-50, ty, { align:"right" });
-  doc.text(`₹${totals.gstAmt.toFixed(2)}`, W-12, ty, { align:"right" });
+  doc.text(formatCurr(totals.gstAmt), W-12, ty, { align:"right" });
   
   ty += 6;
   doc.text("Total Bill Value", W-50, ty, { align:"right" });
-  doc.text(`₹${grandTotal.toFixed(2)}`, W-12, ty, { align:"right" });
+  doc.text(formatCurr(grandTotal), W-12, ty, { align:"right" });
   
   // Red box around Total Bill Value row area
   doc.setDrawColor(220,50,50); doc.setLineWidth(0.4);
@@ -343,9 +353,11 @@ export default function PurchaseOrderPage() {
         <button className={styles.backBtn} onClick={() => router.back()}>
           <ArrowLeft size={18} /> Dashboard
         </button>
-        <div className={styles.topBarTitle}>
-          <FileText size={22} />
-          <span>Purchase Order Entry</span>
+        <div className={styles.topBarLogo}>
+          <RkdLogo width={35} height={40} />
+          <div className={styles.topBarTitle}>
+            <span>Purchase Order Entry</span>
+          </div>
         </div>
         <div className={styles.poNumBadge}>
           <span className={styles.poNumLabel}>PO Number</span>
@@ -465,9 +477,9 @@ export default function PurchaseOrderPage() {
                           <td className={styles.rkdCell}>{item.rkdNumber}</td>
                           <td className={styles.numCell}>{item.approvedQty}</td>
                           <td>{item.units}</td>
-                          <td className={styles.numCell}>₹{rate.toFixed(2)}</td>
+                          <td className={styles.numCell}>₹{formatCurr(rate)}</td>
                           <td className={styles.numCell}>{gst}%</td>
-                          <td className={styles.numCell}>₹{total.toFixed(2)}</td>
+                          <td className={styles.numCell}>₹{formatCurr(total)}</td>
                           <td>
                             <button
                               className={styles.removeBtn}
@@ -484,17 +496,17 @@ export default function PurchaseOrderPage() {
                   <tfoot>
                     <tr className={styles.totalRow}>
                       <td colSpan={7} style={{textAlign:"right",fontWeight:700}}>Subtotal:</td>
-                      <td className={styles.numCell}>₹{totals.subtotal.toFixed(2)}</td>
+                      <td className={styles.numCell}>₹{formatCurr(totals.subtotal)}</td>
                       <td></td>
                     </tr>
                     <tr className={styles.totalRow}>
                       <td colSpan={7} style={{textAlign:"right",fontWeight:700}}>GST Amount:</td>
-                      <td className={styles.numCell}>₹{totals.gst.toFixed(2)}</td>
+                      <td className={styles.numCell}>₹{formatCurr(totals.gst)}</td>
                       <td></td>
                     </tr>
                     <tr className={styles.grandRow}>
                       <td colSpan={7} style={{textAlign:"right",fontWeight:800}}>Total Bill Value:</td>
-                      <td className={styles.numCell}>₹{(totals.subtotal+totals.gst).toFixed(2)}</td>
+                      <td className={styles.numCell}>₹{formatCurr(totals.subtotal+totals.gst)}</td>
                       <td></td>
                     </tr>
                   </tfoot>

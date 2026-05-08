@@ -290,7 +290,7 @@ export async function POST(req: Request) {
     try {
       await sheets.spreadsheets.values.append({
         spreadsheetId: PO_RESPONSES_SHEET_ID,
-        range: "RESPONSES!A:AF",
+        range: "RESPONSES!A:A",
         valueInputOption: "USER_ENTERED",
         requestBody: { values: rowsToAppend },
       });
