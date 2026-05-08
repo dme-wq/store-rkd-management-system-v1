@@ -346,9 +346,10 @@
 .dataTable th:nth-child(12), .dataTable td:nth-child(12) { width: 110px; min-width: 110px; } /* Status */
 
 .tableScrollArea {
+  flex: 1;
+  min-height: 0;       /* Critical for flex children to shrink below content size */
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 650px;
   border-radius: 12px;
   background: white;
   position: relative;
