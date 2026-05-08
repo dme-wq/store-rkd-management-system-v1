@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Check, X, Package, User, Hash, DollarSign, Activity, Loader2 } from "lucide-react";
+import { Check, X, Package, User, Hash, IndianRupee, Activity, Loader2 } from "lucide-react";
 import styles from "./approve.module.css";
 
 export default function ApprovalPage() {
@@ -140,10 +140,10 @@ export default function ApprovalPage() {
             </div>
           </div>
           <div className={styles.infoRow}>
-            <div className={styles.iconBox}><DollarSign size={20} /></div>
+            <div className={styles.iconBox}><IndianRupee size={20} /></div>
             <div className={styles.infoText}>
               <label>Rate</label>
-              <span>₹{data["Price"] || "0"}</span>
+              <span>Rs. {data["Price"] || "0"}</span>
             </div>
           </div>
         </div>
