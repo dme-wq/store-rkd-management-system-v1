@@ -262,7 +262,7 @@ export async function POST(req: Request) {
 
     if (action === "APPROVE") {
       // 1. Update Q (Approval Require?) and R (Approved Quantity) in StoreDataEntry
-      // Note: Columns Q and R are indices 17 and 18 (1-based)
+      console.log(`Updating StoreDataEntry Row ${rowNumber} with status ${status}`);
       await sheets.spreadsheets.values.update({
         spreadsheetId: STORE_SHEET_ID,
         range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
@@ -272,62 +272,42 @@ export async function POST(req: Request) {
         }
       });
 
-      // 2. Append to approvalDataBase
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: STORE_SHEET_ID,
-        range: "approvalDataBase!A:F",
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [[formattedDate, rkdNumber, vendorName, rate, status, approvedQty]]
-        }
-      });
-
       // 3. If status is "Yes", send WhatsApp notifications
-      console.log(`Manual Approval status detected: ${status}`);
       if (status === "Yes") {
-        console.log("Triggering WhatsApp notification process...");
-        // Fetch recipients from whatsappApproval tab
+        console.log("Fetching recipients from whatsappApproval...");
         const whatsappRes = await sheets.spreadsheets.values.get({
           spreadsheetId: STORE_SHEET_ID,
           range: "whatsappApproval!A:B",
         });
         const recipients = whatsappRes.data.values || [];
-        // Skip header
         const contacts = recipients.slice(1).filter((r: any) => r[1]);
 
         if (contacts.length > 0) {
-          // Detect the base URL from the request headers
           const host = req.headers.get("host") || "rkd-store.vercel.app";
           const protocol = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
           const appUrl = `${protocol}://${host}`;
           
           const rawLink = `${appUrl}/approve/${rkdNumber}`;
           const shortLink = await shortenUrl(rawLink);
-          console.log(`Generated Link: ${shortLink}`);
-
+          
           const message = `🚨 *RKD STORE APPROVAL REQUIRED* 🚨\n\n*RKD No:* ${rkdNumber}\n*Item:* ${itemName}\n*Vendor:* ${vendorName}\n*Qty:* ${approvedQty}\n*Rate:* ${rate}\n\n👉 *Click here to Approve/Reject:* ${shortLink}\n\n_System generated notification_`;
 
           for (const contact of contacts) {
             let phone = String(contact[1]).replace(/\D/g, "");
-            // If it's a 10 digit Indian number, add 91
             if (phone.length === 10) phone = "91" + phone;
-            // If it starts with 0, remove it and add 91
             else if (phone.startsWith("0") && phone.length === 11) phone = "91" + phone.slice(1);
             
-            console.log(`Attempting to send WhatsApp to: ${contact[0]} at ${phone}`);
-            const waRes = await sendWhatsApp(phone, message);
-            console.log("Maytapi Final Result:", JSON.stringify(waRes));
+            await sendWhatsApp(phone, message);
           }
 
-          // Log to WhatsappData in the new spreadsheet
-          // Headers: Timestamp, RKD Store Number, Vendor Name, Item Name, Require Qty, Approved Qty, Rate, Approval Status
-          // Fetch Require Qty from current row
+          // Log to WhatsappData (Log Spreadsheet)
           const rowRes = await sheets.spreadsheets.values.get({
             spreadsheetId: STORE_SHEET_ID,
-            range: `StoreDataEntry!F${rowNumber}`, // Column F: Require Qty
+            range: `StoreDataEntry!F${rowNumber}`,
           });
           const requireQty = rowRes.data.values?.[0]?.[0] || "0";
 
+          console.log(`Logging to WhatsappData with Rate: ${rate}`);
           await sheets.spreadsheets.values.append({
             spreadsheetId: WHATSAPP_LOG_SHEET_ID,
             range: "WhatsappData!A:I",
