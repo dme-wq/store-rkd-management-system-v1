@@ -48,22 +48,33 @@ async function shortenUrl(url: string) {
 
 async function sendWhatsApp(to: string, message: string) {
   try {
-    const url = `https://api.maytapi.com/api/v1/product/${MAYTAPI_PRODUCT_ID}/device/${MAYTAPI_PHONE_ID}/sendMessage`;
-    console.log(`Sending WhatsApp to ${to}...`);
+    const url = `https://api.maytapi.com/api/v1/${MAYTAPI_PRODUCT_ID}/${MAYTAPI_PHONE_ID}/sendMessage`;
+    console.log(`[WhatsApp] Sending to ${to} via Maytapi...`);
+    
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-maytapi-key": MAYTAPI_TOKEN
       },
-      body: JSON.stringify({ to_number: to, type: "text", message })
+      body: JSON.stringify({ 
+        to_number: to, 
+        type: "text", 
+        message: message 
+      })
     });
+
     const result = await res.json();
-    console.log(`Maytapi Response for ${to}:`, JSON.stringify(result));
+    console.log(`[WhatsApp] Response for ${to}:`, JSON.stringify(result));
+    
+    if (result.success === false) {
+      console.error(`[WhatsApp] Failed to send to ${to}:`, result.message || "Unknown error");
+    }
+    
     return result;
   } catch (e) {
-    console.error("WhatsApp Send Error:", e);
-    return { success: false };
+    console.error("[WhatsApp] Network/API Error:", e);
+    return { success: false, error: String(e) };
   }
 }
 
@@ -354,6 +365,24 @@ export async function POST(req: Request) {
           range: `WhatsappData!H${logRowNum}`,
           valueInputOption: "USER_ENTERED",
           requestBody: { values: [[ownerStatus]] }
+        });
+      }
+
+      // NEW: If Approved, save to approvalDataBase
+      if (ownerStatus === "Yes") {
+        const fullRowRes = await sheets.spreadsheets.values.get({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
+        });
+        const rowData = fullRowRes.data.values?.[0] || [];
+        
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: STORE_SHEET_ID,
+          range: "approvalDataBase!A:T",
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [rowData]
+          }
         });
       }
     } else {

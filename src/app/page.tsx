@@ -916,6 +916,7 @@ export default function Home() {
                       <th>Machine ID</th>
                       <th>Stock in Store</th>
                       <th>Status</th>
+                      <th>Approval Status</th>
                       {(!statusFilter || statusFilter === "Requirement Open") && <th className={styles.actionCol}>Action</th>}
                     </tr>
                   </thead>
@@ -956,6 +957,14 @@ export default function Home() {
                             </span>
                           </td>
                           <td className={styles.colBold}>{row["Status"] || "-"}</td>
+                          <td>
+                            <span className={`${styles.pillId} ${
+                              row["Approval Require?"] === "Yes" ? styles.pillIdLowStock : 
+                              row["Approval Require?"] === "No" ? styles.stockDanger : ""
+                            }`}>
+                              {row["Approval Require?"] || "-"}
+                            </span>
+                          </td>
                           {(!statusFilter || statusFilter === "Requirement Open") && (
                             <td className={styles.actionCell}>
                               {row["Status"] === "Requirement Open" && (

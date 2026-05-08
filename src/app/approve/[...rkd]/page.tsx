@@ -133,13 +133,6 @@ export default function ApprovalPage() {
 
         <div className={styles.grid}>
           <div className={styles.infoRow}>
-            <div className={styles.iconBox}><Activity size={20} /></div>
-            <div className={styles.infoText}>
-              <label>Approved Qty</label>
-              <span>{data["Approved Quantity"]} {data["Units"]}</span>
-            </div>
-          </div>
-          <div className={styles.infoRow}>
             <div className={styles.iconBox}><IndianRupee size={20} /></div>
             <div className={styles.infoText}>
               <label>Rate</label>
