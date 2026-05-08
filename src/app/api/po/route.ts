@@ -217,7 +217,7 @@ export async function POST(req: Request) {
             fileId: fileRes.data.id!,
             requestBody: { role: "reader", type: "anyone" },
           });
-          pdfUrl = fileRes.data.webViewLink || "";
+          pdfUrl = `https://drive.google.com/file/d/${fileRes.data.id}/view?usp=drivesdk`;
           console.log(`[PO] PDF saved to Drive: ${pdfUrl}`);
         } catch (driveErr: any) {
           driveError = `Drive upload failed: ${driveErr.message}`;
