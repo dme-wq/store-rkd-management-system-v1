@@ -180,6 +180,117 @@ function Modal({ isOpen, onClose, title, message, data }: any) {
   );
 }
 
+// ── Modern Alert Modal (replaces all browser alert/confirm) ──────────────────
+type AlertType = "error" | "warning" | "success" | "info";
+function AlertModal({ isOpen, onClose, message, type = "error" }: { isOpen: boolean; onClose: () => void; message: string; type?: AlertType }) {
+  if (!isOpen) return null;
+  const cfg: Record<AlertType, { icon: string; color: string; bg: string; btnBg: string; title: string }> = {
+    error:   { icon: "❌", color: "#dc2626", bg: "#fee2e2", btnBg: "linear-gradient(135deg,#dc2626,#b91c1c)", title: "Error" },
+    warning: { icon: "⚠️", color: "#d97706", bg: "#fef3c7", btnBg: "linear-gradient(135deg,#d97706,#b45309)", title: "Warning" },
+    success: { icon: "✅", color: "#16a34a", bg: "#dcfce7", btnBg: "linear-gradient(135deg,#16a34a,#15803d)", title: "Success" },
+    info:    { icon: "ℹ️", color: "#2563eb", bg: "#dbeafe", btnBg: "linear-gradient(135deg,#2563eb,#1d4ed8)", title: "Notice" },
+  };
+  const c = cfg[type];
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+      <div style={{ background: 'white', borderRadius: '24px', padding: '32px 28px', maxWidth: '400px', width: '90%', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', textAlign: 'center', animation: 'fadeIn 0.2s ease' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '1.8rem' }}>{c.icon}</div>
+        <h3 style={{ fontFamily: "'Inter','Poppins',sans-serif", fontWeight: 800, fontSize: '1.2rem', color: '#0f172a', margin: '0 0 10px' }}>{c.title}</h3>
+        <p style={{ fontFamily: "'Inter','Poppins',sans-serif", color: '#475569', fontSize: '0.93rem', lineHeight: 1.6, margin: '0 0 24px' }}>{message}</p>
+        <button onClick={onClose} style={{ background: c.btnBg, color: 'white', border: 'none', borderRadius: '12px', padding: '12px 32px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', width: '100%', fontFamily: "'Inter','Poppins',sans-serif" }}>OK, Got it!</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Searchable RKD Select (for Debit Note / Reverse Entry) ───────────────────
+function SearchableRKDSelect({ data, value, onChange, placeholder = "Search RKD or Item..." }: any) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+
+  // Only closed requirements
+  const closedData = useMemo(() =>
+    data.filter((r: any) => String(r["Status"] || "").trim() === "Requirement Closed"),
+    [data]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return closedData.filter((r: any) =>
+      (r["Store RKD Number"] || "").toLowerCase().includes(q) ||
+      (r["Item Name"] || "").toLowerCase().includes(q) ||
+      (r["Person Filling Name"] || "").toLowerCase().includes(q)
+    );
+  }, [closedData, search]);
+
+  const selectedRow = value;
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {/* Trigger */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 14px', borderRadius: '12px', border: '2px solid #e2e8f0',
+          background: 'white', cursor: 'pointer', fontSize: '0.88rem', color: selectedRow ? '#0f172a' : '#94a3b8',
+          fontFamily: "'Inter','Poppins',sans-serif", transition: 'border-color 0.2s',
+          boxShadow: open ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+          borderColor: open ? '#3b82f6' : '#e2e8f0',
+        }}
+      >
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selectedRow ? `${selectedRow["Store RKD Number"]} — ${selectedRow["Item Name"]}` : placeholder}
+        </span>
+        <span style={{ marginLeft: 8, color: '#94a3b8', fontSize: '0.75rem', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
+      </div>
+
+      {/* Dropdown */}
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+          background: 'white', borderRadius: '14px', border: '2px solid #e2e8f0',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.15)', zIndex: 9999, overflow: 'hidden',
+        }}>
+          {/* Search */}
+          <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Search size={15} color="#94a3b8" />
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Type to search..."
+              style={{ border: 'none', outline: 'none', fontSize: '0.85rem', width: '100%', color: '#0f172a', background: 'transparent', fontFamily: "'Inter','Poppins',sans-serif" }}
+            />
+          </div>
+          {/* List */}
+          <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '14px 16px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>No closed requirements found</div>
+            ) : filtered.map((r: any) => (
+              <div
+                key={r._id}
+                onClick={() => { onChange(r); setOpen(false); setSearch(""); }}
+                style={{
+                  padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #f8fafc',
+                  background: selectedRow?._id === r._id ? '#eff6ff' : 'white',
+                  transition: 'background 0.1s',
+                  fontFamily: "'Inter','Poppins',sans-serif",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                onMouseLeave={e => (e.currentTarget.style.background = selectedRow?._id === r._id ? '#eff6ff' : 'white')}
+              >
+                <div style={{ fontWeight: 700, fontSize: '0.83rem', color: '#1e293b' }}>{r["Store RKD Number"]}</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 2 }}>{r["Item Name"]} · {r["Person Filling Name"]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Manual Issue Modal Component
 function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }: any) {
   const [qty, setQty] = useState("");
@@ -372,6 +483,10 @@ export default function Home() {
   const currentYear = new Date().getFullYear().toString();
   const [updatingRowId, setUpdatingRowId] = useState<number | null>(null);
 
+  // Alert Modal State (replaces browser alert())
+  const [alertModal, setAlertModal] = useState<{ open: boolean; msg: string; type: AlertType }>({ open: false, msg: "", type: "error" });
+  const showAlert = (msg: string, type: AlertType = "error") => setAlertModal({ open: true, msg, type });
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
@@ -396,8 +511,8 @@ export default function Home() {
   const handleColumnUpdate = async (rkdNumber: string, column: "S" | "T", qty: string, requireQty: string) => {
     const qtyNum = parseFloat(qty);
     const reqNum = parseFloat(requireQty);
-    if (isNaN(qtyNum) || qtyNum <= 0) { alert("Please enter a valid quantity."); return; }
-    if (qtyNum > reqNum) { alert(`Quantity cannot exceed Required Qty (${requireQty}).`); return; }
+    if (isNaN(qtyNum) || qtyNum <= 0) { showAlert("Please enter a valid quantity.", "warning"); return; }
+    if (qtyNum > reqNum) { showAlert(`Quantity cannot exceed Required Qty (${requireQty}).`, "warning"); return; }
     setColumnUpdating(true);
     try {
       const res = await fetch("/api/sheets", {
@@ -417,7 +532,7 @@ export default function Home() {
       setTimeout(() => setIsModalOpen(false), 2500);
       fetchData(true);
     } catch (err: any) {
-      alert("Update Failed: " + err.message);
+      showAlert("Update Failed: " + err.message, "error");
     } finally {
       setColumnUpdating(false);
     }
@@ -452,7 +567,7 @@ export default function Home() {
     const requireQty = row["Require Qty"];
     
     if (!rkdNumber) {
-      alert("Error: RKD Number not found for this row.");
+      showAlert("Error: RKD Number not found for this row.", "error");
       return;
     }
 
@@ -500,7 +615,7 @@ export default function Home() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
     } catch (err: any) {
-      alert("Failed to update: " + err.message);
+      showAlert("Failed to update: " + err.message, "error");
       setData(originalData); // Rollback
     } finally {
       setUpdatingRowId(null);
@@ -570,7 +685,7 @@ export default function Home() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
     } catch (err: any) {
-      alert("Failed to update: " + err.message);
+      showAlert("Failed to update: " + err.message, "error");
       setData(originalData);
     } finally {
       setUpdatingRowId(null);
@@ -615,7 +730,7 @@ export default function Home() {
       setIsModalOpen(true);
       setTimeout(() => setIsModalOpen(false), 3000);
     } catch (err: any) {
-      alert("Approval Failed: " + err.message);
+      showAlert("Approval Failed: " + err.message, "error");
       setData(originalData);
     } finally {
       setUpdatingRowId(null);
@@ -661,7 +776,7 @@ export default function Home() {
       setIsModalOpen(true);
       setTimeout(() => setIsModalOpen(false), 3000);
     } catch (err: any) {
-      alert("Manual Approval Failed: " + err.message);
+      showAlert("Manual Approval Failed: " + err.message, "error");
       setData(originalData);
     } finally {
       setUpdatingRowId(null);
@@ -1161,22 +1276,13 @@ export default function Home() {
             <p className={styles.modalMessage}>Select RKD Number and enter Debit Note Qty <span style={{color:'#dc2626',fontWeight:700}}>(≤ Required Qty)</span></p>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>🔖 Select RKD Store Number</label>
-              <select
-                className={styles.formSelect}
-                value={dnSelectedRKD ? JSON.stringify(dnSelectedRKD) : ""}
-                onChange={e => {
-                  if (!e.target.value) { setDnSelectedRKD(null); setDnQty(""); return; }
-                  const row = JSON.parse(e.target.value);
-                  setDnSelectedRKD(row);
-                  setDnQty(row["Debit Note Qty"] || "");
-                }}
-              >
-                <option value="">— Select RKD Number —</option>
-                {data.map((r: any) => (
-                  <option key={r._id} value={JSON.stringify(r)}>{r["Store RKD Number"]} — {r["Item Name"]}</option>
-                ))}
-              </select>
+              <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{color:'#dc2626',fontSize:'0.75rem'}}>(Requirement Closed only)</span></label>
+              <SearchableRKDSelect
+                data={data}
+                value={dnSelectedRKD}
+                onChange={(row: any) => { setDnSelectedRKD(row); setDnQty(row["Debit Note Qty"] || ""); }}
+                placeholder="Search RKD Number or Item..."
+              />
             </div>
 
             {dnSelectedRKD && (
@@ -1226,22 +1332,13 @@ export default function Home() {
             <p className={styles.modalMessage}>Select RKD Number and enter Reverse Entry Qty <span style={{color:'#7c3aed',fontWeight:700}}>(≤ Required Qty)</span></p>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>🔖 Select RKD Store Number</label>
-              <select
-                className={styles.formSelect}
-                value={reSelectedRKD ? JSON.stringify(reSelectedRKD) : ""}
-                onChange={e => {
-                  if (!e.target.value) { setReSelectedRKD(null); setReQty(""); return; }
-                  const row = JSON.parse(e.target.value);
-                  setReSelectedRKD(row);
-                  setReQty(row["Reverse Entry Qty"] || "");
-                }}
-              >
-                <option value="">— Select RKD Number —</option>
-                {data.map((r: any) => (
-                  <option key={r._id} value={JSON.stringify(r)}>{r["Store RKD Number"]} — {r["Item Name"]}</option>
-                ))}
-              </select>
+              <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{color:'#7c3aed',fontSize:'0.75rem'}}>(Requirement Closed only)</span></label>
+              <SearchableRKDSelect
+                data={data}
+                value={reSelectedRKD}
+                onChange={(row: any) => { setReSelectedRKD(row); setReQty(row["Reverse Entry Qty"] || ""); }}
+                placeholder="Search RKD Number or Item..."
+              />
             </div>
 
             {reSelectedRKD && (
@@ -1277,6 +1374,14 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Modern Alert Modal — replaces all browser alert() */}
+      <AlertModal
+        isOpen={alertModal.open}
+        onClose={() => setAlertModal(a => ({ ...a, open: false }))}
+        message={alertModal.msg}
+        type={alertModal.type}
+      />
     </div>
   );
 }
