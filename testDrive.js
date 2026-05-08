@@ -30,8 +30,16 @@ async function run() {
       },
       media: { mimeType: "application/pdf", body: s },
       fields: "id",
+      supportsAllDrives: true,
     });
-    console.log("SUCCESS:", fileRes.data);
+    console.log("SUCCESS file creation:", fileRes.data);
+    
+    await drive.permissions.create({
+      fileId: fileRes.data.id,
+      requestBody: { role: "reader", type: "anyone" },
+      supportsAllDrives: true,
+    });
+    console.log("SUCCESS permission creation!");
   } catch (err) {
     console.error("ERROR:", err.message);
   }

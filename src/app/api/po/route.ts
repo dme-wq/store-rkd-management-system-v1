@@ -222,7 +222,7 @@ export async function POST(req: Request) {
           pdfUrl = `https://drive.google.com/file/d/${fileRes.data.id}/view?usp=drivesdk`;
           console.log(`[PO] PDF saved to Drive: ${pdfUrl}`);
         } catch (driveErr: any) {
-          driveError = `Drive upload failed: ${driveErr.message}`;
+          driveError = `Drive upload failed: ${driveErr.message} (Please share folder with ${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL})`;
           console.error("[PO] Drive upload failed:", driveErr.message);
           // Continue — PDF download in browser still works
         }
