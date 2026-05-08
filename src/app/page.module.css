@@ -1179,3 +1179,8 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);
 }
+
+@keyframes poBlink {
+  0%,100% { box-shadow: 0 4px 15px rgba(234,88,12,0.4); transform: scale(1); }
+  50%     { box-shadow: 0 6px 28px rgba(234,88,12,0.75), 0 0 20px rgba(251,146,60,0.4); transform: scale(1.03); }
+}

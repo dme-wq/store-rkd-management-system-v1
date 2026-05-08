@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck } from "lucide-react";
+import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText } from "lucide-react";
 import Select from "react-select";
 import { subDays, subMonths, isWithinInterval, startOfDay, endOfDay, isSameDay, isSameMonth } from "date-fns";
 
@@ -17,7 +18,7 @@ const monthMap: Record<string, number> = {
 
 function parseCustomDate(dateStr: string): Date {
   if (!dateStr) return new Date(0);
-  
+
   // Try native parsing first
   let d = new Date(dateStr);
   if (!isNaN(d.getTime())) return d;
@@ -33,13 +34,13 @@ function parseCustomDate(dateStr: string): Date {
       year = parseInt(parts[yearIdx], 10);
       // Remove year from parts to find day/month
       const otherParts = parts.filter((_, i) => i !== yearIdx);
-      
+
       // 2. Find Month (either name or number)
       for (let i = 0; i < otherParts.length; i++) {
         const p = otherParts[i].toLowerCase();
         if (monthMap[p] !== undefined) {
           month = monthMap[p];
-          day = parseInt(otherParts[1-i], 10);
+          day = parseInt(otherParts[1 - i], 10);
           break;
         }
       }
@@ -58,7 +59,7 @@ function parseCustomDate(dateStr: string): Date {
         }
       }
     }
-    
+
     if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
       return new Date(year, month, day);
     }
@@ -154,7 +155,7 @@ function Modal({ isOpen, onClose, title, message, data }: any) {
         </div>
         <h3 className={styles.modalTitle}>{title}</h3>
         <p className={styles.modalMessage}>{message}</p>
-        
+
         {data && (
           <div className={styles.modalInfoGrid}>
             <div className={styles.modalInfoItem}>
@@ -185,10 +186,10 @@ type AlertType = "error" | "warning" | "success" | "info";
 function AlertModal({ isOpen, onClose, message, type = "error" }: { isOpen: boolean; onClose: () => void; message: string; type?: AlertType }) {
   if (!isOpen) return null;
   const cfg: Record<AlertType, { icon: string; color: string; bg: string; btnBg: string; title: string }> = {
-    error:   { icon: "❌", color: "#dc2626", bg: "#fee2e2", btnBg: "linear-gradient(135deg,#dc2626,#b91c1c)", title: "Error" },
+    error: { icon: "❌", color: "#dc2626", bg: "#fee2e2", btnBg: "linear-gradient(135deg,#dc2626,#b91c1c)", title: "Error" },
     warning: { icon: "⚠️", color: "#d97706", bg: "#fef3c7", btnBg: "linear-gradient(135deg,#d97706,#b45309)", title: "Warning" },
     success: { icon: "✅", color: "#16a34a", bg: "#dcfce7", btnBg: "linear-gradient(135deg,#16a34a,#15803d)", title: "Success" },
-    info:    { icon: "ℹ️", color: "#2563eb", bg: "#dbeafe", btnBg: "linear-gradient(135deg,#2563eb,#1d4ed8)", title: "Notice" },
+    info: { icon: "ℹ️", color: "#2563eb", bg: "#dbeafe", btnBg: "linear-gradient(135deg,#2563eb,#1d4ed8)", title: "Notice" },
   };
   const c = cfg[type];
   return (
@@ -317,7 +318,7 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
         </div>
         <h3 className={styles.modalTitle}>Manual Issue 📦</h3>
         <p className={styles.modalMessage}>Only <strong>Issue Qty</strong> and <strong>Status</strong> are editable.</p>
-        
+
         <div className={styles.formInfoBox}>
           <div className={styles.modalInfoItem}><span className={styles.modalLabel}>RKD Number:</span> <span className={styles.modalValue}>{row["Store RKD Number"]}</span></div>
           <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span> <span className={styles.modalValue}>{row["Person Filling Name"]}</span></div>
@@ -328,7 +329,7 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
             <span className={styles.modalLabel}>Required:</span> <span className={styles.modalValue}>{row["Require Qty"]} {row["Units"]}</span>
           </div>
           <div className={styles.modalInfoItem}>
-            <span className={styles.modalLabel}>Current Stock:</span> 
+            <span className={styles.modalLabel}>Current Stock:</span>
             <span className={styles.modalValue} style={{ color: Number(stockMap[(row["Item Name"] || "").trim().toLowerCase()]) < Number(row["Require Qty"]) ? '#ef4444' : '#166534' }}>
               {stockMap[(row["Item Name"] || "").trim().toLowerCase()] || "0"}
             </span>
@@ -337,21 +338,21 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
 
         {/* EDITABLE */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>✏️ Issue Quantity <span style={{color:'#2563eb',fontSize:'0.75rem'}}>(Editable)</span></label>
-          <input 
-            type="number" 
-            className={styles.formInput} 
-            value={qty} 
+          <label className={styles.formLabel}>✏️ Issue Quantity <span style={{ color: '#2563eb', fontSize: '0.75rem' }}>(Editable)</span></label>
+          <input
+            type="number"
+            className={styles.formInput}
+            value={qty}
             onChange={e => setQty(e.target.value)}
             placeholder="Enter quantity"
           />
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>✏️ Status <span style={{color:'#2563eb',fontSize:'0.75rem'}}>(Editable)</span></label>
-          <select 
-            className={styles.formSelect} 
-            value={status} 
+          <label className={styles.formLabel}>✏️ Status <span style={{ color: '#2563eb', fontSize: '0.75rem' }}>(Editable)</span></label>
+          <select
+            className={styles.formSelect}
+            value={status}
             onChange={e => setStatus(e.target.value)}
           >
             <option value="Requirement Open">Requirement Open</option>
@@ -360,8 +361,8 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
           </select>
         </div>
 
-        <button 
-          className={styles.submitBtn} 
+        <button
+          className={styles.submitBtn}
           onClick={() => onSubmit(qty, status)}
           disabled={updating}
         >
@@ -404,7 +405,7 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
         </div>
         <h3 className={styles.modalTitle}>Manual Approval ✍️</h3>
         <p className={styles.modalMessage}>Only <strong>Approved Qty</strong> and <strong>Approval Require?</strong> are editable.</p>
-        
+
         <div className={styles.formInfoBox}>
           <div className={styles.modalInfoItem}><span className={styles.modalLabel}>RKD:</span> <span className={styles.modalValue}>{row["Store RKD Number"]}</span></div>
           <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span> <span className={styles.modalValue}>{row["Item Name"]}</span></div>
@@ -413,32 +414,32 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
 
         {/* READ-ONLY */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel} style={{ color: '#9ca3af' }}>🔒 Vendor Name <span style={{fontSize:'0.75rem'}}>(Auto-filled)</span></label>
+          <label className={styles.formLabel} style={{ color: '#9ca3af' }}>🔒 Vendor Name <span style={{ fontSize: '0.75rem' }}>(Auto-filled)</span></label>
           <input type="text" className={styles.formInput} value={vendor} readOnly style={readonlyStyle} />
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.formLabel} style={{ color: '#9ca3af' }}>🔒 Rate <span style={{fontSize:'0.75rem'}}>(Auto-filled)</span></label>
+          <label className={styles.formLabel} style={{ color: '#9ca3af' }}>🔒 Rate <span style={{ fontSize: '0.75rem' }}>(Auto-filled)</span></label>
           <input type="text" className={styles.formInput} value={rate} readOnly style={readonlyStyle} />
         </div>
 
         {/* EDITABLE */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>✏️ Approved Quantity <span style={{color:'#d97706',fontSize:'0.75rem'}}>(Editable)</span></label>
-          <input 
-            type="number" 
-            className={styles.formInput} 
-            value={approvedQty} 
+          <label className={styles.formLabel}>✏️ Approved Quantity <span style={{ color: '#d97706', fontSize: '0.75rem' }}>(Editable)</span></label>
+          <input
+            type="number"
+            className={styles.formInput}
+            value={approvedQty}
             onChange={e => setApprovedQty(e.target.value)}
             placeholder="Enter approved quantity"
           />
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>✏️ Approval Require? <span style={{color:'#d97706',fontSize:'0.75rem'}}>(Editable)</span></label>
-          <select 
-            className={styles.formSelect} 
-            value={status} 
+          <label className={styles.formLabel}>✏️ Approval Require? <span style={{ color: '#d97706', fontSize: '0.75rem' }}>(Editable)</span></label>
+          <select
+            className={styles.formSelect}
+            value={status}
             onChange={e => setStatus(e.target.value)}
           >
             <option value="No">No</option>
@@ -446,8 +447,8 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
           </select>
         </div>
 
-        <button 
-          className={styles.submitBtn} 
+        <button
+          className={styles.submitBtn}
           style={{ background: '#d97706' }}
           onClick={() => onSubmit({ vendor, rate, status, approvedQty })}
           disabled={updating}
@@ -460,6 +461,7 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
 }
 
 export default function Home() {
+  const router = useRouter();
   const [data, setData] = useState<any[]>([]);
   const [stockMap, setStockMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -565,7 +567,7 @@ export default function Home() {
     const rowId = row._id;
     const rkdNumber = row["Store RKD Number"];
     const requireQty = row["Require Qty"];
-    
+
     if (!rkdNumber) {
       showAlert("Error: RKD Number not found for this row.", "error");
       return;
@@ -624,10 +626,10 @@ export default function Home() {
 
   const handleManualSubmit = async (issueQty: string, status: string) => {
     if (!manualRow) return;
-    
+
     const rowId = manualRow._id;
     const rkdNumber = manualRow["Store RKD Number"];
-    
+
     // Stock Check
     const itemKey = (manualRow["Item Name"] || "").trim().toLowerCase();
     const currentStockStr = stockMap[itemKey];
@@ -745,7 +747,7 @@ export default function Home() {
     setUpdatingRowId(rowId);
     setIsManualApprovalModalOpen(false);
     const originalData = [...data];
-    
+
     // Optimistic UI Update
     const newData = data.map(r => {
       if (r._id === rowId) return { ...r, "Approval Require?": formData.status, "Approved Quantity": formData.approvedQty };
@@ -856,7 +858,7 @@ export default function Home() {
   const filteredData = useMemo(() => {
     let result = !selMachineID || selMachineID.value === "__all__" ? afterMachine
       : afterMachine.filter(r => r["Machine ID"] === selMachineID.value);
-    
+
     if (statusFilter) {
       result = result.filter(r => String(r["Status"] || "").trim() === statusFilter);
     }
@@ -878,22 +880,22 @@ export default function Home() {
   // Scorecard Calculations (based on all 30 days data)
   const scorecards = useMemo(() => {
     const today = new Date();
-    
+
     let tIndent = 0, tIssue = 0, mIndent = 0, mIssue = 0;
     let sOpen = 0, sClosed = 0, sCancelled = 0;
-    
+
     data.forEach(row => {
       const d = parseCustomDate(row["Timestamp"]);
       const status = String(row["Status"] || "").trim();
       const isClosed = status === "Requirement Closed";
-      
+
       // All-time counts for buttons
       if (status === "Requirement Open") sOpen += 1;
       else if (isClosed) sClosed += 1;
       else if (status === "Requirement Cancelled") sCancelled += 1;
 
       if (d.getTime() === 0) return;
-      
+
       if (isSameDay(d, today)) {
         tIndent += 1;
         if (isClosed) tIssue += 1;
@@ -986,6 +988,24 @@ export default function Home() {
                 >
                   <span style={{ fontSize: '1rem' }}>↩️</span> Reverse Entry
                 </button>
+                <button
+                  onClick={() => router.push("/po")}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: 'linear-gradient(135deg, #ea580c, #c2410c)',
+                    color: 'white', border: 'none', borderRadius: '12px',
+                    padding: '9px 18px', fontWeight: 700, fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(234,88,12,0.4)',
+                    transition: 'all 0.2s ease', letterSpacing: '0.3px',
+                    animation: 'poBlink 2s ease-in-out infinite',
+                    position: 'relative', overflow: 'hidden',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
+                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  <FileText size={16} /> Purchase Order
+                </button>
               </div>
 
               <div className={styles.appMetricsInline}>
@@ -1008,21 +1028,21 @@ export default function Home() {
               </div>
 
               <div className={styles.quickStatusFilters}>
-                <button 
+                <button
                   className={`${styles.statusBtn} ${styles.btnOpen} ${statusFilter === "Requirement Open" ? styles.btnActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Open" ? null : "Requirement Open")}
                 >
                   <span className={styles.statusBadge}>{scorecards.statusCounts.open}</span>
                   Requirement Open
                 </button>
-                <button 
+                <button
                   className={`${styles.statusBtn} ${styles.btnClosed} ${statusFilter === "Requirement Closed" ? styles.btnActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Closed" ? null : "Requirement Closed")}
                 >
                   <span className={styles.statusBadge}>{scorecards.statusCounts.closed}</span>
                   Requirement Closed
                 </button>
-                <button 
+                <button
                   className={`${styles.statusBtn} ${styles.btnCancelled} ${statusFilter === "Requirement Cancelled" ? styles.btnActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Cancelled" ? null : "Requirement Cancelled")}
                 >
@@ -1116,9 +1136,9 @@ export default function Home() {
                       else if (status === "Requirement Cancelled") statusClass = styles.rowCancelled;
 
                       return (
-                        <tr 
-                          key={idx} 
-                          style={{ animationDelay: idx < 50 ? `${(idx % 50) * 0.02}s` : '0s' }} 
+                        <tr
+                          key={idx}
+                          style={{ animationDelay: idx < 50 ? `${(idx % 50) * 0.02}s` : '0s' }}
                           className={`${idx < 50 ? styles.tableRowFadeIn : ""} ${statusClass}`}
                         >
                           <td className={statusClass ? styles.colWhite : styles.colMuted}>{row["Timestamp"] || "-"}</td>
@@ -1138,10 +1158,9 @@ export default function Home() {
                           </td>
                           <td className={styles.colBold}>{row["Status"] || "-"}</td>
                           <td>
-                            <span className={`${styles.pillId} ${
-                              row["Approval Require?"] === "Yes" ? styles.pillIdLowStock : 
-                              row["Approval Require?"] === "No" ? styles.stockDanger : ""
-                            }`}>
+                            <span className={`${styles.pillId} ${row["Approval Require?"] === "Yes" ? styles.pillIdLowStock :
+                                row["Approval Require?"] === "No" ? styles.stockDanger : ""
+                              }`}>
                               {row["Approval Require?"] || "-"}
                             </span>
                           </td>
@@ -1152,7 +1171,7 @@ export default function Home() {
                                   <div className={styles.actionGroup}>
                                     <span className={styles.groupLabel}>Issue</span>
                                     <div className={styles.groupButtons}>
-                                      <button 
+                                      <button
                                         className={styles.directIssueBtn}
                                         onClick={() => handleDirectIssue(row)}
                                         disabled={updatingRowId === row._id}
@@ -1164,7 +1183,7 @@ export default function Home() {
                                           <Zap size={14} fill="currentColor" />
                                         )}
                                       </button>
-                                      <button 
+                                      <button
                                         className={styles.manualIssueBtn}
                                         onClick={() => { setManualRow(row); setIsManualModalOpen(true); }}
                                         disabled={updatingRowId === row._id}
@@ -1178,7 +1197,7 @@ export default function Home() {
                                   <div className={styles.actionGroup}>
                                     <span className={styles.groupLabel}>Approval</span>
                                     <div className={styles.groupButtons}>
-                                      <button 
+                                      <button
                                         className={styles.instantApprovalBtn}
                                         onClick={() => handleInstantApproval(row)}
                                         disabled={updatingRowId === row._id}
@@ -1190,7 +1209,7 @@ export default function Home() {
                                           <CheckCircle size={14} />
                                         )}
                                       </button>
-                                      <button 
+                                      <button
                                         className={styles.manualApprovalBtn}
                                         onClick={() => {
                                           setManualRow(row);
@@ -1235,8 +1254,8 @@ export default function Home() {
       </div>
 
       {/* Modern Modal */}
-      <Modal 
-        isOpen={isModalOpen} 
+      <Modal
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={modalTitle}
         message={modalMsg}
@@ -1254,7 +1273,7 @@ export default function Home() {
       />
 
       {/* Manual Approval Modal */}
-      <ManualApprovalModal 
+      <ManualApprovalModal
         isOpen={isManualApprovalModalOpen}
         onClose={() => setIsManualApprovalModalOpen(false)}
         row={manualRow}
@@ -1273,10 +1292,10 @@ export default function Home() {
               </div>
             </div>
             <h3 className={styles.modalTitle}>Debit Note Entry</h3>
-            <p className={styles.modalMessage}>Select RKD Number and enter Debit Note Qty <span style={{color:'#dc2626',fontWeight:700}}>(≤ Required Qty)</span></p>
+            <p className={styles.modalMessage}>Select RKD Number and enter Debit Note Qty <span style={{ color: '#dc2626', fontWeight: 700 }}>(≤ Required Qty)</span></p>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{color:'#dc2626',fontSize:'0.75rem'}}>(Requirement Closed only)</span></label>
+              <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{ color: '#dc2626', fontSize: '0.75rem' }}>(Requirement Closed only)</span></label>
               <SearchableRKDSelect
                 data={data}
                 value={dnSelectedRKD}
@@ -1289,13 +1308,13 @@ export default function Home() {
               <div className={styles.formInfoBox} style={{ margin: '0 0 16px 0' }}>
                 <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span><span className={styles.modalValue}>{dnSelectedRKD["Item Name"]}</span></div>
                 <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span><span className={styles.modalValue}>{dnSelectedRKD["Person Filling Name"]}</span></div>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{color:'#dc2626',fontWeight:700}}>{dnSelectedRKD["Require Qty"]} {dnSelectedRKD["Units"]}</span></div>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{ color: '#dc2626', fontWeight: 700 }}>{dnSelectedRKD["Require Qty"]} {dnSelectedRKD["Units"]}</span></div>
                 <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Issue Qty:</span><span className={styles.modalValue}>{dnSelectedRKD["Issue Qty"] || "—"}</span></div>
               </div>
             )}
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>✏️ Debit Note Qty <span style={{color:'#dc2626',fontSize:'0.75rem'}}>(Max: {dnSelectedRKD?.["Require Qty"] || "—"})</span></label>
+              <label className={styles.formLabel}>✏️ Debit Note Qty <span style={{ color: '#dc2626', fontSize: '0.75rem' }}>(Max: {dnSelectedRKD?.["Require Qty"] || "—"})</span></label>
               <input
                 type="number"
                 className={styles.formInput}
@@ -1329,10 +1348,10 @@ export default function Home() {
               </div>
             </div>
             <h3 className={styles.modalTitle}>Reverse Entry</h3>
-            <p className={styles.modalMessage}>Select RKD Number and enter Reverse Entry Qty <span style={{color:'#7c3aed',fontWeight:700}}>(≤ Required Qty)</span></p>
+            <p className={styles.modalMessage}>Select RKD Number and enter Reverse Entry Qty <span style={{ color: '#7c3aed', fontWeight: 700 }}>(≤ Required Qty)</span></p>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{color:'#7c3aed',fontSize:'0.75rem'}}>(Requirement Closed only)</span></label>
+              <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{ color: '#7c3aed', fontSize: '0.75rem' }}>(Requirement Closed only)</span></label>
               <SearchableRKDSelect
                 data={data}
                 value={reSelectedRKD}
@@ -1345,13 +1364,13 @@ export default function Home() {
               <div className={styles.formInfoBox} style={{ margin: '0 0 16px 0' }}>
                 <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span><span className={styles.modalValue}>{reSelectedRKD["Item Name"]}</span></div>
                 <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span><span className={styles.modalValue}>{reSelectedRKD["Person Filling Name"]}</span></div>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{color:'#7c3aed',fontWeight:700}}>{reSelectedRKD["Require Qty"]} {reSelectedRKD["Units"]}</span></div>
+                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{ color: '#7c3aed', fontWeight: 700 }}>{reSelectedRKD["Require Qty"]} {reSelectedRKD["Units"]}</span></div>
                 <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Issue Qty:</span><span className={styles.modalValue}>{reSelectedRKD["Issue Qty"] || "—"}</span></div>
               </div>
             )}
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>✏️ Reverse Entry Qty <span style={{color:'#7c3aed',fontSize:'0.75rem'}}>(Max: {reSelectedRKD?.["Require Qty"] || "—"})</span></label>
+              <label className={styles.formLabel}>✏️ Reverse Entry Qty <span style={{ color: '#7c3aed', fontSize: '0.75rem' }}>(Max: {reSelectedRKD?.["Require Qty"] || "—"})</span></label>
               <input
                 type="number"
                 className={styles.formInput}
