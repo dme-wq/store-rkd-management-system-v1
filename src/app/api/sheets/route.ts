@@ -35,21 +35,21 @@ const MAYTAPI_PHONE_ID = process.env.MAYTAPI_PHONE_ID!;
 async function shortenUrl(url: string) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
+    const timeout = setTimeout(() => controller.abort(), 1500); // Short timeout
     const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`, { signal: controller.signal });
     clearTimeout(timeout);
     if (res.ok) return await res.text();
     return url;
   } catch (e) {
-    console.log("TinyURL Failed or Timed Out, using original link.");
     return url;
   }
 }
 
 async function sendWhatsApp(to: string, message: string) {
   try {
+    // Standard Maytapi V1 URL
     const url = `https://api.maytapi.com/api/v1/${MAYTAPI_PRODUCT_ID}/${MAYTAPI_PHONE_ID}/sendMessage`;
-    console.log(`[WhatsApp] Sending to ${to} via Maytapi...`);
+    console.log(`[WhatsApp] Sending to ${to}... Payload:`, { to_number: to, message: message.substring(0, 20) + "..." });
     
     const res = await fetch(url, {
       method: "POST",
@@ -65,15 +65,10 @@ async function sendWhatsApp(to: string, message: string) {
     });
 
     const result = await res.json();
-    console.log(`[WhatsApp] Response for ${to}:`, JSON.stringify(result));
-    
-    if (result.success === false) {
-      console.error(`[WhatsApp] Failed to send to ${to}:`, result.message || "Unknown error");
-    }
-    
+    console.log(`[WhatsApp] API Response:`, JSON.stringify(result));
     return result;
   } catch (e) {
-    console.error("[WhatsApp] Network/API Error:", e);
+    console.error("[WhatsApp] API Error:", e);
     return { success: false, error: String(e) };
   }
 }
@@ -260,6 +255,22 @@ export async function POST(req: Request) {
     hours = hours % 12 || 12;
     const formattedDate = `${day} ${month} ${year} ${hours}:${minutes} ${ampm}`;
 
+    let finalRate = rate;
+    let finalItemName = itemName;
+    let finalVendorName = vendorName;
+
+    // If Rate or Item Name is missing, fetch from sheet directly as fallback
+    if (!finalRate || !finalItemName || finalRate === "0") {
+      const rowDataRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
+      });
+      const rowValues = rowDataRes.data.values?.[0] || [];
+      if (!finalItemName) finalItemName = rowValues[4]; // Column E
+      if (!finalVendorName) finalVendorName = rowValues[13]; // Column N
+      if (!finalRate || finalRate === "0") finalRate = rowValues[14]; // Column O
+    }
+
     if (action === "APPROVE") {
       // 1. Update Q (Approval Require?) and R (Approved Quantity) in StoreDataEntry
       console.log(`Updating StoreDataEntry Row ${rowNumber} with status ${status}`);
@@ -290,7 +301,7 @@ export async function POST(req: Request) {
           const rawLink = `${appUrl}/approve/${rkdNumber}`;
           const shortLink = await shortenUrl(rawLink);
           
-          const message = `🚨 *RKD STORE APPROVAL REQUIRED* 🚨\n\n*RKD No:* ${rkdNumber}\n*Item:* ${itemName}\n*Vendor:* ${vendorName}\n*Qty:* ${approvedQty}\n*Rate:* ${rate}\n\n👉 *Click here to Approve/Reject:* ${shortLink}\n\n_System generated notification_`;
+          const message = `🚨 *RKD STORE APPROVAL REQUIRED* 🚨\n\n*RKD No:* ${rkdNumber}\n*Item:* ${finalItemName}\n*Vendor:* ${finalVendorName}\n*Qty:* ${approvedQty}\n*Rate:* ${finalRate}\n\n👉 *Click here to Approve/Reject:* ${shortLink}\n\n_System generated notification_`;
 
           for (const contact of contacts) {
             let phone = String(contact[1]).replace(/\D/g, "");
@@ -307,13 +318,13 @@ export async function POST(req: Request) {
           });
           const requireQty = rowRes.data.values?.[0]?.[0] || "0";
 
-          console.log(`Logging to WhatsappData with Rate: ${rate}`);
+          console.log(`Logging to WhatsappData with Rate: ${finalRate}`);
           await sheets.spreadsheets.values.append({
             spreadsheetId: WHATSAPP_LOG_SHEET_ID,
             range: "WhatsappData!A:I",
             valueInputOption: "USER_ENTERED",
             requestBody: {
-              values: [[formattedDate, rkdNumber, vendorName, itemName, requireQty, approvedQty, rate, "Pending Owner Approval", shortLink]]
+              values: [[formattedDate, rkdNumber, finalVendorName, finalItemName, requireQty, approvedQty, finalRate, "Pending Owner Approval", shortLink]]
             }
           });
         }
