@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Check, X, Package, User, Hash, IndianRupee, Activity, Loader2 } from "lucide-react";
 import styles from "./approve.module.css";
 
 export default function ApprovalPage() {
   const params = useParams();
-  // Join catch-all segments back into a single string (e.g. ["RKD","2024","123"] -> "RKD/2024/123")
+  const searchParams = useSearchParams();
+  
+  // Get values from URL query string
+  const qty = searchParams.get("qty") || "0";
+  const rate = searchParams.get("rate") || "0";
+  const vendor = searchParams.get("vendor") || "-";
+
+  // Join catch-all segments back into a single string
   const rkd = Array.isArray(params.rkd) ? params.rkd.join("/") : params.rkd;
   
   const [data, setData] = useState<any>(null);
@@ -47,7 +54,10 @@ export default function ApprovalPage() {
         body: JSON.stringify({
           action: "WHATSAPP_UPDATE",
           rkdNumber: rkd,
-          ownerStatus
+          ownerStatus,
+          approvedQty: qty,
+          rate: rate,
+          vendor: vendor
         })
       });
       const json = await res.json();
@@ -118,7 +128,7 @@ export default function ApprovalPage() {
         <div className={styles.infoRow}>
           <div className={styles.iconBox}><Package size={20} /></div>
           <div className={styles.infoText}>
-            <label>Item Description</label>
+            <label>Item Name</label>
             <span>{data["Item Name"]}</span>
           </div>
         </div>
@@ -126,17 +136,24 @@ export default function ApprovalPage() {
         <div className={styles.infoRow}>
           <div className={styles.iconBox}><User size={20} /></div>
           <div className={styles.infoText}>
-            <label>Vendor Name</label>
-            <span>{data["Vendor Name"] || "N/A"}</span>
+            <label>Proposed Vendor</label>
+            <span>{vendor}</span>
           </div>
         </div>
 
         <div className={styles.grid}>
           <div className={styles.infoRow}>
+            <div className={styles.iconBox}><Activity size={20} /></div>
+            <div className={styles.infoText}>
+              <label>Approved Qty</label>
+              <span>{qty} {data["Units"]}</span>
+            </div>
+          </div>
+          <div className={styles.infoRow}>
             <div className={styles.iconBox}><IndianRupee size={20} /></div>
             <div className={styles.infoText}>
-              <label>Rate</label>
-              <span>Rs. {data["Price"] || "0"}</span>
+              <label>Proposed Rate</label>
+              <span>Rs. {rate}</span>
             </div>
           </div>
         </div>

@@ -47,9 +47,9 @@ async function shortenUrl(url: string) {
 
 async function sendWhatsApp(to: string, message: string) {
   try {
-    // Standard Maytapi V1 URL
-    const url = `https://api.maytapi.com/api/v1/${MAYTAPI_PRODUCT_ID}/${MAYTAPI_PHONE_ID}/sendMessage`;
-    console.log(`[WhatsApp] Sending to ${to}... Payload:`, { to_number: to, message: message.substring(0, 20) + "..." });
+    // Corrected Maytapi URL (Removed /v1/ as per docs)
+    const url = `https://api.maytapi.com/api/${MAYTAPI_PRODUCT_ID}/${MAYTAPI_PHONE_ID}/sendMessage`;
+    console.log(`[WhatsApp] Sending to ${to}...`);
     
     const res = await fetch(url, {
       method: "POST",
@@ -298,20 +298,10 @@ export async function POST(req: Request) {
     }
 
     if (action === "APPROVE") {
-      // 1. Update Q (Approval Require?) and R (Approved Quantity) in StoreDataEntry
-      console.log(`Updating StoreDataEntry Row ${rowNumber} with status ${status}`);
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [[status, approvedQty]]
-        }
-      });
+      // CLERK SIDE: Only trigger WhatsApp, do NOT update StoreDataEntry yet
+      console.log(`Clerk Requesting Approval for RKD: ${rkdNumber}. Qty: ${approvedQty}, Rate: ${finalRate}`);
 
-      // 3. If status is "Yes", send WhatsApp notifications
       if (status === "Yes") {
-        console.log("Fetching recipients from whatsappApproval...");
         const whatsappRes = await sheets.spreadsheets.values.get({
           spreadsheetId: STORE_SHEET_ID,
           range: "whatsappApproval!A:B",
@@ -324,7 +314,8 @@ export async function POST(req: Request) {
           const protocol = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
           const appUrl = `${protocol}://${host}`;
           
-          const rawLink = `${appUrl}/approve/${rkdNumber}`;
+          // Pass details in URL so owner has context
+          const rawLink = `${appUrl}/approve/${rkdNumber}?qty=${approvedQty}&rate=${finalRate}&vendor=${encodeURIComponent(finalVendorName)}`;
           const shortLink = await shortenUrl(rawLink);
           
           const message = `🚨 *RKD STORE APPROVAL REQUIRED* 🚨\n\n*RKD No:* ${rkdNumber}\n*Item:* ${finalItemName}\n*Vendor:* ${finalVendorName}\n*Qty:* ${approvedQty}\n*Rate:* ${finalRate}\n\n👉 *Click here to Approve/Reject:* ${shortLink}\n\n_System generated notification_`;
@@ -333,18 +324,16 @@ export async function POST(req: Request) {
             let phone = String(contact[1]).replace(/\D/g, "");
             if (phone.length === 10) phone = "91" + phone;
             else if (phone.startsWith("0") && phone.length === 11) phone = "91" + phone.slice(1);
-            
             await sendWhatsApp(phone, message);
           }
 
-          // Log to WhatsappData (Log Spreadsheet)
+          // Log to WhatsappData (Log Spreadsheet) with "Pending" status
           const rowRes = await sheets.spreadsheets.values.get({
             spreadsheetId: STORE_SHEET_ID,
             range: `StoreDataEntry!F${rowNumber}`,
           });
           const requireQty = rowRes.data.values?.[0]?.[0] || "0";
 
-          console.log(`Logging to WhatsappData with Rate: ${finalRate}`);
           await sheets.spreadsheets.values.append({
             spreadsheetId: WHATSAPP_LOG_SHEET_ID,
             range: "WhatsappData!A:I",
@@ -355,16 +344,20 @@ export async function POST(req: Request) {
           });
         }
       }
+      return NextResponse.json({ success: true, message: "Approval Notification Sent" });
     } else if (action === "WHATSAPP_UPDATE") {
-      // Action for the external approval page
-      const { ownerStatus } = body; // Already parsed at the top
+      // OWNER SIDE: Now we update StoreDataEntry and approvalDataBase
+      const { ownerStatus, approvedQty: finalQty, rate: finalRate, vendor: finalVendor } = body;
       
-      // Update Q (Approval Require?) in StoreDataEntry
+      // 1. Update StoreDataEntry (Status Q, Qty R, Vendor N, Rate O)
+      console.log(`Owner ${ownerStatus} for RKD: ${rkdNumber}`);
       await sheets.spreadsheets.values.update({
         spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!Q${rowNumber}`,
+        range: `StoreDataEntry!N${rowNumber}:R${rowNumber}`,
         valueInputOption: "USER_ENTERED",
-        requestBody: { values: [[ownerStatus]] }
+        requestBody: { 
+          values: [[finalVendor, finalRate, "", ownerStatus, finalQty]] 
+        }
       });
 
       // Update WhatsappData log
