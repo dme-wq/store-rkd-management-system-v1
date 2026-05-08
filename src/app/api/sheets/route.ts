@@ -134,15 +134,14 @@ export async function GET() {
   try {
     // 1. Refresh Stock/Vendor Cache every 5 mins (Background)
     if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
+      console.log("Background Refresh Starting...");
+      
+      // Fetch IMS Stock
       try {
-        const [imsBatchRes, miscRes] = await Promise.all([
-          sheets.spreadsheets.values.batchGet({
-            spreadsheetId: IMS_SHEET_ID,
-            ranges: ["IMS!B1:B10000", "IMS!K1:K10000"],
-          }),
-          sheets.spreadsheets.values.get({ spreadsheetId: MISC_SHEET_ID, range: "Data!B1:F10000" })
-        ]);
-
+        const imsBatchRes = await sheets.spreadsheets.values.batchGet({
+          spreadsheetId: IMS_SHEET_ID,
+          ranges: ["IMS!B1:B10000", "IMS!K1:K10000"],
+        });
         const stockMap: Record<string, string> = {};
         const names = imsBatchRes.data.valueRanges?.[0].values || [];
         const stocks = imsBatchRes.data.valueRanges?.[1].values || [];
@@ -151,7 +150,17 @@ export async function GET() {
           if (name) stockMap[name] = stocks[i]?.[0] || "0";
         });
         cachedStockMap = stockMap;
+      } catch (e: any) {
+        console.error("IMS Fetch Error (Stock will show No Stock):", e.message);
+        if (!cachedStockMap) cachedStockMap = {};
+      }
 
+      // Fetch Misc Vendor/Rate
+      try {
+        const miscRes = await sheets.spreadsheets.values.get({ 
+          spreadsheetId: MISC_SHEET_ID, 
+          range: "Data!B1:F10000" 
+        });
         const miscMap: Record<string, { vendor: string, rate: string }> = {};
         const miscRows = miscRes.data.values || [];
         miscRows.forEach((row: any) => {
@@ -159,10 +168,12 @@ export async function GET() {
           if (name) miscMap[name] = { vendor: row[4] || "", rate: row[3] || "" };
         });
         cachedMiscMap = miscMap;
-        lastStaticFetchTime = now;
-      } catch (e) {
-        console.error("Static fetch failed, using old data", e);
+      } catch (e: any) {
+        console.error("Misc Fetch Error (Vendors/Rates will be empty):", e.message);
+        if (!cachedMiscMap) cachedMiscMap = {};
       }
+
+      lastStaticFetchTime = now;
     }
 
     // 2. Return cached main data if still valid (30s)
