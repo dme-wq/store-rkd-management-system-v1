@@ -132,9 +132,9 @@ export async function GET() {
         const [imsBatchRes, miscRes] = await Promise.all([
           sheets.spreadsheets.values.batchGet({
             spreadsheetId: IMS_SHEET_ID,
-            ranges: ["IMS!B1:B5000", "IMS!K1:K5000"],
+            ranges: ["IMS!B1:B3000", "IMS!K1:K3000"],
           }),
-          sheets.spreadsheets.values.get({ spreadsheetId: MISC_SHEET_ID, range: "Data!B1:F" })
+          sheets.spreadsheets.values.get({ spreadsheetId: MISC_SHEET_ID, range: "Data!B1:F1000" })
         ]);
 
         const stockMap: Record<string, string> = {};
@@ -168,42 +168,21 @@ export async function GET() {
       });
     }
 
-    // 3. Optimized Main Data Fetch
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: STORE_SHEET_ID,
-      fields: "sheets(properties(title,gridProperties))"
+    // 3. Optimized Main Data Fetch (Direct range fetch for speed on Vercel)
+    const range = `StoreDataEntry!A1:T3000`; 
+    const storeRes = await sheets.spreadsheets.values.get({ 
+      spreadsheetId: STORE_SHEET_ID, 
+      range,
+      majorDimension: "ROWS"
     });
-    const storeSheet = spreadsheet.data.sheets?.find((s: any) => s.properties?.title === "StoreDataEntry");
-    const totalGridRows = storeSheet?.properties?.gridProperties?.rowCount || 1000;
-
-    const lookbackRange = 3000;
-    const checkStart = Math.max(1, totalGridRows - lookbackRange);
-    const rowCheckRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: STORE_SHEET_ID,
-      range: `StoreDataEntry!A${checkStart}:A${totalGridRows}`,
-    });
-
-    const recentIds = rowCheckRes.data.values || [];
-    let lastDataRowInChunk = recentIds.length;
-    while (lastDataRowInChunk > 0) {
-      const val = recentIds[lastDataRowInChunk - 1]?.[0];
-      if (val && String(val).trim() !== "" && String(val).trim() !== "#") break;
-      lastDataRowInChunk--;
-    }
-    
-    const lastDataRow = checkStart + lastDataRowInChunk - 1;
-    const startRow = Math.max(1, lastDataRow - 2000);
-    const range = `StoreDataEntry!A${startRow}:T${lastDataRow}`;
-    
-    const storeRes = await sheets.spreadsheets.values.get({ spreadsheetId: STORE_SHEET_ID, range });
     const storeRows = storeRes.data.values || [];
 
     const data = storeRows.map((row: any, idx: number) => {
-      const actualRowNumber = startRow + idx;
+      const actualRowNumber = idx + 1; // Simplifed for fixed range A1:T2000
       const obj: any = { _id: idx, rowNumber: actualRowNumber };
       HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
       return obj;
-    });
+    }).filter((r: any) => r["Store RKD Number"] && r["Store RKD Number"] !== "#"); // Filter empty rows
 
     const responseData = { 
       success: true, 
@@ -211,12 +190,18 @@ export async function GET() {
       stockMap: cachedStockMap || {},
       miscMap: cachedMiscMap || {},
       fetchedAt: new Date().toISOString(),
-      debug: { totalGridRows, lastDataRow, rangeUsed: range, rowsReturned: storeRows.length }
+      debug: { rangeUsed: range, rowsReturned: storeRows.length }
     };
 
     cachedApiResponse = responseData;
     lastFetchTime = now;
-    return NextResponse.json(responseData);
+
+    return new NextResponse(JSON.stringify(responseData), {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, s-maxage=1, stale-while-revalidate=59"
+      }
+    });
   } catch (error: any) {
     console.error("API error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
