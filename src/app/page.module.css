@@ -837,7 +837,8 @@
 .dataTable th:nth-child(10) { width: 100px; } /* Machine ID */
 .dataTable th:nth-child(11) { width: 85px;  } /* Stock */
 .dataTable th:nth-child(12) { width: 125px; } /* Status */
-.dataTable th:nth-child(13) { width: 70px;  } /* Action */
+.dataTable th:nth-child(13) { width: 100px; } /* Approval Status */
+.dataTable th:nth-child(14) { width: 70px;  } /* Action */
 
 .dataTable th {
   background: #334155; /* Dark Slate Grey */
@@ -852,6 +853,9 @@
   color: #ffffff;
   border-bottom: 2px solid #475569;
   text-align: center;
+  white-space: normal;
+  line-height: 1.2;
+  vertical-align: middle;
 }
 
 .dataTable td {
