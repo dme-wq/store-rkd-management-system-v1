@@ -10,19 +10,21 @@ type AlertType = "error" | "warning" | "success" | "info";
 function AlertModal({ isOpen, onClose, message, type = "error" }: { isOpen: boolean; onClose: () => void; message: string; type?: AlertType }) {
   if (!isOpen) return null;
   const cfg: Record<AlertType, { icon: string; color: string; bg: string; btnBg: string; title: string }> = {
-    error: { icon: "❌", color: "#dc2626", bg: "#fee2e2", btnBg: "linear-gradient(135deg,#dc2626,#b91c1c)", title: "Error" },
-    warning: { icon: "⚠️", color: "#d97706", bg: "#fef3c7", btnBg: "linear-gradient(135deg,#d97706,#b45309)", title: "Warning" },
-    success: { icon: "✅", color: "#16a34a", bg: "#dcfce7", btnBg: "linear-gradient(135deg,#16a34a,#15803d)", title: "Success" },
-    info: { icon: "ℹ️", color: "#2563eb", bg: "#dbeafe", btnBg: "linear-gradient(135deg,#2563eb,#1d4ed8)", title: "Notice" },
+    error: { icon: "❌", color: "#dc2626", bg: "#fef2f2", btnBg: "#bb0000", title: "Error" },
+    warning: { icon: "⚠️", color: "#d97706", bg: "#fffbeb", btnBg: "#e9730c", title: "Warning" },
+    success: { icon: "✅", color: "#16a34a", bg: "#f0fdf4", btnBg: "#107e3e", title: "Success" },
+    info: { icon: "ℹ️", color: "#2563eb", bg: "#eff6ff", btnBg: "#0854a0", title: "Notice" },
   };
   const c = cfg[type];
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-      <div style={{ background: 'white', borderRadius: '24px', padding: '32px 28px', maxWidth: '400px', width: '90%', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', textAlign: 'center', animation: 'fadeIn 0.2s ease' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '1.8rem' }}>{c.icon}</div>
-        <h3 style={{ fontFamily: "'Inter','Poppins',sans-serif", fontWeight: 800, fontSize: '1.2rem', color: '#0f172a', margin: '0 0 10px' }}>{c.title}</h3>
-        <p style={{ fontFamily: "'Inter','Poppins',sans-serif", color: '#475569', fontSize: '0.93rem', lineHeight: 1.6, margin: '0 0 24px' }}>{message}</p>
-        <button onClick={onClose} style={{ background: c.btnBg, color: 'white', border: 'none', borderRadius: '12px', padding: '12px 32px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', width: '100%', fontFamily: "'Inter','Poppins',sans-serif" }}>OK, Got it!</button>
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <div className={styles.modalIconBox} style={{ background: c.bg, color: c.color }}>{c.icon}</div>
+        </div>
+        <h3 className={styles.modalTitle}>{c.title}</h3>
+        <p className={styles.modalMessage}>{message}</p>
+        <button onClick={onClose} className={styles.submitBtn} style={{ background: c.btnBg }}>OK, Got it!</button>
       </div>
     </div>
   );
@@ -86,15 +88,12 @@ function ManualInwardModal({ isOpen, onClose, row, onSubmit, updating }: any) {
         </div>
 
         <button
-          className="rkdSpinBtn"
-          style={{ width: '100%', justifyContent: 'center', '--btn-bg': '#064e3b', '--btn-text': 'white', '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.3)' } as React.CSSProperties}
+          className={styles.submitBtn}
           onClick={() => onSubmit(inwardQty, rate)}
           disabled={updating || !inwardQty}
         >
-          <span className="rkdSpinIcon">
-            {updating ? <Loader2 className={styles.btnSpin} size={20} /> : "✅"}
-          </span>
-          <span className="rkdSpinText">Submit Inward</span>
+          {updating ? <Loader2 className={styles.btnSpin} size={16} /> : <CheckCircle size={16} />}
+          {updating ? "Submitting..." : "Submit Inward"}
         </button>
       </div>
     </div>
@@ -224,8 +223,6 @@ export default function InwardPage() {
 
   return (
     <div className={styles.pageContainer}>
-      <div className={styles.bgTopShapeLayer1}></div>
-      <div className={styles.bgBottomShape}></div>
 
       {/* Header */}
       <header className={styles.topHeader}>

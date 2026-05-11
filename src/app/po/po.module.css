@@ -1,300 +1,245 @@
-/* ── PO Page: Fillo SaaS WebApp Theme ──────────────────────────────────────── */
+/* ── SAP Fiori Horizon Theme ──────────────────────────────────────── */
 .page {
   min-height: 100vh;
-  background: #F4F7FE;
-  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
-  color: #2B3674;
+  background: #f4f5f6; /* SAP Horizon Base */
+  font-family: 'Inter', '72', 'Segoe UI', sans-serif;
+  color: #32363a;
   padding-bottom: 50px;
 }
 
-/* ── Top Bar ─────────────────────────────────────── */
+/* ── Shell Header ─────────────────────────────────────── */
 .topBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 40px;
-  background: transparent;
-  flex-wrap: wrap;
-  gap: 20px;
+  padding: 12px 32px;
+  background: #354a5f; /* SAP Horizon Shell Header */
+  color: #ffffff;
+  box-shadow: inset 0 -1px 0 0 rgba(0,0,0,0.15);
 }
 
 .backBtn {
   display: flex; align-items: center; gap: 8px;
-  background: white;
-  color: #A3AED1;
-  border: none;
-  border-radius: 12px;
-  padding: 10px 20px;
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 6px 12px;
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-weight: 500;
+  font-size: 0.875rem;
   transition: all 0.2s;
-  box-shadow: 0px 4px 15px rgba(112, 144, 176, 0.08);
 }
 .backBtn:hover { 
-  background: #fdfdfd; 
-  color: #2B3674;
-  transform: translateY(-2px); 
+  background: rgba(255,255,255,0.1); 
+  border-color: rgba(255,255,255,0.2);
 }
 
 .topBarTitle {
-  display: flex; align-items: center; gap: 12px;
-  color: #2B3674;
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: -0.4px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
-.topBarLogo {
+/* ── Object Header (Dynamic Page Header) ───────────────────────── */
+.objectHeader {
+  background: #ffffff;
+  padding: 24px 32px;
+  border-bottom: 1px solid #d9d9d9;
+  margin-bottom: 24px;
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.objectHeaderLeft h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  color: #1d2d3e;
+  font-weight: 600;
+}
+
+.objectHeaderTags {
+  display: flex;
   gap: 16px;
+  font-size: 0.875rem;
+  color: #556b82;
 }
 
-.poNumBadge {
-  display: flex; align-items: center; gap: 12px;
-  background: white;
-  border-radius: 16px;
-  padding: 12px 24px;
-  box-shadow: 0px 18px 40px rgba(112, 144, 176, 0.12);
-}
-.poNumLabel { color: #A3AED1; font-size: 0.8rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;}
-.poNumVal   { color: #2B3674; font-size: 1.1rem; font-weight: 700; }
-.poDateBadge {
-  color: #A3AED1;
-  font-size: 0.85rem;
-  font-weight: 500;
-  border-left: 1px solid #E9EDF7;
-  padding-left: 12px;
+.sapBadge {
+  background: #eef0f2;
+  border: 1px solid #d9d9d9;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1d2d3e;
 }
 
-/* ── Two-column grid ─────────────────────────────── */
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 24px;
-  padding: 0 40px;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-@media (max-width: 1100px) {
-  .formGrid { grid-template-columns: 1fr; }
-  .topBar { padding: 20px; }
-  .formGrid { padding: 0 20px; }
-}
-
-/* ── Card ─────────────────────────────────────────── */
-.card {
-  background: #FFFFFF;
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 24px;
-  box-shadow: 0px 18px 40px rgba(112, 144, 176, 0.12);
-}
-
-.cardTitle {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #2B3674;
-  margin-bottom: 24px;
+.objectHeaderActions {
   display: flex;
-  align-items: center;
   gap: 12px;
 }
 
-.itemCount {
-  margin-left: auto;
-  background: #F4F7FE;
-  color: #16A34A;
-  font-size: 0.85rem;
-  font-weight: 700;
-  padding: 6px 14px;
-  border-radius: 12px;
+/* ── SAP Standard Buttons ───────────────────────────────────────── */
+.sapBtn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.875rem; font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  font-family: inherit;
 }
 
-/* ── Form Group ──────────────────────────────────── */
-.formGroup  { margin-bottom: 20px; }
-.label      { display: block; font-size: 0.85rem; font-weight: 500; color: #A3AED1; margin-bottom: 10px; }
-.required   { color: #EE5D50; }
+.sapBtnEmphasized {
+  background: #0854a0;
+  color: #ffffff;
+  border-color: #0854a0;
+}
+.sapBtnEmphasized:hover:not(:disabled) { background: #06407a; }
+
+.sapBtnStandard {
+  background: #ffffff;
+  color: #0854a0;
+  border-color: #0854a0;
+}
+.sapBtnStandard:hover:not(:disabled) { background: #e5f0fa; }
+
+.sapBtnAccept {
+  background: #107e3e;
+  color: #ffffff;
+  border-color: #107e3e;
+}
+.sapBtnAccept:hover:not(:disabled) { background: #0c5e2f; }
+
+.sapBtnReject {
+  background: transparent;
+  color: #bb0000;
+  border-color: transparent;
+}
+.sapBtnReject:hover:not(:disabled) { background: #ffebeb; }
+
+.sapBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Content Area & Layout ─────────────────────────────── */
+.contentArea {
+  padding: 0 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .formGrid { grid-template-columns: 1fr; }
+}
+
+/* ── SAP Cards (Panels) ─────────────────────────────────────────── */
+.sapCard {
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+}
+
+.sapCardHeader {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e4e4e4;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1d2d3e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sapCardContent {
+  padding: 24px;
+}
+
+/* ── Form Elements ──────────────────────────────────── */
+.formGroup  { margin-bottom: 16px; }
+.label      { display: block; font-size: 0.875rem; font-weight: 500; color: #556b82; margin-bottom: 6px; }
+.required   { color: #bb0000; }
 
 .input {
   width: 100%;
-  padding: 16px 20px;
-  background: #F4F7FE;
-  border: none;
-  border-radius: 16px;
-  font-size: 0.95rem;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #89919a;
+  border-radius: 4px;
+  font-size: 0.875rem;
   font-family: inherit;
-  font-weight: 500;
-  color: #2B3674;
+  color: #32363a;
   outline: none;
-  transition: background 0.2s;
+  transition: border-color 0.2s;
   box-sizing: border-box;
 }
-.input::placeholder { color: #A3AED1; font-weight: 400; }
-.input:hover { background: #E9EDF7; }
+.input:hover { border-color: #0854a0; }
 .input:focus {
-  background: #FFFFFF;
-  box-shadow: 0 0 0 2px #16A34A;
+  border-color: #0854a0;
+  outline: 1px solid #0854a0;
 }
+.input[readOnly] { background: #f4f5f6; border-color: #d9d9d9; color: #556b82; }
 
-/* ── Vendor Dropdown ─────────────────────────────── */
-.vendorDropWrap { position: relative; }
-
-.vendorTrigger {
-  display: flex; align-items: center; gap: 10px;
-  padding: 16px 20px;
-  background: #F4F7FE;
-  border: none;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-height: 54px;
-}
-.vendorTrigger:hover { background: #E9EDF7; }
-.vendorTrigger.open {
-  background: #FFFFFF;
-  box-shadow: 0 0 0 2px #16A34A;
-}
-.vendorSearchInput {
-  border: none; outline: none; flex: 1;
-  font-size: 0.95rem; font-weight: 500; font-family: inherit; background: transparent; color: #2B3674;
-}
-.vendorSearchInput::placeholder { color: #A3AED1; }
-.vendorSelected   { flex: 1; font-size: 0.95rem; font-weight: 700; color: #2B3674; }
-.vendorPlaceholder{ flex: 1; font-size: 0.95rem; color: #A3AED1; font-weight: 500; }
-.dropArrow { color: #A3AED1; font-size: 0.8rem; margin-left: auto; transition: transform 0.3s; }
-.open .dropArrow { transform: rotate(180deg); color: #16A34A; }
-
-.vendorList {
-  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 999;
-  background: #FFFFFF;
-  border: none;
-  border-radius: 20px;
-  box-shadow: 0px 18px 40px rgba(112, 144, 176, 0.15);
-  overflow: hidden;
-  max-height: 320px; overflow-y: auto;
-}
-.vendorLoading, .vendorEmpty {
-  padding: 24px; color: #A3AED1; font-size: 0.9rem; text-align: center; font-weight: 500;
-}
-.vendorOption {
-  padding: 16px 24px; cursor: pointer; border-bottom: 1px solid #F4F7FE;
-  transition: all 0.15s;
-}
-.vendorOption:last-child { border-bottom: none; }
-.vendorOption:hover { background: #F4F7FE; }
-.vendorOptionActive { background: #E9EDF7; }
-.vendorOptName { font-weight: 700; font-size: 0.95rem; color: #2B3674; }
-.vendorOptAddr { font-size: 0.8rem; color: #A3AED1; margin-top: 4px; line-height: 1.5; }
-
-.vendorInfoBox {
-  background: #F4F7FE;
-  border-radius: 16px;
-  padding: 18px 20px;
-  margin-top: 20px;
-}
-.vendorInfoRow {
-  display: flex; gap: 10px; align-items: flex-start;
-  font-size: 0.85rem; color: #2B3674; line-height: 1.6; font-weight: 500;
-}
-
-/* ── Items Table ─────────────────────────────────── */
+/* ── SAP Table ─────────────────────────────────── */
 .tableWrap { overflow-x: auto; }
 
-.itemTable {
+.sapTable {
   width: 100%; border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
-.itemTable th {
-  color: #A3AED1;
-  padding: 14px 16px; text-align: left;
-  font-weight: 500; white-space: nowrap;
-  font-size: 0.85rem;
-  border-bottom: 1px solid #E9EDF7;
+.sapTable th {
+  background: #f4f5f6;
+  color: #556b82;
+  padding: 12px 16px; text-align: left;
+  font-weight: 600; white-space: nowrap;
+  border-bottom: 1px solid #d9d9d9;
+  border-top: 1px solid #d9d9d9;
 }
-.itemTable td {
-  padding: 16px 16px; border-bottom: 1px solid #F4F7FE;
-  vertical-align: middle; color: #2B3674;
-  font-weight: 500;
+.sapTable td {
+  padding: 12px 16px; 
+  border-bottom: 1px solid #e4e4e4;
+  vertical-align: middle; 
+  color: #32363a;
 }
-.itemTable tr:hover td { background: #FCFDFE; }
+.sapTable tbody tr:hover td { background: #f5faff; }
 
-.itemName { font-weight: 700; color: #2B3674; min-width: 180px; }
-.rkdCell  { font-size: 0.8rem; color: #A3AED1; font-weight: 600; }
-.numCell  { text-align: right; font-weight: 700; color: #2B3674; font-feature-settings: "tnum"; }
-
-.rowExcluded td { opacity: 0.3; text-decoration: line-through; }
-
-.checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #16A34A; }
-
-.removeBtn {
-  background: #F4F7FE; border: none; cursor: pointer;
-  color: #EE5D50; padding: 8px;
-  border-radius: 10px; transition: all 0.2s;
-  display: flex; align-items: center; justify-content: center;
-}
-.removeBtn:hover { background: #FDE8E8; }
-
-.totalRow td { background: #FFFFFF; font-size: 0.95rem; border-bottom: none; color: #A3AED1; }
-.grandRow td {
-  background: #FFFFFF; color: #2B3674;
-  font-size: 1.1rem; font-weight: 800;
-  border-top: 1px solid #E9EDF7;
-  padding-top: 24px;
-}
-
-.loadingItems {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 12px; padding: 50px; color: #A3AED1; font-weight: 500;
-}
-.emptyItems {
-  text-align: center; padding: 50px; color: #A3AED1;
-  font-size: 1rem; font-weight: 500;
-}
+.numCell  { text-align: right; font-feature-settings: "tnum"; }
+.rowExcluded td { opacity: 0.4; text-decoration: line-through; background: #fafafa; }
+.checkbox { width: 16px; height: 16px; accent-color: #0854a0; cursor: pointer; }
 
 /* ── Delivery Box ───────────────────────────────── */
 .deliveryBox {
-  background: #F4F7FE;
-  border: none;
-  border-radius: 16px;
-  padding: 24px;
-  margin-top: 32px;
+  background: #f4f5f6;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 16px;
+  margin-top: 24px;
 }
-.deliveryTitle { font-weight: 700; font-size: 0.9rem; color: #2B3674; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;}
-.deliveryAddr  { font-size: 0.85rem; color: #A3AED1; line-height: 1.8; font-weight: 500; }
+.deliveryTitle { font-weight: 600; font-size: 0.875rem; color: #1d2d3e; margin-bottom: 8px;}
+.deliveryAddr  { font-size: 0.875rem; color: #556b82; line-height: 1.6; }
 
 /* ── Alerts ─────────────────────────────────────── */
 .alertError   {
-  background: #FDE8E8; border-radius: 16px;
-  padding: 16px 24px; color: #EE5D50; font-size: 0.95rem;
-  margin-bottom: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px;
+  background: #ffebeb; border-left: 4px solid #bb0000;
+  padding: 12px 16px; color: #bb0000; font-size: 0.875rem;
+  margin-bottom: 16px; font-weight: 600;
 }
 .alertSuccess {
-  background: #E8F8F0; border-radius: 16px;
-  padding: 16px 24px; color: #16A34A; font-size: 0.95rem;
-  margin-bottom: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px;
-}
-
-/* ── Generate Button ────────────────────────────── */
-.generateBtn {
-  width: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  background: #16A34A;
-  color: white; border: none; border-radius: 16px;
-  padding: 20px 24px; font-size: 1.05rem; font-weight: 700;
-  cursor: pointer; letter-spacing: 0.3px;
-  box-shadow: 0px 8px 20px rgba(22, 163, 74, 0.24);
-  transition: all 0.2s;
-}
-.generateBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0px 12px 25px rgba(22, 163, 74, 0.3);
-}
-.generateBtn:active:not(:disabled) { transform: translateY(0); box-shadow: 0px 4px 10px rgba(22, 163, 74, 0.2); }
-.generateBtn:disabled {
-  background: #E9EDF7; box-shadow: none; cursor: not-allowed; color: #A3AED1;
+  background: #f0fae2; border-left: 4px solid #107e3e;
+  padding: 12px 16px; color: #107e3e; font-size: 0.875rem;
+  margin-bottom: 16px; font-weight: 600;
 }
 
 /* ── Spinner ─────────────────────────────────────── */
@@ -303,3 +248,27 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+/* ── Vendor Dropdown ─────────────────────────────── */
+.vendorDropWrap { position: relative; }
+.vendorTrigger {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #89919a;
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 42px;
+}
+.vendorTrigger.open { border-color: #0854a0; outline: 1px solid #0854a0; }
+.vendorSearchInput { border: none; outline: none; flex: 1; font-size: 0.875rem; font-family: inherit; }
+.vendorList {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 999;
+  background: #ffffff; border: 1px solid #d9d9d9; border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  max-height: 250px; overflow-y: auto;
+}
+.vendorOption { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #e4e4e4; }
+.vendorOption:hover { background: #f5faff; }
+.vendorOptName { font-weight: 600; font-size: 0.875rem; color: #1d2d3e; }
+.vendorOptAddr { font-size: 0.75rem; color: #556b82; margin-top: 4px; }

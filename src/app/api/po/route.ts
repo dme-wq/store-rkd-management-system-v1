@@ -157,8 +157,62 @@ export async function GET(req: Request) {
           })
           .filter((n: number) => n > 0);
         if (nums.length > 0) nextNum = Math.max(...nums) + 1;
-      } catch (_) { nextNum = 1; }
+        // Enforce minimum PO number of 15919
+        if (nextNum < 15919) nextNum = 15919;
+      } catch (_) { nextNum = 15919; }
       return NextResponse.json({ success: true, poNumber: `PO_RKD_${YEAR}_${nextNum}` });
+    }
+
+    // ── 4. GET list of all POs (for CRUD Manage POs) ───────────
+    if (action === "listPOs") {
+      const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: PO_RESPONSES_SHEET_ID,
+        range: "RESPONSES!A:AF",
+      });
+      const rows = res.data.values || [];
+      const poMap: Record<string, any> = {};
+
+      // Group rows by PO Number (Column E)
+      rows.slice(1).forEach((row: any) => {
+        const poNum = (row[4] || "").trim(); // E: PONo
+        if (!poNum) return;
+        
+        if (!poMap[poNum]) {
+          poMap[poNum] = {
+            poNumber: poNum,
+            poDate: row[5] || "",
+            vendorName: row[2] || "",
+            vendorAddress: row[3] || "",
+            paymentTerms: row[6] || "",
+            termsOfDelivery: row[7] || "",
+            freightCharges: row[8] || "",
+            transporterName: row[9] || "",
+            quoteRefNo: row[10] || "",
+            packingCharges: row[11] || "",
+            discount: row[12] || "",
+            expectedArrival: row[13] || "",
+            poCheckedBy: row[14] || "",
+            pdfUrl: row[31] || "",
+            poGrandTotal: row[29] || "0",
+            items: [],
+          };
+        }
+        
+        poMap[poNum].items.push({
+          rkdNumber: row[19] || "", // T
+          itemName: row[15] || "",  // P
+          units: row[21] || "",     // V
+          approvedQty: row[20] || "0", // U
+          rate: row[22] || "0",      // W
+          gst: row[23] || "0",       // X
+          total: row[24] || "0",     // Y
+          included: true,
+        });
+      });
+
+      // Return array sorted by newest first (assuming ascending PO numbers)
+      const poList = Object.values(poMap).reverse();
+      return NextResponse.json({ success: true, pos: poList });
     }
 
     return NextResponse.json({ success: false, error: "Unknown action" }, { status: 400 });
@@ -316,6 +370,175 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[PO POST Error]:", err.message);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+
+// ───────────────────────────── PUT (Update PO) ────────────────────────────
+export async function PUT(req: Request) {
+  if (!PO_RESPONSES_SHEET_ID) {
+    return NextResponse.json({ success: false, error: "PO_RESPONSES_SHEET_ID env variable is not set." }, { status: 500 });
+  }
+
+  try {
+    const body = await req.json();
+    const { sheets, drive } = getClients();
+
+    const {
+      poNumber, poDate, vendorName, vendorAddress,
+      paymentTerms, termsOfDelivery, freightCharges, transporterName,
+      quoteRefNo, packingCharges, discount, expectedArrival, poCheckedBy,
+      items, pdfBase64, existingPdfUrl
+    } = body;
+
+    const CONSIGNEE = "RKD Furnishings Pvt Ltd., Plot No. 238-239, Sector-29, Part-II, HUDA, Panipat-132103, Haryana";
+    const now = new Date();
+    const timestamp = now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+    // ── 1. Update PDF in Drive ───────────────
+    let pdfUrl = existingPdfUrl || "";
+    let driveError = "";
+    if (pdfBase64) {
+      try {
+        const pdfBuffer = Buffer.from(pdfBase64, "base64");
+        const { Readable } = await import("stream");
+        const stream = Readable.from(pdfBuffer);
+        
+        let fileId = null;
+        if (existingPdfUrl && existingPdfUrl.includes("/d/")) {
+           const match = existingPdfUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+           if (match) fileId = match[1];
+        }
+
+        if (fileId) {
+          // Update existing file
+          await drive.files.update({
+            fileId,
+            media: { mimeType: "application/pdf", body: stream },
+            supportsAllDrives: true,
+          });
+          console.log(`[PO] Updated PDF in Drive: ${pdfUrl}`);
+        } else if (PO_DRIVE_FOLDER_ID) {
+          // Fallback to create new if no valid URL found
+          const fileRes = await drive.files.create({
+            requestBody: { name: `${poNumber}.pdf`, mimeType: "application/pdf", parents: [PO_DRIVE_FOLDER_ID] },
+            media: { mimeType: "application/pdf", body: stream },
+            fields: "id",
+            supportsAllDrives: true,
+          });
+          await drive.permissions.create({
+            fileId: fileRes.data.id!,
+            requestBody: { role: "reader", type: "anyone" },
+            supportsAllDrives: true,
+          });
+          pdfUrl = `https://drive.google.com/file/d/${fileRes.data.id}/view?usp=drivesdk`;
+        }
+      } catch (driveErr: any) {
+        driveError = `Drive update failed: ${driveErr.message}`;
+        console.error("[PO] Drive update failed:", driveErr.message);
+      }
+    }
+
+    // ── 2. Pre-calculate PO-level totals ─────
+    const poSubtotal  = items.reduce((s: number, item: any) => s + parseFloat(item.approvedQty||"0") * parseFloat(item.rate||"0"), 0);
+    const poGSTAmt    = items.reduce((s: number, item: any) => {
+      const sub = parseFloat(item.approvedQty||"0") * parseFloat(item.rate||"0");
+      return s + sub * parseFloat(item.gst||"0") / 100;
+    }, 0);
+    const poGrandTotal = poSubtotal + poGSTAmt;
+
+    // ── 3. Find and Delete Old Rows in Google Sheets ──
+    const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId: PO_RESPONSES_SHEET_ID });
+    const responsesSheet = sheetMeta.data.sheets?.find(s => s.properties?.title === "RESPONSES");
+    const sheetId = responsesSheet?.properties?.sheetId;
+
+    if (sheetId !== undefined) {
+      const getRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: PO_RESPONSES_SHEET_ID,
+        range: "RESPONSES!E:E", // PO Number column
+      });
+      const rows = getRes.data.values || [];
+      
+      // Find row indices to delete (0-indexed). We collect them from bottom to top so deletion is safe.
+      const indicesToDelete: number[] = [];
+      for (let i = rows.length - 1; i >= 0; i--) {
+        if (rows[i][0] === poNumber) {
+          indicesToDelete.push(i);
+        }
+      }
+
+      if (indicesToDelete.length > 0) {
+        // Since indices are contiguous for a single PO usually, but to be safe, we sort descending
+        indicesToDelete.sort((a, b) => b - a);
+
+        // Group into contiguous ranges
+        const requests = [];
+        let start = indicesToDelete[0];
+        let end = start;
+
+        for (let i = 1; i <= indicesToDelete.length; i++) {
+          if (i < indicesToDelete.length && indicesToDelete[i] === start - 1) {
+            start = indicesToDelete[i]; // expand range
+          } else {
+            requests.push({
+              deleteDimension: {
+                range: {
+                  sheetId: sheetId,
+                  dimension: "ROWS",
+                  startIndex: start,
+                  endIndex: end + 1 // endIndex is exclusive
+                }
+              }
+            });
+            if (i < indicesToDelete.length) {
+              start = indicesToDelete[i];
+              end = start;
+            }
+          }
+        }
+
+        if (requests.length > 0) {
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: PO_RESPONSES_SHEET_ID,
+            requestBody: { requests }
+          });
+          console.log(`[PO] Deleted ${indicesToDelete.length} old rows for ${poNumber}`);
+        }
+      }
+    }
+
+    // ── 4. Append New Rows ──
+    const rowsToAppend = items.map((item: any) => {
+      const qty      = parseFloat(item.approvedQty || "0");
+      const rate     = parseFloat(item.rate        || "0");
+      const gstPc    = parseFloat(item.gst         || "0");
+      const itemTotal = qty * rate;
+
+      return [
+        timestamp, "", vendorName, vendorAddress, poNumber, poDate,
+        paymentTerms || "", termsOfDelivery || "", freightCharges || "", transporterName || "",
+        quoteRefNo || "", packingCharges || "", discount || "", expectedArrival || "", poCheckedBy || "",
+        item.itemName, "", "", "", item.rkdNumber, qty, item.units, rate, gstPc, itemTotal.toFixed(2),
+        "", "", poSubtotal.toFixed(2), poGSTAmt.toFixed(2), poGrandTotal.toFixed(2), "", pdfUrl
+      ];
+    });
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: PO_RESPONSES_SHEET_ID,
+      range: "RESPONSES!A:A",
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: rowsToAppend },
+    });
+    console.log(`[PO] Appended ${rowsToAppend.length} updated rows for ${poNumber}`);
+
+    return NextResponse.json({
+      success: true,
+      poNumber,
+      pdfUrl,
+      driveWarning: driveError || undefined,
+    });
+  } catch (err: any) {
+    console.error("[PO PUT Error]:", err.message);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
