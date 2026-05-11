@@ -1276,3 +1276,33 @@
   margin-top: 2px;
   line-height: 1.2;
 }
+
+/* Floating Action Button for Indent */
+.fabIndent {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+  font-size: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 9999;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fabIndent:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.6);
+}
+
+.fabIndent:active {
+  transform: scale(0.95);
+}

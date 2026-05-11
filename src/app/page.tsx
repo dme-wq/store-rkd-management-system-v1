@@ -987,10 +987,7 @@ export default function Home() {
                     <span style={{ fontSize: '1rem' }}>📥</span>
                     <span>Inward Entry</span>
                   </button>
-                  <button onClick={() => { setIsNavigating(true); router.push("/indent"); }} className={styles.dribbbleBtnPrimary}>
-                    <span style={{ fontSize: '1rem' }}>📱</span>
-                    <span>New Indent</span>
-                  </button>
+
                 </div>
 
                 {/* Scorecards */}
@@ -1391,6 +1388,15 @@ export default function Home() {
         message={alertModal.msg}
         type={alertModal.type}
       />
+
+      {/* Floating Action Button for New Indent */}
+      <button 
+        className={styles.fabIndent}
+        onClick={() => window.open('/indent', '_blank')}
+        title="Create New Indent"
+      >
+        📱
+      </button>
     </div>
   );
 }
