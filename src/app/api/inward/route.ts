@@ -33,6 +33,8 @@ const HEADERS = [
   "Gate User Email", "Inward Qty", "Store User Email", "Timestamp of Inward Entry", "Rate"
 ];
 
+const MISC_SHEET_ID = process.env.MISC_SHEET_ID!;
+
 export async function GET() {
   const sheets = getSheetsClient();
   try {
@@ -50,11 +52,43 @@ export async function GET() {
       return obj;
     });
 
+    // Fetch Misc Data for Rates
+    let miscMap: Record<string, { vendor: string, rate: string }> = {};
+    try {
+      const miscRes = await sheets.spreadsheets.values.get({ 
+        spreadsheetId: MISC_SHEET_ID, 
+        range: "Data!B1:F10000" 
+      });
+      const miscRows = miscRes.data.values || [];
+      miscRows.forEach((row: any) => {
+        const name = (row[0] || "").trim().toLowerCase();
+        if (name) miscMap[name] = { vendor: row[4] || "", rate: row[3] || "" };
+      });
+    } catch (e) {
+      console.error("Failed to fetch Misc Data for Rates:", e);
+    }
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
     // We only want rows where Gate Entry is done, but Inward Qty (Index 9) is empty.
-    const pendingInwards = data.filter((r: any) => 
-      r["Indent Request Number"] && 
-      (!r["Inward Qty"] || r["Inward Qty"].toString().trim() === "")
-    );
+    const pendingInwards = data.filter((r: any) => {
+      if (!r["Indent Request Number"]) return false;
+      if (r["Inward Qty"] && r["Inward Qty"].toString().trim() !== "") return false;
+      
+      const dateStr = r["Gate Entry Date"] || r["Timestamp"];
+      if (dateStr) {
+        const entryDate = new Date(dateStr);
+        if (!isNaN(entryDate.getTime()) && entryDate < thirtyDaysAgo) {
+            return false;
+        }
+      }
+      return true;
+    }).map((r: any) => {
+      const itemName = (r["Item Name"] || "").trim().toLowerCase();
+      const rateFromMisc = miscMap[itemName]?.rate || "";
+      return { ...r, autoRate: rateFromMisc };
+    });
 
     return new NextResponse(JSON.stringify({ success: true, data: pendingInwards.reverse() }), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }

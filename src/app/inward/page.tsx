@@ -36,7 +36,7 @@ function ManualInwardModal({ isOpen, onClose, row, onSubmit, updating }: any) {
   useEffect(() => {
     if (row) {
       setInwardQty(row["Received Qty"] || "");
-      setRate("");
+      setRate(row.autoRate || "");
     }
   }, [row]);
 
@@ -74,13 +74,14 @@ function ManualInwardModal({ isOpen, onClose, row, onSubmit, updating }: any) {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>✏️ Rate <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 400 }}>(Optional)</span></label>
+          <label className={styles.formLabel}>🔒 Rate <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 400 }}>(Auto-filled)</span></label>
           <input
-            type="number"
+            type="text"
             className={styles.formInput}
             value={rate}
-            onChange={e => setRate(e.target.value)}
-            placeholder="Enter rate"
+            readOnly
+            style={{ background: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed', borderColor: '#e5e7eb', borderStyle: 'dashed' }}
+            placeholder="Auto-fetched rate"
           />
         </div>
 
@@ -170,7 +171,7 @@ export default function InwardPage() {
         body: JSON.stringify({
           rowNumber: row.rowNumber,
           inwardQty: qty,
-          rate: ""
+          rate: row.autoRate || ""
         })
       });
       const json = await res.json();
