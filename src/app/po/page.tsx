@@ -529,7 +529,7 @@ export default function PurchaseOrderPage() {
         <div className={styles.formGrid}>
           {/* ── LEFT: Vendor + Items ── */}
           <div className={styles.leftPanel}>
-            <div className={styles.sapCard}>
+            <div className={styles.sapCard} style={{ position: 'relative', zIndex: 50 }}>
               <div className={styles.sapCardHeader}>Vendor Details</div>
               <div className={styles.sapCardContent}>
                 <div className={styles.formGroup}>
@@ -572,7 +572,7 @@ export default function PurchaseOrderPage() {
               </div>
             </div>
 
-            <div className={styles.sapCard}>
+            <div className={styles.sapCard} style={{ position: 'relative', zIndex: 10 }}>
               <div className={styles.sapCardHeader}>
                 Items for PO
                 <span className={styles.sapBadge}>{includedItems.length} selected</span>
