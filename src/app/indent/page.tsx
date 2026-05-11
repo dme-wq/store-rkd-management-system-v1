@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Select from "react-select";
 import styles from "./indent.module.css";
 
-// ── Toast system ──────────────────────────────────────────────────────────────
+// ── Toast System ──────────────────────────────────────────────────────────────
 type ToastType = "success" | "error" | "warning" | "info";
 interface Toast { id: number; type: ToastType; title: string; message: string; }
 
@@ -31,124 +31,136 @@ function useToast() {
   const add = useCallback((type: ToastType, title: string, message = "") => {
     const id = Date.now();
     setToasts(p => [...p, { id, type, title, message }]);
-    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4500);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 5000);
   }, []);
   const remove = useCallback((id: number) => setToasts(p => p.filter(t => t.id !== id)), []);
-  return { toasts, remove, toast: { success: (t: string, m?: string) => add("success", t, m), error: (t: string, m?: string) => add("error", t, m), warning: (t: string, m?: string) => add("warning", t, m), info: (t: string, m?: string) => add("info", t, m) } };
+  return {
+    toasts, remove,
+    toast: {
+      success: (t: string, m?: string) => add("success", t, m),
+      error:   (t: string, m?: string) => add("error", t, m),
+      warning: (t: string, m?: string) => add("warning", t, m),
+      info:    (t: string, m?: string) => add("info", t, m),
+    }
+  };
 }
 
-// ── Chip Selector Component ───────────────────────────────────────────────────
-function ChipSelector({ label, required, options, value, onChange, freq }: {
-  label: string; required?: boolean; options: string[]; value: string;
-  onChange: (v: string) => void; freq?: Record<string, number>;
-}) {
-  const [showAll, setShowAll] = useState(false);
-  const top = options.slice(0, 6);
-  const rest = options.slice(6);
-  const visible = showAll ? options : top;
-
-  return (
-    <div className={styles.fieldBlock}>
-      <div className={styles.fieldLabel}>{label}{required && <span className={styles.req}>*</span>}</div>
-      <div className={styles.chipGrid}>
-        {visible.map(opt => (
-          <button
-            key={opt}
-            type="button"
-            className={`${styles.chip} ${value === opt ? styles.chipActive : ""}`}
-            onClick={() => onChange(value === opt ? "" : opt)}
-          >
-            {opt}
-            {freq && freq[opt] > 2 && <span className={styles.chipBadge}>{freq[opt]}</span>}
-          </button>
-        ))}
-        {rest.length > 0 && !showAll && (
-          <button type="button" className={styles.chipMore} onClick={() => setShowAll(true)}>
-            +{rest.length} more
-          </button>
-        )}
-        {showAll && rest.length > 0 && (
-          <button type="button" className={styles.chipMore} onClick={() => setShowAll(false)}>
-            Show less ↑
-          </button>
-        )}
-      </div>
-      {value && (
-        <div className={styles.selectedPill}>
-          ✓ <strong>{value}</strong>
-          <button type="button" onClick={() => onChange("")} className={styles.pillClear}>×</button>
-        </div>
-      )}
-    </div>
-  );
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const toOpts = (arr: string[]) => arr.map(a => ({ value: a, label: a }));
 
 export default function IndentForm() {
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [successRkd, setSuccessRkd] = useState<string | null>(null);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [submitting,  setSubmitting]  = useState(false);
+  const [successRkd,  setSuccessRkd]  = useState<string | null>(null);
   const { toasts, remove, toast } = useToast();
 
   const [options, setOptions] = useState<any>({
-    persons: [], departments: [], machineNames: [], machineIDs: [], items: [], itemMap: {}, freq: {}
+    persons: [], departments: [], machineNames: [], machineIDs: [],
+    items: [], itemMap: {}, freq: {}
   });
-
-  useEffect(() => {
-    const cached = localStorage.getItem("indentOptionsCache_v3");
-    if (cached) {
-      try { setOptions(JSON.parse(cached)); setLoading(false); } catch (e) {}
-    }
-    fetch("/api/indent")
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          setOptions(data.options);
-          localStorage.setItem("indentOptionsCache_v3", JSON.stringify(data.options));
-        }
-        setLoading(false);
-      })
-      .catch(() => { toast.error("Network Error", "Could not load form options."); setLoading(false); });
-  }, []);
 
   const [form, setForm] = useState({
-    personFillingName: "", department: "", machineName: "", machineId: "", itemName: "", requireQty: ""
+    personFillingName: "", department: "",
+    machineName: "", machineId: "",
+    itemName: "", requireQty: ""
   });
 
-  const selectedItemData = form.itemName && options.itemMap[form.itemName]
+  const itemData = form.itemName && options.itemMap[form.itemName]
     ? options.itemMap[form.itemName]
     : { units: "", rate: "", vendor: "", stock: "" };
 
-  const handleChange = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  const set = (field: string, value: string) =>
+    setForm(prev => ({ ...prev, [field]: value }));
 
-  const toSelectOptions = (arr: string[]) => arr.map(a => ({ value: a, label: a }));
+  useEffect(() => {
+    const cached = localStorage.getItem("indentCache_v4");
+    if (cached) {
+      try { setOptions(JSON.parse(cached)); setPageLoading(false); } catch {}
+    }
+    fetch("/api/indent")
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setOptions(d.options);
+          localStorage.setItem("indentCache_v4", JSON.stringify(d.options));
+        }
+        setPageLoading(false);
+      })
+      .catch(() => {
+        toast.error("Network Error", "Could not load form options.");
+        setPageLoading(false);
+      });
+  }, []);
 
+  // ── react-select shared styles ──
+  const mkSelectStyles = (searchable = false) => ({
+    control: (b: any, s: any) => ({
+      ...b,
+      minHeight: "52px",
+      border: s.isFocused ? "2px solid #1A5CFF" : "1.5px solid #E2E8F0",
+      borderRadius: "14px",
+      backgroundColor: s.isFocused ? "#fff" : "#F7F9FC",
+      boxShadow: s.isFocused ? "0 0 0 4px rgba(26,92,255,0.1)" : "none",
+      paddingLeft: "4px",
+      fontSize: "0.95rem",
+      fontWeight: "600",
+      cursor: searchable ? "text" : "pointer",
+      transition: "all 0.2s ease",
+      fontFamily: "'Outfit', sans-serif",
+    }),
+    menu: (b: any) => ({
+      ...b, borderRadius: "14px", border: "1px solid #E2E8F0",
+      boxShadow: "0 12px 40px rgba(0,0,0,0.12)", zIndex: 500,
+      marginTop: "6px", padding: "6px", overflow: "hidden",
+    }),
+    menuList: (b: any) => ({ ...b, maxHeight: "220px" }),
+    option: (b: any, s: any) => ({
+      ...b,
+      padding: "12px 14px", borderRadius: "10px", margin: "2px 0",
+      fontWeight: "600", fontSize: "0.9rem", fontFamily: "'Outfit', sans-serif",
+      backgroundColor: s.isSelected ? "#1A5CFF" : s.isFocused ? "#EEF2FF" : "white",
+      color: s.isSelected ? "white" : "#1E293B",
+      cursor: "pointer",
+    }),
+    placeholder: (b: any) => ({ ...b, color: "#94A3B8", fontWeight: "400" }),
+    singleValue: (b: any) => ({ ...b, color: "#1E293B", fontWeight: "700" }),
+    indicatorSeparator: () => ({ display: "none" }),
+    dropdownIndicator: (b: any) => ({ ...b, color: "#1A5CFF", paddingRight: "12px" }),
+    clearIndicator: (b: any) => ({ ...b, color: "#EF4444", cursor: "pointer" }),
+    noOptionsMessage: (b: any) => ({ ...b, color: "#94A3B8", fontStyle: "italic" }),
+  });
+
+  const dropStyle  = mkSelectStyles(false); // non-searchable
+  const searchStyle = mkSelectStyles(true);  // searchable (Item Name)
+
+  // ── Submit ──
   const handleSubmit = async () => {
-    // Validation with toast alerts
-    if (!form.personFillingName) { toast.warning("Person Required", "Please select the person filling this indent."); return; }
-    if (!form.department) { toast.warning("Department Required", "Please select your department."); return; }
-    if (!form.itemName) { toast.warning("Item Required", "Please select the item you need."); return; }
+    if (!form.personFillingName) { toast.warning("Required", "Please select Person Name."); return; }
+    if (!form.department)        { toast.warning("Required", "Please select Department."); return; }
+    if (!form.itemName)          { toast.warning("Required", "Please select Item Name."); return; }
     if (!form.requireQty || parseFloat(form.requireQty) <= 0) {
-      toast.warning("Quantity Required", "Please enter a valid required quantity."); return;
+      toast.warning("Required", "Enter a valid Require Quantity."); return;
     }
 
-    const stock = parseFloat(selectedItemData.stock || "0");
-    const qty = parseFloat(form.requireQty);
-    if (stock <= 0) {
-      toast.warning("⚠️ Out of Stock", `Stock for "${form.itemName}" is currently ${stock}. Submitting anyway — store team will review.`);
-    } else if (qty > stock) {
-      toast.info("Quantity Alert", `Requested qty (${qty}) exceeds current stock (${stock}). Your request will be reviewed.`);
-    }
+    const stock = parseFloat(itemData.stock || "0");
+    const qty   = parseFloat(form.requireQty);
+    if (stock <= 0) toast.warning("⚠️ Out of Stock", `"${form.itemName}" has no stock. Request will be queued.`);
+    else if (qty > stock) toast.info("Stock Alert", `Requested qty (${qty}) exceeds available stock (${stock}).`);
 
     setSubmitting(true);
     try {
       const payload = {
-        personFillingName: form.personFillingName, itemName: form.itemName,
-        requireQty: form.requireQty, department: form.department,
+        personFillingName: form.personFillingName, department: form.department,
         machineName: form.machineName, machineId: form.machineId,
-        units: selectedItemData.units, vendorName: selectedItemData.vendor,
-        price: selectedItemData.rate, stockInStore: selectedItemData.stock
+        itemName: form.itemName, requireQty: form.requireQty,
+        units: itemData.units, vendorName: itemData.vendor,
+        price: itemData.rate, stockInStore: itemData.stock
       };
-      const res = await fetch("/api/indent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res  = await fetch("/api/indent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const data = await res.json();
       if (data.success) {
         setSuccessRkd(data.rkdNumber);
@@ -163,226 +175,197 @@ export default function IndentForm() {
     }
   };
 
-  // react-select styles — AppSheet blue theme, centered
-  const selectStyles = {
-    control: (base: any, state: any) => ({
-      ...base,
-      backgroundColor: state.isFocused ? "#ffffff" : "#F8F9FA",
-      border: state.isFocused ? "2px solid #1A73E8" : "1.5px solid #DADCE0",
-      borderRadius: "10px",
-      padding: "4px 6px",
-      boxShadow: state.isFocused ? "0 0 0 3px rgba(26,115,232,0.15)" : "none",
-      fontSize: "0.95rem",
-      fontWeight: "500",
-      minHeight: "50px",
-      transition: "all 0.2s ease",
-      textAlign: "left" as const,
-    }),
-    menu: (base: any) => ({
-      ...base, borderRadius: "12px", border: "1px solid #E8EAED",
-      boxShadow: "0 8px 32px rgba(60,64,67,0.18)", zIndex: 500,
-      marginTop: "6px", padding: "6px", overflow: "hidden",
-    }),
-    menuList: (base: any) => ({ ...base, maxHeight: "260px" }),
-    option: (base: any, state: any) => ({
-      ...base, padding: "11px 14px", borderRadius: "8px", margin: "2px 0",
-      fontWeight: "500", fontSize: "0.9rem",
-      backgroundColor: state.isSelected ? "#1A73E8" : state.isFocused ? "#EEF4FD" : "white",
-      color: state.isSelected ? "white" : "#202124", cursor: "pointer",
-    }),
-    placeholder: (base: any) => ({ ...base, color: "#9AA0A6", fontWeight: "400" }),
-    singleValue: (base: any) => ({ ...base, color: "#202124", fontWeight: "600" }),
-    indicatorSeparator: () => ({ display: "none" }),
-    dropdownIndicator: (base: any) => ({ ...base, color: "#1A73E8" }),
-    clearIndicator: (base: any) => ({ ...base, color: "#EA4335", cursor: "pointer" }),
-    noOptionsMessage: (base: any) => ({ ...base, color: "#9AA0A6", fontStyle: "italic" }),
-  };
-
-  if (loading) return (
-    <div className={styles.loadingOverlay}>
-      <div className={styles.loaderBox}></div>
-      <div className={styles.loadingText}>Loading form...</div>
+  // ── Loading ──
+  if (pageLoading) return (
+    <div className={styles.loadingScreen}>
+      <div className={styles.loadingLogo}>RKD</div>
+      <div className={styles.loaderRing}></div>
+      <p className={styles.loadingText}>Loading Form...</p>
     </div>
   );
 
+  const stockNum = parseFloat(itemData.stock || "0");
+
   return (
-    <div className={styles.pageContainer}>
+    <div className={styles.page}>
       <ToastContainer toasts={toasts} remove={remove} />
 
-      {/* App Bar */}
-      <div className={styles.header}>
-        <div className={styles.headerInner}>
-          <div className={styles.headerLeft}>
-            <div className={styles.headerIcon}>📋</div>
-            <div>
-              <h1 className={styles.headerTitle}>Store Miscellaneous Indent</h1>
-              <div className={styles.headerSub}>RKD Group — Fill all required fields</div>
-            </div>
+      {/* ── Hero Header ── */}
+      <div className={styles.hero}>
+        <div className={styles.heroBg}></div>
+        <div className={styles.heroContent}>
+          <div className={styles.heroBrand}>
+            <div className={styles.heroLogo}>RKD</div>
+            <span className={styles.heroLogoLabel}>Group</span>
           </div>
-          <div className={styles.rkdLogoBox}>RKD</div>
+          <h1 className={styles.heroTitle}>Store Miscellaneous<br/>Indent Form</h1>
+          <p className={styles.heroSub}>Fill all required details to submit your requirement</p>
         </div>
-        <div className={styles.progressStrip}><div className={styles.progressFill}></div></div>
+        <div className={styles.heroWave}>
+          <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+            <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#F1F5F9"/>
+          </svg>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className={styles.contentArea}>
+      {/* ── Form Card ── */}
+      <div className={styles.formWrap}>
 
-        {/* EMPLOYEE DETAILS */}
-        <div className={styles.formCard}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardHeaderIcon}>👤</span>
-            <span>Employee Details</span>
+        {/* SECTION: Employee */}
+        <div className={styles.section}>
+          <div className={styles.sectionLabel}>
+            <span className={styles.sectionDot}></span>
+            Employee Details
           </div>
-          <div className={styles.cardBody}>
-            <ChipSelector
-              label="Person Name" required
-              options={options.persons} value={form.personFillingName}
-              onChange={v => handleChange("personFillingName", v)}
-              freq={options.freq?.person}
-            />
-            <ChipSelector
-              label="Department" required
-              options={options.departments} value={form.department}
-              onChange={v => handleChange("department", v)}
-              freq={options.freq?.dept}
-            />
-          </div>
-        </div>
 
-        {/* MACHINE DETAILS */}
-        <div className={styles.formCard}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardHeaderIcon}>⚙️</span>
-            <span>Machine Details <span className={styles.optional}>(optional)</span></span>
-          </div>
-          <div className={styles.cardBody}>
-            <ChipSelector
-              label="Machine Name"
-              options={options.machineNames} value={form.machineName}
-              onChange={v => handleChange("machineName", v)}
-              freq={options.freq?.machineName}
+          <div className={styles.field}>
+            <label className={styles.label}>Person Name <span className={styles.req}>*</span></label>
+            <Select
+              options={toOpts(options.persons)}
+              styles={dropStyle} isSearchable={false} isClearable
+              placeholder="Select person..."
+              value={form.personFillingName ? { value: form.personFillingName, label: form.personFillingName } : null}
+              onChange={(o: any) => set("personFillingName", o?.value || "")}
             />
-            <ChipSelector
-              label="Machine ID"
-              options={options.machineIDs} value={form.machineId}
-              onChange={v => handleChange("machineId", v)}
-              freq={options.freq?.machineId}
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Department <span className={styles.req}>*</span></label>
+            <Select
+              options={toOpts(options.departments)}
+              styles={dropStyle} isSearchable={false} isClearable
+              placeholder="Select department..."
+              value={form.department ? { value: form.department, label: form.department } : null}
+              onChange={(o: any) => set("department", o?.value || "")}
             />
           </div>
         </div>
 
-        {/* ITEM REQUIREMENT */}
-        <div className={styles.formCard}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardHeaderIcon}>📦</span>
-            <span>Item Requirement</span>
+        {/* SECTION: Machine */}
+        <div className={styles.section}>
+          <div className={styles.sectionLabel}>
+            <span className={styles.sectionDot} style={{ background: "#8B5CF6" }}></span>
+            Machine Details
+            <span className={styles.optTag}>Optional</span>
           </div>
-          <div className={styles.cardBody}>
 
-            {/* Item Name — searchable dropdown */}
-            <div className={styles.fieldBlock}>
-              <div className={styles.fieldLabel}>Item Name <span className={styles.req}>*</span></div>
+          <div className={styles.twoCol}>
+            <div className={styles.field}>
+              <label className={styles.label}>Machine Name</label>
               <Select
-                options={toSelectOptions(options.items)}
-                styles={selectStyles}
-                placeholder="🔍 Search item name..."
-                value={form.itemName ? { value: form.itemName, label: form.itemName } : null}
-                onChange={(o: any) => handleChange("itemName", o?.value || "")}
-                isClearable
-                isSearchable
-                noOptionsMessage={() => "No items found"}
-                filterOption={(opt, input) =>
-                  !input || opt.label.toLowerCase().includes(input.toLowerCase())
-                }
+                options={toOpts(options.machineNames)}
+                styles={dropStyle} isSearchable={false} isClearable
+                placeholder="Select..."
+                value={form.machineName ? { value: form.machineName, label: form.machineName } : null}
+                onChange={(o: any) => set("machineName", o?.value || "")}
               />
             </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Machine ID</label>
+              <Select
+                options={toOpts(options.machineIDs)}
+                styles={dropStyle} isSearchable={false} isClearable
+                placeholder="Select..."
+                value={form.machineId ? { value: form.machineId, label: form.machineId } : null}
+                onChange={(o: any) => set("machineId", o?.value || "")}
+              />
+            </div>
+          </div>
+        </div>
 
-            {/* Stock Info Box */}
-            {form.itemName && (
-              <div className={`${styles.infoBox} ${parseFloat(selectedItemData.stock) <= 0 ? styles.infoBoxDanger : parseFloat(selectedItemData.stock) < 5 ? styles.infoBoxWarn : ""}`}>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>📦 Current Stock in Store</span>
-                  <span className={styles.stockBadge}>{selectedItemData.stock || "0"}</span>
+        {/* SECTION: Item */}
+        <div className={styles.section}>
+          <div className={styles.sectionLabel}>
+            <span className={styles.sectionDot} style={{ background: "#10B981" }}></span>
+            Item Requirement
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Item Name <span className={styles.req}>*</span></label>
+            <Select
+              options={toOpts(options.items)}
+              styles={searchStyle} isSearchable isClearable
+              placeholder="🔍 Search item..."
+              value={form.itemName ? { value: form.itemName, label: form.itemName } : null}
+              onChange={(o: any) => set("itemName", o?.value || "")}
+              noOptionsMessage={() => "No matching items"}
+              filterOption={(opt, input) => !input || opt.label.toLowerCase().includes(input.toLowerCase())}
+            />
+          </div>
+
+          {/* Stock info */}
+          {form.itemName && (
+            <div className={`${styles.stockCard} ${stockNum <= 0 ? styles.stockDanger : stockNum < 5 ? styles.stockWarn : styles.stockOk}`}>
+              <div className={styles.stockRow}>
+                <span className={styles.stockLabel}>📦 Stock in Store</span>
+                <span className={styles.stockVal}>{itemData.stock || "0"} {itemData.units}</span>
+              </div>
+              {itemData.vendor && (
+                <div className={styles.stockRow}>
+                  <span className={styles.stockLabel}>🏪 Vendor</span>
+                  <span className={styles.stockVendor}>{itemData.vendor}</span>
                 </div>
-                {selectedItemData.vendor && (
-                  <div className={styles.infoRow}>
-                    <span className={styles.infoLabel}>🏪 Vendor</span>
-                    <span className={styles.infoValue}>{selectedItemData.vendor}</span>
-                  </div>
-                )}
-                {parseFloat(selectedItemData.stock) <= 0 && (
-                  <div className={styles.stockAlert}>⚠️ Out of Stock — request will be queued for procurement</div>
-                )}
-              </div>
-            )}
-
-            {/* Qty + Units row */}
-            <div className={styles.rowGrid}>
-              <div className={styles.fieldBlock} style={{ marginBottom: 0 }}>
-                <div className={styles.fieldLabel}>Require Qty <span className={styles.req}>*</span></div>
-                <input
-                  type="number" step="any" min="0.01"
-                  className={styles.formInput}
-                  placeholder="e.g. 5"
-                  value={form.requireQty}
-                  onChange={e => handleChange("requireQty", e.target.value)}
-                />
-              </div>
-              <div className={styles.fieldBlock} style={{ marginBottom: 0 }}>
-                <div className={styles.fieldLabel}>Units</div>
-                <input
-                  type="text" className={styles.formInput}
-                  value={selectedItemData.units} disabled placeholder="—"
-                />
-              </div>
+              )}
+              {stockNum <= 0 && (
+                <div className={styles.stockWarningText}>⚠️ Currently out of stock — will be queued for procurement</div>
+              )}
             </div>
+          )}
 
+          {/* Qty + Units */}
+          <div className={styles.twoCol}>
+            <div className={styles.field}>
+              <label className={styles.label}>Require Qty <span className={styles.req}>*</span></label>
+              <input
+                type="number" min="0.01" step="any"
+                className={styles.numInput}
+                placeholder="e.g. 5"
+                value={form.requireQty}
+                onChange={e => set("requireQty", e.target.value)}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Units</label>
+              <input
+                type="text" className={`${styles.numInput} ${styles.disabled}`}
+                value={itemData.units} disabled placeholder="—"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Spacer for fixed button */}
-        <div style={{ height: 8 }}></div>
+        {/* ── Submit ── */}
+        <button
+          className={styles.submitBtn}
+          disabled={submitting || !form.personFillingName || !form.department || !form.itemName || !form.requireQty}
+          onClick={handleSubmit}
+        >
+          {submitting ? (
+            <><span className={styles.btnSpinner}></span> Submitting...</>
+          ) : (
+            "Submit Indent →"
+          )}
+        </button>
+
+        <p className={styles.formNote}>
+          Fields marked <span className={styles.req}>*</span> are required
+        </p>
       </div>
 
-      {/* Sticky Submit Bar */}
-      <div className={styles.bottomBar}>
-        <div className={styles.bottomInner}>
-          <div className={styles.formSummary}>
-            {form.personFillingName && <span className={styles.summaryChip}>👤 {form.personFillingName}</span>}
-            {form.itemName && <span className={styles.summaryChip}>📦 {form.itemName}</span>}
-          </div>
-          <button
-            className={styles.submitBtn}
-            disabled={submitting || !form.personFillingName || !form.itemName || !form.requireQty || !form.department}
-            onClick={handleSubmit}
-          >
-            {submitting ? (
-              <><div className={styles.btnSpinner}></div> Submitting...</>
-            ) : (
-              <><span>Submit Indent</span> <span className={styles.submitArrow}>→</span></>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Success Modal */}
+      {/* ── Success Modal ── */}
       {successRkd && (
-        <div className={styles.successModal}>
-          <div className={styles.successCard}>
-            <div className={styles.successAnim}>📬</div>
-            <h3 className={styles.successTitle}>Indent Submitted!</h3>
-            <div className={styles.successSubtitle}>
-              Your requirement has been received. The store team will process it shortly.
-            </div>
-            <div className={styles.successRkd}>{successRkd}</div>
-            <div className={styles.successActions}>
-              <button className={styles.successBtnPrimary} onClick={() => setSuccessRkd(null)}>
-                + New Indent
-              </button>
-              <button className={styles.successBtnSecondary} onClick={() => window.close()}>
-                Close
-              </button>
-            </div>
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <div className={styles.modalEmoji}>🎉</div>
+            <h3 className={styles.modalTitle}>Indent Submitted!</h3>
+            <p className={styles.modalSub}>Your requirement has been recorded. The store team will process it shortly.</p>
+            <div className={styles.modalRkd}>{successRkd}</div>
+            <button className={styles.modalPrimary} onClick={() => setSuccessRkd(null)}>
+              + New Indent
+            </button>
+            <button className={styles.modalSecondary} onClick={() => window.close()}>
+              Close
+            </button>
           </div>
         </div>
       )}
