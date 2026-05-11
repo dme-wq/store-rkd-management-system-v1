@@ -161,7 +161,7 @@ export async function POST(req: Request) {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: STORE_SHEET_ID,
-      range: "StoreDataEntry!A:P",
+      range: "StoreDataEntry!A:A",
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       requestBody: {
