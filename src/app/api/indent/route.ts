@@ -43,7 +43,7 @@ export async function GET() {
       sheets.spreadsheets.values.batchGet({
         spreadsheetId: IMS_SHEET_ID,
         ranges: ["IMS!B1:B10000", "IMS!K1:K10000"],
-      }).catch(e => {
+      }).catch((e: any) => {
         console.error("IMS Fetch failed", e.message);
         return { data: { valueRanges: [] } };
       })
