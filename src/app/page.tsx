@@ -958,87 +958,96 @@ export default function Home() {
           <div className={styles.appCard}>
 
             {/* App Card Header */}
-            <div className={styles.appHeader}>
-              <div className={styles.appHeaderTitles}>
-                <h2 className={styles.liveTitle}>Live Inward Data</h2>
+            <div className={styles.appHeader} style={{ padding: '1rem 1.5rem', flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
+              
+              {/* Top Row: Title, 4 Buttons, Scorecards */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div className={styles.appHeaderTitles}>
+                  <h2 className={styles.liveTitle} style={{ fontSize: '1.2rem', margin: 0 }}>Live Data</h2>
+                </div>
+
+                {/* 4 Action Buttons */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => { setIsDebitNoteOpen(true); setDnSelectedRKD(null); setDnQty(""); }}
+                    className="rkdSpinBtn"
+                    style={{ '--btn-color': '#dc2626', '--btn-shadow': 'rgba(220,38,38,0.35)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
+                  >
+                    <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.9rem' }}>📄</span>
+                    <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Debit Note</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsReverseEntryOpen(true); setReSelectedRKD(null); setReQty(""); }}
+                    className="rkdSpinBtn"
+                    style={{ '--btn-color': '#7c3aed', '--btn-shadow': 'rgba(124,58,237,0.35)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
+                  >
+                    <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.9rem' }}>↩️</span>
+                    <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Reverse Entry</span>
+                  </button>
+                  <button
+                    onClick={() => router.push("/po")}
+                    className="rkdSpinBtn"
+                    style={{ '--btn-color': '#ea580c', '--btn-shadow': 'rgba(234,88,12,0.4)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
+                  >
+                    <span className="rkdSpinIcon" style={{ width: '24px', height: '24px' }}><FileText size={14} /></span>
+                    <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Purchase Order</span>
+                  </button>
+                  <button
+                    onClick={() => router.push("/inward")}
+                    className="rkdSpinBtn"
+                    style={{ '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.35)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
+                  >
+                    <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.9rem' }}>📥</span>
+                    <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Inward Entry</span>
+                  </button>
+                </div>
+
+                {/* Scorecards */}
+                <div className={styles.appMetricsInline} style={{ gap: '8px' }}>
+                  <div className="rkdSpinBtn" style={{ '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', padding: '4px 12px 4px 4px', gap: '8px', cursor: 'default' } as React.CSSProperties}>
+                    <span className="rkdSpinIcon" style={{ width: '28px', height: '28px', fontSize: '1rem', fontWeight: 900 }}>{scorecards.todayIndent}</span>
+                    <span className="rkdSpinText" style={{ fontSize: '0.7rem', lineHeight: 1.1, textAlign: 'left', color: '#166534' }}>Today<br/>Indent</span>
+                  </div>
+                  <div className="rkdSpinBtn" style={{ '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', padding: '4px 12px 4px 4px', gap: '8px', cursor: 'default' } as React.CSSProperties}>
+                    <span className="rkdSpinIcon" style={{ width: '28px', height: '28px', fontSize: '1rem', fontWeight: 900 }}>{scorecards.todayIssue}</span>
+                    <span className="rkdSpinText" style={{ fontSize: '0.7rem', lineHeight: 1.1, textAlign: 'left', color: '#166534' }}>Today<br/>Issue</span>
+                  </div>
+                  <div className="rkdSpinBtn" style={{ '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', padding: '4px 12px 4px 4px', gap: '8px', cursor: 'default' } as React.CSSProperties}>
+                    <span className="rkdSpinIcon" style={{ width: '28px', height: '28px', fontSize: '1rem', fontWeight: 900 }}>{scorecards.monthIndent}</span>
+                    <span className="rkdSpinText" style={{ fontSize: '0.7rem', lineHeight: 1.1, textAlign: 'left', color: '#166534' }}>Monthly<br/>Indent</span>
+                  </div>
+                  <div className="rkdSpinBtn" style={{ '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', padding: '4px 12px 4px 4px', gap: '8px', cursor: 'default' } as React.CSSProperties}>
+                    <span className="rkdSpinIcon" style={{ width: '28px', height: '28px', fontSize: '1rem', fontWeight: 900 }}>{scorecards.monthIssue}</span>
+                    <span className="rkdSpinText" style={{ fontSize: '0.7rem', lineHeight: 1.1, textAlign: 'left', color: '#166534' }}>Monthly<br/>Issue</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Debit Note & Reverse Entry Buttons */}
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Bottom Row: Status Filters */}
+              <div className={styles.quickStatusFilters} style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', justifyContent: 'flex-start', gap: '10px' }}>
                 <button
-                  onClick={() => { setIsDebitNoteOpen(true); setDnSelectedRKD(null); setDnQty(""); }}
-                  className="rkdSpinBtn"
-                  style={{ '--btn-color': '#dc2626', '--btn-shadow': 'rgba(220,38,38,0.35)' } as React.CSSProperties}
-                >
-                  <span className="rkdSpinIcon">📄</span>
-                  <span className="rkdSpinText">Debit Note</span>
-                </button>
-                <button
-                  onClick={() => { setIsReverseEntryOpen(true); setReSelectedRKD(null); setReQty(""); }}
-                  className="rkdSpinBtn"
-                  style={{ '--btn-color': '#7c3aed', '--btn-shadow': 'rgba(124,58,237,0.35)' } as React.CSSProperties}
-                >
-                  <span className="rkdSpinIcon">↩️</span>
-                  <span className="rkdSpinText">Reverse Entry</span>
-                </button>
-                <button
-                  onClick={() => router.push("/po")}
-                  className="rkdSpinBtn"
-                  style={{ '--btn-color': '#ea580c', '--btn-shadow': 'rgba(234,88,12,0.4)' } as React.CSSProperties}
-                >
-                  <span className="rkdSpinIcon"><FileText size={16} /></span>
-                  <span className="rkdSpinText">Purchase Order</span>
-                </button>
-                <button
-                  onClick={() => router.push("/inward")}
-                  className="rkdSpinBtn"
-                  style={{ '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.35)' } as React.CSSProperties}
-                >
-                  <span className="rkdSpinIcon">📥</span>
-                  <span className="rkdSpinText">Inward Entry</span>
-                </button>
-              </div>
-
-              <div className={styles.appMetricsInline}>
-                <div className={styles.scorecard}>
-                  <span className={styles.scorecardTitle}>Today Indent</span>
-                  <span className={styles.scorecardValue}>{scorecards.todayIndent}</span>
-                </div>
-                <div className={styles.scorecard}>
-                  <span className={styles.scorecardTitle}>Today Issue</span>
-                  <span className={styles.scorecardValue}>{scorecards.todayIssue}</span>
-                </div>
-                <div className={styles.scorecard}>
-                  <span className={styles.scorecardTitle}>Monthly Indent</span>
-                  <span className={styles.scorecardValue}>{scorecards.monthIndent}</span>
-                </div>
-                <div className={styles.scorecard}>
-                  <span className={styles.scorecardTitle}>Monthly Issue</span>
-                  <span className={styles.scorecardValue}>{scorecards.monthIssue}</span>
-                </div>
-              </div>
-
-              <div className={styles.quickStatusFilters}>
-                <button
-                  className={`${styles.statusBtn} ${styles.btnOpen} ${statusFilter === "Requirement Open" ? styles.btnActive : ""}`}
+                  className={`rkdSpinBtn ${statusFilter === "Requirement Open" ? styles.btnActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Open" ? null : "Requirement Open")}
+                  style={{ '--btn-color': '#d97706', '--btn-shadow': 'rgba(217,119,6,0.3)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
                 >
-                  <span className={styles.statusBadge}>{scorecards.statusCounts.open}</span>
-                  Requirement Open
+                  <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.85rem', fontWeight: 900 }}>{scorecards.statusCounts.open}</span>
+                  <span className="rkdSpinText" style={{ fontSize: '0.75rem', color: '#d97706' }}>Requirement Open</span>
                 </button>
                 <button
-                  className={`${styles.statusBtn} ${styles.btnClosed} ${statusFilter === "Requirement Closed" ? styles.btnActive : ""}`}
+                  className={`rkdSpinBtn ${statusFilter === "Requirement Closed" ? styles.btnActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Closed" ? null : "Requirement Closed")}
+                  style={{ '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
                 >
-                  <span className={styles.statusBadge}>{scorecards.statusCounts.closed}</span>
-                  Requirement Closed
+                  <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.85rem', fontWeight: 900 }}>{scorecards.statusCounts.closed}</span>
+                  <span className="rkdSpinText" style={{ fontSize: '0.75rem', color: '#166534' }}>Requirement Closed</span>
                 </button>
                 <button
-                  className={`${styles.statusBtn} ${styles.btnCancelled} ${statusFilter === "Requirement Cancelled" ? styles.btnActive : ""}`}
+                  className={`rkdSpinBtn ${statusFilter === "Requirement Cancelled" ? styles.btnActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Cancelled" ? null : "Requirement Cancelled")}
+                  style={{ '--btn-color': '#991b1b', '--btn-shadow': 'rgba(153,27,27,0.3)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
                 >
-                  <span className={styles.statusBadge}>{scorecards.statusCounts.cancelled}</span>
-                  Requirement Cancelled
+                  <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.85rem', fontWeight: 900 }}>{scorecards.statusCounts.cancelled}</span>
+                  <span className="rkdSpinText" style={{ fontSize: '0.75rem', color: '#991b1b' }}>Requirement Cancelled</span>
                 </button>
               </div>
             </div>

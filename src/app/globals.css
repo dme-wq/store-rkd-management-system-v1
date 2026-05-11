@@ -89,7 +89,7 @@ body {
 
 /* On hover, change text color to white */
 .rkdSpinBtn:hover .rkdSpinText {
-  color: white;
+  color: white !important;
 }
 
 /* Disabled state */
