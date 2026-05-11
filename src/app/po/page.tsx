@@ -346,6 +346,7 @@ export default function PurchaseOrderPage() {
   const handleSave = async () => {
     if (!selVendor) { setError("Please select a vendor."); return; }
     if (includedItems.length === 0) { setError("Please include at least one item."); return; }
+    if (!expectedArrival) { setError("Please provide the Expected Date of Arrival."); return; }
     setSaving(true); setError(null); setSuccess(null);
     try {
       const pdfBase64 = await generatePDF({
@@ -645,7 +646,7 @@ export default function PurchaseOrderPage() {
                 ))}
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Expected Date of Arrival</label>
+                  <label className={styles.label}>Expected Date of Arrival <span className={styles.required}>*</span></label>
                   <input type="date" className={styles.input} value={expectedArrival} onChange={e => setExpectedArrival(e.target.value)} />
                 </div>
 
