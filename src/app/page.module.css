@@ -2,7 +2,7 @@
 .pageContainer {
   position: relative;
   min-height: 100vh;
-  background-color: #f6f6f8;
+  background-color: #F0247A;
   font-family: 'Inter', system-ui, sans-serif;
   overflow: hidden;
   display: flex;
@@ -16,7 +16,7 @@
   left: 0;
   width: 100%;
   height: 250px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: linear-gradient(135deg, #C41861, #F0247A);
   clip-path: polygon(0 0, 100% 0, 100% 10%, 15% 100%, 0 100%);
   z-index: 1;
 }
@@ -27,7 +27,7 @@
   left: 0;
   width: 100%;
   height: 300px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #E8185A, #FF6BAE);
   clip-path: polygon(0 0, 100% 0, 100% 30%, 35% 100%, 0 100%);
   z-index: 0;
   opacity: 0.8;
@@ -46,7 +46,7 @@
   width: 250px;
   height: 250px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.1));
+  background: radial-gradient(circle at 30% 30%, rgba(255,200,220,0.7), rgba(255,100,180,0.08));
   box-shadow: 
     inset -10px -10px 20px rgba(0,0,0,0.1),
     0 20px 40px rgba(0,0,0,0.2),
@@ -143,16 +143,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(255, 255, 255, 0.18);
   padding: 4px 10px;
   border-radius: 20px;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .liveDot {
   width: 8px;
   height: 8px;
-  background-color: #10b981;
+  background-color: #ffffff;
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
@@ -160,14 +160,14 @@
 .liveText {
   font-size: 0.7rem;
   font-weight: 800;
-  color: #10b981;
+  color: #ffffff;
   letter-spacing: 1px;
 }
 
 @keyframes pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
 }
 
 .modalOverlay {
@@ -297,10 +297,10 @@
 .logoSquare {
   width: 48px;
   height: 48px;
-  background-color: #166534; /* Matching Dark Green */
+  background-color: #C41861; /* Hot Pink */
   position: relative;
   border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(22, 101, 52, 0.4);
+  box-shadow: 0 8px 25px rgba(196, 24, 97, 0.4);
   font-family: 'Arial', sans-serif;
   color: white;
   font-weight: 900;
@@ -319,7 +319,7 @@
   font-size: 1rem;
   font-weight: 800;
   color: white;
-  background-color: #166534; /* Matching Dark Green */
+  background-color: #C41861; /* Hot Pink */
   padding: 6px 14px;
   border-radius: 8px;
   letter-spacing: 0.3px;
@@ -406,7 +406,7 @@
 
 .directIssueBtn {
   background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  color: #ffffff;
   border: 1.5px solid #10b981;
   width: 30px;
   height: 30px;
@@ -443,10 +443,10 @@
 .logoSquare {
   width: 48px;
   height: 48px;
-  background-color: #166534; /* Matching Dark Green */
+  background-color: #C41861; /* Hot Pink */
   position: relative;
   border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(22, 101, 52, 0.4);
+  box-shadow: 0 8px 25px rgba(196, 24, 97, 0.4);
   font-family: 'Arial', sans-serif;
   color: white;
   font-weight: 900;
@@ -774,7 +774,7 @@
 }
 
 .searchInput:focus {
-  border-color: #3b82f6;
+  border-color: #F0247A;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -986,7 +986,7 @@
 .pillIdLowStock {
   background: #ef4444 !important; /* Solid Red */
   color: #ffffff !important;      /* White text */
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.45);
 }
 
 .pillReq { background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 8px; font-weight: 700; }
@@ -1020,7 +1020,7 @@
 
 .spinnerIcon {
   animation: spin 1s linear infinite;
-  color: #3b82f6;
+  color: #F0247A;
   margin-bottom: 12px;
 }
 
@@ -1132,7 +1132,7 @@
 .submitBtn:hover {
   background: #14532d;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.2);
+  box-shadow: 0 4px 12px rgba(196, 24, 97, 0.25);
 }
 
 .submitBtn:disabled {
@@ -1152,14 +1152,14 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+  box-shadow: 0 2px 4px rgba(240, 36, 122, 0.25);
 }
 
 .instantApprovalBtn:hover {
   background: #166534;
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.2);
+  box-shadow: 0 4px 12px rgba(196, 24, 97, 0.25);
 }
 
 .manualApprovalBtn {
@@ -1210,7 +1210,7 @@
 
 /* Dribbble Style Buttons & Scorecards */
 .dribbbleBtnPrimary {
-  background-color: #6366f1;
+  background-color: #F0247A;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -1223,10 +1223,10 @@
   gap: 8px;
   cursor: pointer;
   transition: background-color 0.2s ease, transform 0.1s ease;
-  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 2px 4px rgba(240, 36, 122, 0.3);
 }
 .dribbbleBtnPrimary:hover {
-  background-color: #4f46e5;
+  background-color: #C41861;
   transform: translateY(-1px);
 }
 
@@ -1253,7 +1253,7 @@
 }
 .dribbbleBtnSecondaryActive {
   background-color: #f1f5f9;
-  border-color: #6366f1;
+  border-color: #F0247A;
   color: #4f46e5;
 }
 
@@ -1271,7 +1271,7 @@
 .dribbbleScorecardValue {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #6366f1;
+  color: #F0247A;
 }
 .dribbbleScorecardLabel {
   font-size: 0.75rem;
@@ -1289,10 +1289,10 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: linear-gradient(135deg, #F0247A, #C41861);
   color: white;
   border: none;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 4px 14px rgba(240, 36, 122, 0.45);
   font-size: 1.5rem;
   display: flex;
   justify-content: center;
@@ -1304,7 +1304,7 @@
 
 .fabIndent:hover {
   transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.6);
+  box-shadow: 0 8px 24px rgba(240, 36, 122, 0.65);
 }
 
 .fabIndent:active {

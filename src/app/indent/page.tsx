@@ -127,39 +127,55 @@ export default function IndentForm() {
     );
   }
 
-  // Common react-select styles for Samsung UI
+  // react-select styles — pink theme
   const selectStyles = {
     control: (base: any, state: any) => ({
       ...base,
-      backgroundColor: state.isFocused ? '#ffffff' : '#fff9db', // Light yellow for editable
-      border: state.isFocused ? '2px solid #7b61ff' : '1.5px solid #cbd5e0',
+      backgroundColor: state.isFocused ? '#ffffff' : '#fff9db',
+      border: state.isFocused ? '2px solid #F0247A' : '2px solid #f59e0b',
       borderRadius: '16px',
       padding: '6px 8px',
-      boxShadow: state.isFocused ? '0 0 15px rgba(123, 97, 255, 0.15)' : 'none',
-      fontSize: '1.05rem',
-      fontWeight: '500',
-      transition: 'all 0.2s ease'
+      boxShadow: state.isFocused ? '0 0 0 4px rgba(240, 36, 122, 0.15)' : '0 0 0 1px rgba(245,158,11,0.1)',
+      fontSize: '1rem',
+      fontWeight: '600',
+      transition: 'all 0.2s ease',
+      minHeight: '52px',
     }),
     menu: (base: any) => ({
       ...base,
       borderRadius: '20px',
-      border: '1px solid #e2e8f0',
-      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
+      border: '1px solid #fce7f3',
+      boxShadow: '0 20px 50px rgba(240, 36, 122, 0.15), 0 4px 16px rgba(0,0,0,0.08)',
       overflow: 'hidden',
-      zIndex: 100,
+      zIndex: 200,
       marginTop: '8px',
-      padding: '8px'
+      padding: '8px',
     }),
     option: (base: any, state: any) => ({
       ...base,
       padding: '12px 16px',
       borderRadius: '12px',
       margin: '2px 0',
-      fontWeight: '500',
-      backgroundColor: state.isSelected ? '#7b61ff' : state.isFocused ? '#f2f2f7' : 'white',
+      fontWeight: '600',
+      backgroundColor: state.isSelected ? '#F0247A' : state.isFocused ? '#fce7f3' : 'white',
       color: state.isSelected ? 'white' : '#1d1d1f',
-      cursor: 'pointer'
-    })
+      cursor: 'pointer',
+    }),
+    placeholder: (base: any) => ({
+      ...base,
+      color: '#94a3b8',
+      fontWeight: '500',
+    }),
+    singleValue: (base: any) => ({
+      ...base,
+      color: '#1d1d1f',
+      fontWeight: '600',
+    }),
+    indicatorSeparator: () => ({ display: 'none' }),
+    dropdownIndicator: (base: any) => ({
+      ...base,
+      color: '#F0247A',
+    }),
   };
 
   return (
