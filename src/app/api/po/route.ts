@@ -30,6 +30,38 @@ const MISC_SHEET_ID        = process.env.MISC_SHEET_ID!;
 const PO_RESPONSES_SHEET_ID = process.env.PO_RESPONSES_SHEET_ID!;
 const PO_DRIVE_FOLDER_ID   = process.env.PO_DRIVE_FOLDER_ID!;
 
+const monthMap: Record<string, number> = {
+  "जनवरी": 0, "फरवरी": 1, "मार्च": 2, "अप्रैल": 3, "मई": 4, "जून": 5,
+  "जुलाई": 6, "अगस्त": 7, "सितंबर": 8, "अक्टूबर": 9, "नवंबर": 10, "दिसंबर": 11,
+  "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
+  "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11
+};
+
+function parseDate(dateStr: string): Date {
+  if (!dateStr) return new Date(0);
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) return d;
+  const parts = dateStr.split(/[-\s/:]+/);
+  if (parts.length >= 3) {
+    const day = parseInt(parts[0], 10);
+    const mStr = parts[1].toLowerCase();
+    const year = parseInt(parts[2], 10);
+    let month = monthMap[mStr];
+    if (month === undefined) {
+      const key = Object.keys(monthMap).find(k => mStr.includes(k));
+      if (key) {
+        month = monthMap[key];
+      } else {
+        const mNum = parseInt(mStr, 10);
+        if (!isNaN(mNum) && mNum >= 1 && mNum <= 12) month = mNum - 1;
+        else month = 0;
+      }
+    }
+    return new Date(year, month, day);
+  }
+  return new Date(0);
+}
+
 // ───────────────────────────── GET ─────────────────────────────
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -65,8 +97,8 @@ export async function GET(req: Request) {
       rows.forEach((row: any) => {
         if (!isDataRow(row)) return;
         const timestampStr = String(row[2] || "").trim(); // C=2: Timestamp
-        const entryDate = new Date(timestampStr);
-        if (isNaN(entryDate.getTime()) || entryDate < thirtyDaysAgo) return; // Only last 30 days
+        const entryDate = parseDate(timestampStr);
+        if (entryDate < thirtyDaysAgo) return; // Only last 30 days
         
         const vendor      = (row[13] || "").trim();
         const approvedQty = parseFloat(row[17] || "0");
@@ -118,8 +150,8 @@ export async function GET(req: Request) {
         .filter((row: any) => {
           if (!isDataRow(row)) return false;
           const timestampStr = String(row[2] || "").trim(); // C=2: Timestamp
-          const entryDate = new Date(timestampStr);
-          if (isNaN(entryDate.getTime()) || entryDate < thirtyDaysAgo) return false;
+          const entryDate = parseDate(timestampStr);
+          if (entryDate < thirtyDaysAgo) return false;
 
           const rowVendor   = (row[13] || "").trim();
           const approvedQty = parseFloat(row[17] || "0");
@@ -188,10 +220,17 @@ export async function GET(req: Request) {
       const rows = res.data.values || [];
       const poMap: Record<string, any> = {};
 
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
       // Group rows by PO Number (Column E)
       rows.slice(1).forEach((row: any) => {
         const poNum = (row[4] || "").trim(); // E: PONo
         if (!poNum) return;
+
+        const poDateStr = String(row[5] || "").trim(); // F: PODate
+        const poDate = parseDate(poDateStr);
+        if (poDate < sixtyDaysAgo) return; // Only last 60 days
         
         if (!poMap[poNum]) {
           poMap[poNum] = {
