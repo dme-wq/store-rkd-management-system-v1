@@ -1006,6 +1006,21 @@ export default function Home() {
                 >
                   <FileText size={16} /> Purchase Order
                 </button>
+                <button
+                  onClick={() => router.push("/inward")}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: 'white', border: 'none', borderRadius: '12px',
+                    padding: '9px 18px', fontWeight: 700, fontSize: '0.82rem',
+                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,0.35)',
+                    transition: 'all 0.2s ease', letterSpacing: '0.3px'
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
+                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  <span style={{ fontSize: '1rem' }}>📥</span> Inward Entry
+                </button>
               </div>
 
               <div className={styles.appMetricsInline}>
