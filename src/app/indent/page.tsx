@@ -162,8 +162,11 @@ export default function IndentForm() {
       <div className={styles.bottomBlob}></div>
 
       <div className={styles.header}>
-        <h1 className={styles.headerTitle}>New Indent</h1>
-        <div className={styles.headerSubtitle}>We'd love to hear from you! Drop us a requirement, and we'll connect with you soon.</div>
+        <h1 className={styles.headerTitle}>Store Miscellaneous Indent Form</h1>
+        <div className={styles.logoWrapper}>
+          <div className={styles.rkdLogoBox}>RKD</div>
+          <div className={styles.rkdLogoText}>GROUP</div>
+        </div>
       </div>
 
       <div className={styles.contentArea}>

@@ -62,7 +62,7 @@ export async function GET() {
       const item = (row[0] || "").trim();
       if (item) {
         itemMap[item] = {
-          units: row[1] || "",    // C=1
+          units: row[2] || "",    // C=1, D=2
           rate: row[3] || "",     // E=3
           vendor: row[4] || "",   // F=4
           stock: "0"
