@@ -19,6 +19,33 @@ export default function IndentForm() {
     itemMap: {}
   });
 
+  useEffect(() => {
+    // Check cache first for instant load
+    const cached = localStorage.getItem("indentOptionsCache");
+    if (cached) {
+      try {
+        setOptions(JSON.parse(cached));
+        setLoading(false); // Instantly stop loading
+      } catch (e) {}
+    }
+
+    // Always fetch latest in background
+    fetch("/api/indent")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setOptions(data.options);
+          localStorage.setItem("indentOptionsCache", JSON.stringify(data.options));
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load options", err);
+        setLoading(false);
+      });
+  }, []);
+
+
   // Form State
   const [form, setForm] = useState({
     personFillingName: "",
@@ -34,18 +61,7 @@ export default function IndentForm() {
     ? options.itemMap[form.itemName] 
     : { units: "", rate: "", vendor: "", stock: "" };
 
-  useEffect(() => {
-    fetch("/api/indent")
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setOptions(data.options);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to load options", err);
-        setLoading(false);
-      });
-  }, []);
+
 
   const handleChange = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -142,9 +158,12 @@ export default function IndentForm() {
 
   return (
     <div className={styles.pageContainer}>
+      <div className={styles.topBlob}></div>
+      <div className={styles.bottomBlob}></div>
+
       <div className={styles.header}>
         <h1 className={styles.headerTitle}>New Indent</h1>
-        <div className={styles.headerSubtitle}>Submit store requirements</div>
+        <div className={styles.headerSubtitle}>We'd love to hear from you! Drop us a requirement, and we'll connect with you soon.</div>
       </div>
 
       <div className={styles.contentArea}>
@@ -282,14 +301,19 @@ export default function IndentForm() {
       {/* Success Modal */}
       {successRkd && (
         <div className={styles.successModal}>
+          <div className={styles.topBlob}></div>
+          <div className={styles.bottomBlob}></div>
+          
           <div className={styles.successCard}>
-            <div className={styles.successIcon}>
-              <Check size={40} />
+            <div className={styles.successIcon} style={{ background: 'transparent', fontSize: '80px', marginBottom: 0 }}>
+              📬
             </div>
-            <h3 className={styles.successTitle}>Submitted!</h3>
-            <div style={{ color: '#8e8e93', marginBottom: 12 }}>Your Indent RKD Number is:</div>
+            <h3 className={styles.successTitle}>Indent Submitted!!</h3>
+            <div className={styles.successSubtitle}>
+              Your requirement has been received! One of our team members will be in touch with you shortly.
+            </div>
             <div className={styles.successRkd}>{successRkd}</div>
-            <button className={styles.successBtn} onClick={() => setSuccessRkd(null)}>Submit Another</button>
+            <button className={styles.successBtn} onClick={() => setSuccessRkd(null)}>Go home</button>
           </div>
         </div>
       )}
