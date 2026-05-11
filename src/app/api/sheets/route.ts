@@ -115,13 +115,81 @@ function parseDate(dateStr: string): Date {
   return new Date(0);
 }
 
+
 let lastFetchTime = 0;
 let cachedApiResponse: any = null;
-const CACHE_DURATION = 30000; // 30 seconds
+const CACHE_DURATION = 25000; // 25 seconds
 let cachedStockMap: any = null;
 let cachedMiscMap: any = null;
 let lastStaticFetchTime = 0;
 const STATIC_CACHE_DURATION = 300000; // 5 minutes
+let imsRefreshing = false; // prevent concurrent IMS refreshes
+
+// Fetch IMS + Misc in background with timeout — never blocks the main response
+async function refreshStaticCaches(sheets: any) {
+  if (imsRefreshing) return;
+  imsRefreshing = true;
+  console.log("[Cache] Refreshing IMS + Misc in background...");
+
+  // 8-second timeout for the entire static refresh
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort();
+    console.warn("[Cache] IMS refresh timed out after 8s");
+  }, 8000);
+
+  try {
+    // IMS: B2:B7500 and K2:K7500 — start from row 2 to SKIP the header row
+    // Row 1 = "Item Name" | ... | "Remaining Stock" — skipping prevents the 1-row offset bug
+    const [imsBatchRes, miscRes] = await Promise.all([
+      sheets.spreadsheets.values.batchGet({
+        spreadsheetId: IMS_SHEET_ID,
+        ranges: ["IMS!B2:B7500", "IMS!K2:K7500"], // row 2 onwards — skip header!
+      }),
+      sheets.spreadsheets.values.get({ 
+        spreadsheetId: MISC_SHEET_ID, 
+        range: "Data!B2:F5000" // skip header
+      })
+    ]);
+
+    // Process Stock — B and K are now perfectly aligned (both start at row 2)
+    const stockMap: Record<string, string> = {};
+    const namesRaw = imsBatchRes.data.valueRanges?.[0].values || [];
+    const stocksRaw = imsBatchRes.data.valueRanges?.[1].values || [];
+    namesRaw.forEach((row: any, i: number) => {
+      const name = (row[0] || "").toString().trim().toLowerCase();
+      if (!name) return; // skip blank item name rows
+      const rawVal = (stocksRaw[i]?.[0] ?? "").toString().trim();
+      stockMap[name] = rawVal || "0";
+    });
+    cachedStockMap = stockMap;
+    console.log(`[Cache] stockMap built: ${Object.keys(stockMap).length} items`);
+
+    // Process Misc
+    const miscMap: Record<string, { vendor: string, rate: string }> = {};
+    const miscRows = miscRes.data.values || [];
+    miscRows.forEach((row: any) => {
+      const name = (row[0] || "").trim().toLowerCase();
+      if (name) miscMap[name] = { vendor: row[4] || "", rate: row[3] || "" };
+    });
+    cachedMiscMap = miscMap;
+    lastStaticFetchTime = Date.now();
+    console.log(`[Cache] miscMap built: ${Object.keys(miscMap).length} items`);
+
+  } catch (e: any) {
+    if (e.name === "AbortError") {
+      console.error("[Cache] IMS refresh aborted (timeout)");
+    } else {
+      console.error("[Cache] IMS refresh error:", e.message);
+    }
+    // Keep old cache on error — don't wipe it
+    if (!cachedStockMap) cachedStockMap = {};
+    if (!cachedMiscMap) cachedMiscMap = {};
+  } finally {
+    clearTimeout(timer);
+    imsRefreshing = false;
+  }
+}
 
 export async function GET() {
   if (!STORE_SHEET_ID) {
@@ -131,65 +199,27 @@ export async function GET() {
   const now = Date.now();
   const sheets = getSheetsClient();
 
+  // ── STRATEGY: Return cached data IMMEDIATELY if available, refresh in background ──
+  // This prevents the "Syncing Database..." freeze on repeated visits.
+  
+  // Trigger background IMS/Misc refresh if stale (non-blocking)
+  if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
+    refreshStaticCaches(sheets); // fire and forget — don't await
+  }
+
+  // If we have fresh main data cache, return immediately with latest stockMap
+  if (cachedApiResponse && (now - lastFetchTime < CACHE_DURATION)) {
+    return NextResponse.json({
+      ...cachedApiResponse,
+      stockMap: cachedStockMap || {},
+      miscMap: cachedMiscMap || {}
+    });
+  }
+
+  // If we have STALE main data but no cache at all yet — return stale + trigger bg refresh
+  // This only blocks on the very first cold start
   try {
-    // 1. Refresh Stock/Vendor Cache every 5 mins (Background)
-    if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
-      console.log("Parallel Refresh Starting...");
-      
-      try {
-        const [imsBatchRes, miscRes] = await Promise.all([
-          sheets.spreadsheets.values.batchGet({
-            spreadsheetId: IMS_SHEET_ID,
-            ranges: ["IMS!B1:B10000", "IMS!K1:K10000"],
-          }),
-          sheets.spreadsheets.values.get({ 
-            spreadsheetId: MISC_SHEET_ID, 
-            range: "Data!B1:F10000" 
-          })
-        ]);
-
-        // Process Stock
-        // Build parallel arrays skipping truly-empty rows so indexes stay in sync
-        const stockMap: Record<string, string> = {};
-        const namesRaw = imsBatchRes.data.valueRanges?.[0].values || [];
-        const stocksRaw = imsBatchRes.data.valueRanges?.[1].values || [];
-        namesRaw.forEach((row: any, i: number) => {
-          const name = (row[0] || "").toString().trim().toLowerCase();
-          if (!name) return; // skip blank rows
-          const rawVal = (stocksRaw[i]?.[0] ?? "").toString().trim();
-          // Store raw value as-is from IMS (can be negative if IMS is negative)
-          stockMap[name] = rawVal || "0";
-        });
-        cachedStockMap = stockMap;
-
-        // Process Misc
-        const miscMap: Record<string, { vendor: string, rate: string }> = {};
-        const miscRows = miscRes.data.values || [];
-        miscRows.forEach((row: any) => {
-          const name = (row[0] || "").trim().toLowerCase();
-          if (name) miscMap[name] = { vendor: row[4] || "", rate: row[3] || "" };
-        });
-        cachedMiscMap = miscMap;
-        lastStaticFetchTime = now;
-        
-      } catch (e: any) {
-        console.error("Refresh Parallel Error:", e.message);
-        // Don't crash, use old cache if exists
-        if (!cachedStockMap) cachedStockMap = {};
-        if (!cachedMiscMap) cachedMiscMap = {};
-      }
-    }
-
-    // 2. Return cached main data if still valid (30s)
-    if (cachedApiResponse && (now - lastFetchTime < CACHE_DURATION)) {
-      return NextResponse.json({
-        ...cachedApiResponse,
-        stockMap: cachedStockMap || {},
-        miscMap: cachedMiscMap || {}
-      });
-    }
-
-    // 3. Optimized Main Data Fetch
+    // ── Main Data Fetch (only if cache is expired) ──
     let totalRows = 0;
     try {
       const idRes = await sheets.spreadsheets.values.get({
@@ -198,14 +228,24 @@ export async function GET() {
       });
       totalRows = idRes.data.values?.length || 0;
     } catch (e: any) {
-      console.error("Main ID Fetch Failed:", e.message);
+      // If we have stale cache, return it rather than failing completely
+      if (cachedApiResponse) {
+        console.warn("[API] Using stale cache due to fetch error:", e.message);
+        return NextResponse.json({
+          ...cachedApiResponse,
+          stockMap: cachedStockMap || {},
+          miscMap: cachedMiscMap || {},
+          stale: true
+        });
+      }
       return NextResponse.json({ 
         success: false, 
-        error: `Cannot access StoreDataEntry tab. Please share the sheet with the service account. Error: ${e.message}` 
+        error: `Cannot access StoreDataEntry: ${e.message}` 
       }, { status: 500 });
     }
 
-    const startRow = Math.max(1, totalRows - 2999);
+    // Fetch only last 1500 rows for speed (was 3000 — unnecessarily large)
+    const startRow = Math.max(1, totalRows - 1499);
     let storeRows: any[] = [];
     try {
       const storeRes = await sheets.spreadsheets.values.get({
@@ -214,10 +254,17 @@ export async function GET() {
       });
       storeRows = storeRes.data.values || [];
     } catch (e: any) {
-      console.error("Main Data Fetch Failed:", e.message);
+      if (cachedApiResponse) {
+        return NextResponse.json({
+          ...cachedApiResponse,
+          stockMap: cachedStockMap || {},
+          miscMap: cachedMiscMap || {},
+          stale: true
+        });
+      }
       return NextResponse.json({ 
         success: false, 
-        error: `Failed to fetch records from Main Sheet (A${startRow}:T${totalRows}). ID: ${STORE_SHEET_ID}. Error: ${e.message}` 
+        error: `Failed to fetch store data: ${e.message}` 
       }, { status: 500 });
     }
 
@@ -226,7 +273,7 @@ export async function GET() {
       const obj: any = { _id: idx, rowNumber: actualRowNumber };
       HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
       return obj;
-    }).filter((r: any) => r["Store RKD Number"] && r["Store RKD Number"] !== "#"); // Filter empty rows
+    }).filter((r: any) => r["Store RKD Number"] && r["Store RKD Number"] !== "#");
 
     const responseData = { 
       success: true, 
