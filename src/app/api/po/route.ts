@@ -104,7 +104,7 @@ export async function GET(req: Request) {
         const approvedQty = parseFloat(row[17] || "0");
         const status      = (row[8] || "").trim().toLowerCase();
         // Include if: vendor assigned AND approved qty > 0 AND Requirement is Open
-        if (vendor && approvedQty > 0 && status === "open") vendorSet.add(vendor);
+        if (vendor && approvedQty > 0 && status === "requirement open") vendorSet.add(vendor);
       });
 
       // Fetch vendor details from Misc Vendor List — B=Name, C=ContactPerson, D=ContactNum, E=Email, F=GST, G=Address
@@ -156,7 +156,7 @@ export async function GET(req: Request) {
           const rowVendor   = (row[13] || "").trim();
           const approvedQty = parseFloat(row[17] || "0");
           const status      = (row[8] || "").trim().toLowerCase();
-          return rowVendor === vendor && approvedQty > 0 && status === "open";
+          return rowVendor === vendor && approvedQty > 0 && status === "requirement open";
         })
         .map((row: any) => ({
           rkdNumber:   (row[1]  || "").trim(),   // B = Store RKD Number
