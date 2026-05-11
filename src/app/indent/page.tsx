@@ -131,28 +131,34 @@ export default function IndentForm() {
   const selectStyles = {
     control: (base: any, state: any) => ({
       ...base,
-      backgroundColor: state.isFocused ? '#ffffff' : '#f2f2f7',
-      border: 'none',
+      backgroundColor: state.isFocused ? '#ffffff' : '#fff9db', // Light yellow for editable
+      border: state.isFocused ? '2px solid #7b61ff' : '1.5px solid #cbd5e0',
       borderRadius: '16px',
-      padding: '4px 6px',
-      boxShadow: state.isFocused ? '0 0 0 2px #007aff' : 'none',
+      padding: '6px 8px',
+      boxShadow: state.isFocused ? '0 0 15px rgba(123, 97, 255, 0.15)' : 'none',
       fontSize: '1.05rem',
-      fontWeight: '500'
+      fontWeight: '500',
+      transition: 'all 0.2s ease'
     }),
     menu: (base: any) => ({
       ...base,
-      borderRadius: '16px',
-      border: 'none',
-      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+      borderRadius: '20px',
+      border: '1px solid #e2e8f0',
+      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
       overflow: 'hidden',
-      zIndex: 100
+      zIndex: 100,
+      marginTop: '8px',
+      padding: '8px'
     }),
     option: (base: any, state: any) => ({
       ...base,
       padding: '12px 16px',
+      borderRadius: '12px',
+      margin: '2px 0',
       fontWeight: '500',
-      backgroundColor: state.isSelected ? '#007aff' : state.isFocused ? '#f2f2f7' : 'white',
-      color: state.isSelected ? 'white' : '#1d1d1f'
+      backgroundColor: state.isSelected ? '#7b61ff' : state.isFocused ? '#f2f2f7' : 'white',
+      color: state.isSelected ? 'white' : '#1d1d1f',
+      cursor: 'pointer'
     })
   };
 
