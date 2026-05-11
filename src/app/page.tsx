@@ -718,25 +718,22 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "APPROVE",
+          action: "INSTANT_APPROVE",
           rkdNumber,
           itemName: row["Item Name"],
-          vendorName: misc.vendor,
-          rate: misc.rate,
-          approvedQty: reqQty,
-          status: "Yes"  // ← THIS WAS MISSING — WhatsApp never fired without this
+          approvedQty: reqQty
         })
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
 
-      setModalTitle("WhatsApp Sent! 📢");
-      setModalMsg(`Approval request for "${row["Item Name"]}" sent to owner via WhatsApp. Waiting for owner confirmation.`);
+      setModalTitle("Instant Approval! ✅");
+      setModalMsg(`Approval status set to "No" and Approved Quantity set to "${reqQty}" for ${rkdNumber}.`);
       setModalData(null);
       setIsModalOpen(true);
       setTimeout(() => setIsModalOpen(false), 3000);
     } catch (err: any) {
-      showAlert("Approval Failed: " + err.message, "error");
+      showAlert("Instant Approval Failed: " + err.message, "error");
       setData(originalData);
     } finally {
       setUpdatingRowId(null);
@@ -962,7 +959,7 @@ export default function Home() {
 
             {/* App Card Header */}
             <div className={styles.appHeader} style={{ padding: '1rem 1.5rem', flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
-              
+
               {/* Top Row: Title, 4 Buttons, Scorecards */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <div className={styles.appHeaderTitles}>
@@ -1144,7 +1141,7 @@ export default function Home() {
                           <td className={styles.colBold}>{row["Status"] || "-"}</td>
                           <td>
                             <span className={`${styles.pillId} ${row["Approval Require?"] === "Yes" ? styles.pillIdLowStock :
-                                row["Approval Require?"] === "No" ? styles.stockDanger : ""
+                              row["Approval Require?"] === "No" ? styles.stockDanger : ""
                               }`}>
                               {row["Approval Require?"] || "-"}
                             </span>
@@ -1390,7 +1387,7 @@ export default function Home() {
       />
 
       {/* Floating Action Button for New Indent */}
-      <button 
+      <button
         className={styles.fabIndent}
         onClick={() => window.open('/indent', '_blank')}
         title="Create New Indent"

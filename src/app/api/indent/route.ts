@@ -119,13 +119,21 @@ export async function POST(req: Request) {
     }
     
     const newSerial = lastSerial + 1;
-    const year = new Date().getFullYear();
-    const storeRkdNumber = `RKD_S_${year}_${newSerial}`;
-    
-    // Format timestamp
+    // Generate IST Timestamp
     const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+    const monthIndex = istDate.getUTCMonth();
     const months = ["जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"];
-    const timestamp = `${String(now.getDate()).padStart(2, '0')}-${months[now.getMonth()]}-${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const month = months[monthIndex];
+    const yearPrefix = istDate.getUTCFullYear();
+    const hours = String(istDate.getUTCHours()).padStart(2, '0');
+    const mins = String(istDate.getUTCMinutes()).padStart(2, '0');
+    
+    const timestamp = `${day}-${month}-${yearPrefix} ${hours}:${mins}`;
+    const storeRkdNumber = `RKD_S_${yearPrefix}_${newSerial}`;
     
     const { 
       personFillingName, 

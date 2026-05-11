@@ -391,7 +391,37 @@ ${approvalLink}
           });
         }
       }
-      return NextResponse.json({ success: true, message: "Approval Notification Sent" });
+      } else if (status === "No") {
+        // Immediate update for "No Approval Required"
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { 
+            values: [["No", approvedQty || ""]] 
+          }
+        });
+        return NextResponse.json({ success: true, message: "Approval Status set to No" });
+      }
+      return NextResponse.json({ success: true, message: "Action Completed" });
+    } else if (action === "INSTANT_APPROVE") {
+      // Instant Approval: Update Q (Approval Require?) to No and R (Approved Qty) to Require Qty
+      // Fetch Require Qty first to be safe
+      const rowRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!F${rowNumber}`,
+      });
+      const requireQty = rowRes.data.values?.[0]?.[0] || "0";
+
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { 
+          values: [["No", requireQty]] 
+        }
+      });
+      return NextResponse.json({ success: true, message: "Instant Approval Completed" });
     } else if (action === "WHATSAPP_UPDATE") {
       // OWNER SIDE: Owner clicked the link and decided. NOW we update StoreDataEntry.
       const { ownerStatus, approvedQty: finalQty, rate: finalOwnRate, vendor: finalVendor } = body;

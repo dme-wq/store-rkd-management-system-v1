@@ -107,43 +107,39 @@
 
 /* Labels */
 .formLabel {
-  font-size: 0.9rem;
+  display: block;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #3a3a3c;
+  color: #2d3748;
   margin-bottom: 8px;
-  padding-left: 12px;
 }
 .required {
-  color: #ff3b30;
-  margin-left: 4px;
+  color: #e53e3e;
 }
 
 /* Inputs */
 .formInput {
-  background-color: #f2f2f7;
-  border: none;
-  border-radius: 16px;
-  padding: 16px 20px;
+  width: 100%;
+  background-color: #fff9db; /* Light yellow for editable */
+  border: 1.5px solid #cbd5e0;
+  border-radius: 12px;
+  padding: 14px 16px;
   font-size: 1.05rem;
   font-weight: 500;
   color: #1d1d1f;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-  width: 100%;
-  box-sizing: border-box;
+  transition: all 0.2s ease;
 }
 .formInput:focus {
   outline: none;
   background-color: #ffffff;
-  box-shadow: 0 0 0 2px #007aff;
-}
-.formInput::placeholder {
-  color: #aeaeb2;
-  font-weight: 400;
+  border-color: #7b61ff;
+  box-shadow: 0 0 0 2px rgba(123, 97, 255, 0.2);
 }
 .formInput:disabled {
-  background-color: #e5e5ea;
-  color: #8e8e93;
-  opacity: 1;
+  background-color: #f7fafc;
+  color: #718096;
+  border-color: #edf2f7;
+  cursor: not-allowed;
 }
 
 /* Custom Select styling to match input */
@@ -152,15 +148,16 @@
   font-weight: 500;
 }
 .reactSelectControl {
-  background-color: #f3f4f6 !important;
-  border: none !important;
+  background-color: #fff9db !important; /* Light yellow for editable */
+  border: 1.5px solid #e2e8f0 !important;
   border-radius: 12px !important;
   padding: 4px 6px !important;
   box-shadow: none !important;
 }
 .reactSelectControl--is-focused {
   background-color: #ffffff !important;
-  box-shadow: 0 0 0 2px #7b61ff !important;
+  border-color: #7b61ff !important;
+  box-shadow: 0 0 0 2px rgba(123, 97, 255, 0.2) !important;
 }
 .reactSelectMenu {
   border-radius: 12px !important;
