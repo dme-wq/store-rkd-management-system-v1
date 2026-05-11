@@ -14,3 +14,91 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* Spin Button Base - Micro Interaction */
+.rkdSpinBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 50px;
+  padding: 8px 24px 8px 8px; /* Extra padding on left for the circle */
+  font-family: 'Inter', 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #0f172a;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+/* The expanding colored circle background */
+.rkdSpinBtn::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50px;
+  background: var(--btn-color, #10b981);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+/* On hover, scale the circle to cover the button */
+.rkdSpinBtn:hover::before {
+  transform: scale(15);
+}
+
+/* On hover, add a deeper shadow to the button */
+.rkdSpinBtn:hover {
+  box-shadow: 0 8px 25px var(--btn-shadow, rgba(16,185,129,0.3));
+  border-color: transparent;
+  transform: translateY(-2px);
+}
+
+/* Icon container */
+.rkdSpinIcon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: white;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* On hover, spin the icon */
+.rkdSpinBtn:hover .rkdSpinIcon {
+  transform: rotate(360deg);
+}
+
+/* Text */
+.rkdSpinText {
+  position: relative;
+  z-index: 1;
+  transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* On hover, change text color to white */
+.rkdSpinBtn:hover .rkdSpinText {
+  color: white;
+}
+
+/* Disabled state */
+.rkdSpinBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.rkdSpinBtn:disabled::before {
+  background: #94a3b8;
+}

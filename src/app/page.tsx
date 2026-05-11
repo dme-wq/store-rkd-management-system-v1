@@ -362,11 +362,15 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
         </div>
 
         <button
-          className={styles.submitBtn}
+          className="rkdSpinBtn"
+          style={{ width: '100%', justifyContent: 'center', '--btn-color': '#2563eb', '--btn-shadow': 'rgba(37,99,235,0.3)' } as React.CSSProperties}
           onClick={() => onSubmit(qty, status)}
           disabled={updating}
         >
-          {updating ? <Loader2 className={styles.btnSpin} size={20} /> : "Update & Sync ✅"}
+          <span className="rkdSpinIcon">
+            {updating ? <Loader2 className={styles.btnSpin} size={20} /> : "✅"}
+          </span>
+          <span className="rkdSpinText">Update & Sync</span>
         </button>
       </div>
     </div>
@@ -448,12 +452,15 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
         </div>
 
         <button
-          className={styles.submitBtn}
-          style={{ background: '#d97706' }}
+          className="rkdSpinBtn"
+          style={{ width: '100%', justifyContent: 'center', '--btn-color': '#d97706', '--btn-shadow': 'rgba(217,119,6,0.3)' } as React.CSSProperties}
           onClick={() => onSubmit({ vendor, rate, status, approvedQty })}
           disabled={updating}
         >
-          {updating ? <Loader2 className={styles.btnSpin} size={18} /> : "Submit Approval ✅"}
+          <span className="rkdSpinIcon">
+            {updating ? <Loader2 className={styles.btnSpin} size={18} /> : "✅"}
+          </span>
+          <span className="rkdSpinText">Submit Approval</span>
         </button>
       </div>
     </div>
@@ -960,66 +967,35 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => { setIsDebitNoteOpen(true); setDnSelectedRKD(null); setDnQty(""); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
-                    color: 'white', border: 'none', borderRadius: '12px',
-                    padding: '9px 18px', fontWeight: 700, fontSize: '0.82rem',
-                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(220,38,38,0.35)',
-                    transition: 'all 0.2s ease', letterSpacing: '0.3px'
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                  className="rkdSpinBtn"
+                  style={{ '--btn-color': '#dc2626', '--btn-shadow': 'rgba(220,38,38,0.35)' } as React.CSSProperties}
                 >
-                  <span style={{ fontSize: '1rem' }}>📄</span> Debit Note
+                  <span className="rkdSpinIcon">📄</span>
+                  <span className="rkdSpinText">Debit Note</span>
                 </button>
                 <button
                   onClick={() => { setIsReverseEntryOpen(true); setReSelectedRKD(null); setReQty(""); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                    color: 'white', border: 'none', borderRadius: '12px',
-                    padding: '9px 18px', fontWeight: 700, fontSize: '0.82rem',
-                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(124,58,237,0.35)',
-                    transition: 'all 0.2s ease', letterSpacing: '0.3px'
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                  className="rkdSpinBtn"
+                  style={{ '--btn-color': '#7c3aed', '--btn-shadow': 'rgba(124,58,237,0.35)' } as React.CSSProperties}
                 >
-                  <span style={{ fontSize: '1rem' }}>↩️</span> Reverse Entry
+                  <span className="rkdSpinIcon">↩️</span>
+                  <span className="rkdSpinText">Reverse Entry</span>
                 </button>
                 <button
                   onClick={() => router.push("/po")}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    background: 'linear-gradient(135deg, #ea580c, #c2410c)',
-                    color: 'white', border: 'none', borderRadius: '12px',
-                    padding: '9px 18px', fontWeight: 700, fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(234,88,12,0.4)',
-                    transition: 'all 0.2s ease', letterSpacing: '0.3px',
-                    animation: 'poBlink 2s ease-in-out infinite',
-                    position: 'relative', overflow: 'hidden',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                  className="rkdSpinBtn"
+                  style={{ '--btn-color': '#ea580c', '--btn-shadow': 'rgba(234,88,12,0.4)' } as React.CSSProperties}
                 >
-                  <FileText size={16} /> Purchase Order
+                  <span className="rkdSpinIcon"><FileText size={16} /></span>
+                  <span className="rkdSpinText">Purchase Order</span>
                 </button>
                 <button
                   onClick={() => router.push("/inward")}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                    color: 'white', border: 'none', borderRadius: '12px',
-                    padding: '9px 18px', fontWeight: 700, fontSize: '0.82rem',
-                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,0.35)',
-                    transition: 'all 0.2s ease', letterSpacing: '0.3px'
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                  className="rkdSpinBtn"
+                  style={{ '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.35)' } as React.CSSProperties}
                 >
-                  <span style={{ fontSize: '1rem' }}>📥</span> Inward Entry
+                  <span className="rkdSpinIcon">📥</span>
+                  <span className="rkdSpinText">Inward Entry</span>
                 </button>
               </div>
 
@@ -1342,12 +1318,15 @@ export default function Home() {
             </div>
 
             <button
-              className={styles.submitBtn}
-              style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 15px rgba(220,38,38,0.35)' }}
+              className="rkdSpinBtn"
+              style={{ width: '100%', justifyContent: 'center', '--btn-color': '#dc2626', '--btn-shadow': 'rgba(220,38,38,0.35)' } as React.CSSProperties}
               disabled={columnUpdating || !dnSelectedRKD || !dnQty}
               onClick={() => handleColumnUpdate(dnSelectedRKD["Store RKD Number"], "S", dnQty, dnSelectedRKD["Require Qty"])}
             >
-              {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : "💾 Save Debit Note"}
+              <span className="rkdSpinIcon">
+                {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : "💾"}
+              </span>
+              <span className="rkdSpinText">Save Debit Note</span>
             </button>
           </div>
         </div>
@@ -1398,12 +1377,15 @@ export default function Home() {
             </div>
 
             <button
-              className={styles.submitBtn}
-              style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 4px 15px rgba(124,58,237,0.35)' }}
+              className="rkdSpinBtn"
+              style={{ width: '100%', justifyContent: 'center', '--btn-color': '#7c3aed', '--btn-shadow': 'rgba(124,58,237,0.35)' } as React.CSSProperties}
               disabled={columnUpdating || !reSelectedRKD || !reQty}
               onClick={() => handleColumnUpdate(reSelectedRKD["Store RKD Number"], "T", reQty, reSelectedRKD["Require Qty"])}
             >
-              {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : "💾 Save Reverse Entry"}
+              <span className="rkdSpinIcon">
+                {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : "💾"}
+              </span>
+              <span className="rkdSpinText">Save Reverse Entry</span>
             </button>
           </div>
         </div>

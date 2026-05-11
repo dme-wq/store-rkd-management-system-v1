@@ -86,11 +86,15 @@ function ManualInwardModal({ isOpen, onClose, row, onSubmit, updating }: any) {
         </div>
 
         <button
-          className={styles.submitBtn}
+          className="rkdSpinBtn"
+          style={{ width: '100%', justifyContent: 'center', '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.3)' } as React.CSSProperties}
           onClick={() => onSubmit(inwardQty, rate)}
           disabled={updating || !inwardQty}
         >
-          {updating ? <Loader2 className={styles.btnSpin} size={20} /> : "Submit Inward ✅"}
+          <span className="rkdSpinIcon">
+            {updating ? <Loader2 className={styles.btnSpin} size={20} /> : "✅"}
+          </span>
+          <span className="rkdSpinText">Submit Inward</span>
         </button>
       </div>
     </div>
