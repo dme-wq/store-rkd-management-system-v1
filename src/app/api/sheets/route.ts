@@ -355,7 +355,6 @@ export async function POST(req: Request) {
     }
 
     if (action === "APPROVE") {
-      // CLERK SIDE: Only trigger WhatsApp, do NOT update StoreDataEntry yet
       console.log(`Clerk Requesting Approval for RKD: ${rkdNumber}. Qty: ${approvedQty}, Rate: ${finalRate}`);
 
       if (status === "Yes") {
@@ -371,32 +370,19 @@ export async function POST(req: Request) {
           const protocol = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
           const appUrl = `${protocol}://${host}`;
           
-          // Direct link — no TinyURL (reliable on Vercel)
-          const approvalLink = `${appUrl}/approve/${rkdNumber}?qty=${approvedQty}&rate=${encodeURIComponent(finalRate)}&vendor=${encodeURIComponent(finalVendorName)}`;
+          const longLink = `${appUrl}/approve/${rkdNumber}?qty=${approvedQty}&rate=${encodeURIComponent(finalRate)}&vendor=${encodeURIComponent(finalVendorName)}`;
           
+          // Shorten URL using is.gd (free, no API key, links never expire)
+          let approvalLink = longLink;
+          try {
+            const isgdRes = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`);
+            const isgdData = await isgdRes.json();
+            if (isgdData.shorturl) approvalLink = isgdData.shorturl;
+          } catch (e) {
+            console.warn("is.gd shortening failed, using full link:", e);
+          }
+
           const totalPrice = (parseFloat(approvedQty) * parseFloat(finalRate || "0")).toFixed(2);
-
-          const message = 
-`━━━━━━━━━━━━━━━━━━━━━━━
-🏭 *RKD INDUSTRIES — STORE*
-━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 *APPROVAL REQUEST*
-
-🔖 *RKD No:*       ${rkdNumber}
-📦 *Item:*             ${finalItemName}
-🏪 *Vendor:*        ${finalVendorName}
-🔢 *Qty:*               ${approvedQty}
-💰 *Rate:*             Rs. ${finalRate}
-🧾 *Total Price:*  Rs. ${totalPrice}
-
-━━━━━━━━━━━━━━━━━━━━━━━
-👆 *TAP BELOW TO DECIDE:*
-${approvalLink}
-━━━━━━━━━━━━━━━━━━━━━━━
-
-⏰ ${formattedDate}
-🤖 _RKD Store Management System_`;
 
           for (const contact of contacts) {
             const contactName = contact[0] || "Sir/Ma'am";
@@ -404,29 +390,29 @@ ${approvalLink}
             if (phone.length === 10) phone = "91" + phone;
             else if (phone.startsWith("0") && phone.length === 11) phone = "91" + phone.slice(1);
 
-            const personalizedMessage = 
+            const personalizedMessage =
 `👋 *Namaste ${contactName} Ji!*
 
-━━━━━━━━━━━━━━━━━━━━━━━
-🏭 *RKD INDUSTRIES — STORE*
-━━━━━━━━━━━━━━━━━━━━━━━
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+🏪 *STORE MISCELLANEOUS APPROVAL*
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 
-📋 *APPROVAL REQUEST*
+📋 *Approval Required*
 
-🔖 *RKD No:*       ${rkdNumber}
-📦 *Item:*             ${finalItemName}
-🏪 *Vendor:*        ${finalVendorName}
-🔢 *Qty:*               ${approvedQty}
-💰 *Rate:*             Rs. ${finalRate}
-🧾 *Total Price:*  Rs. ${totalPrice}
+🔖 RKD No:      *${rkdNumber}*
+📦 Item:            *${finalItemName}*
+🏪 Vendor:       *${finalVendorName}*
+🔢 Qty:              *${approvedQty}*
+💰 Rate:           *₹ ${finalRate}*
+🧾 Total:          *₹ ${totalPrice}*
 
-━━━━━━━━━━━━━━━━━━━━━━━
-👆 *TAP BELOW TO DECIDE:*
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+👆 Tap to Approve / Reject:
 ${approvalLink}
-━━━━━━━━━━━━━━━━━━━━━━━
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 
 ⏰ ${formattedDate}
-🤖 _RKD Store Management System_`;
+🤖 _Store Miscellaneous System_`;
 
             await sendWhatsApp(phone, personalizedMessage);
           }
@@ -447,6 +433,7 @@ ${approvalLink}
             }
           });
         }
+
       } else if (status === "No") {
         // Immediate update for "No Approval Required"
         await sheets.spreadsheets.values.update({
@@ -554,25 +541,25 @@ ${approvalLink}
             const doerMessage =
 `👋 *Namaste ${doerName} Ji!*
 
-━━━━━━━━━━━━━━━━━━━━━━━
-🏭 *RKD INDUSTRIES — STORE*
-━━━━━━━━━━━━━━━━━━━━━━━
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+🏪 *STORE MISCELLANEOUS APPROVAL*
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 
 ${statusColor} *REQUEST ${statusText}* ${statusEmoji}
 
-🔖 *RKD No:*   ${rkdNumber}
-📦 *Item:*        ${finalItemName}
-🔢 *Qty:*          ${finalQty || approvedQty}
-💰 *Rate:*        Rs. ${finalRate}
+🔖 RKD No:    *${rkdNumber}*
+📦 Item:          *${finalItemName}*
+🔢 Qty:            *${finalQty || approvedQty}*
+💰 Rate:          *₹ ${finalRate}*
 
-━━━━━━━━━━━━━━━━━━━━━━━
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 ${isApproved
   ? "✅ Your material request has been *Approved* by the management. It will be processed shortly."
-  : "❌ Your material request has been *Rejected* by the management. Please contact the store for more details."}
-━━━━━━━━━━━━━━━━━━━━━━━
+  : "❌ Your material request has been *Rejected* by the management. Please contact the store."}
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 
 ⏰ ${formattedDate}
-🤖 _RKD Store Management System_`;
+🤖 _Store Miscellaneous System_`;
 
             await sendWhatsApp(doerPhone, doerMessage);
           }

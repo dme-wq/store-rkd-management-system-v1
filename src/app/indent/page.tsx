@@ -127,180 +127,184 @@ export default function IndentForm() {
     );
   }
 
-  // react-select styles — pink theme
+  // react-select styles — AppSheet blue theme
   const selectStyles = {
     control: (base: any, state: any) => ({
       ...base,
-      backgroundColor: state.isFocused ? '#ffffff' : '#fff9db',
-      border: state.isFocused ? '2px solid #F0247A' : '2px solid #f59e0b',
-      borderRadius: '16px',
-      padding: '6px 8px',
-      boxShadow: state.isFocused ? '0 0 0 4px rgba(240, 36, 122, 0.15)' : '0 0 0 1px rgba(245,158,11,0.1)',
-      fontSize: '1rem',
-      fontWeight: '600',
+      backgroundColor: state.isFocused ? '#ffffff' : '#F8F9FA',
+      border: state.isFocused ? '1.5px solid #1A73E8' : '1.5px solid #DADCE0',
+      borderRadius: '8px',
+      padding: '4px 6px',
+      boxShadow: state.isFocused ? '0 0 0 3px rgba(26, 115, 232, 0.12)' : 'none',
+      fontSize: '0.95rem',
+      fontWeight: '500',
       transition: 'all 0.2s ease',
-      minHeight: '52px',
+      minHeight: '48px',
     }),
     menu: (base: any) => ({
       ...base,
-      borderRadius: '20px',
-      border: '1px solid #fce7f3',
-      boxShadow: '0 20px 50px rgba(240, 36, 122, 0.15), 0 4px 16px rgba(0,0,0,0.08)',
+      borderRadius: '8px',
+      border: '1px solid #DADCE0',
+      boxShadow: '0 4px 20px rgba(60,64,67,0.15)',
       overflow: 'hidden',
       zIndex: 200,
-      marginTop: '8px',
-      padding: '8px',
+      marginTop: '4px',
+      padding: '4px',
     }),
     option: (base: any, state: any) => ({
       ...base,
-      padding: '12px 16px',
-      borderRadius: '12px',
+      padding: '10px 14px',
+      borderRadius: '6px',
       margin: '2px 0',
-      fontWeight: '600',
-      backgroundColor: state.isSelected ? '#F0247A' : state.isFocused ? '#fce7f3' : 'white',
-      color: state.isSelected ? 'white' : '#1d1d1f',
+      fontWeight: '500',
+      fontSize: '0.92rem',
+      backgroundColor: state.isSelected ? '#1A73E8' : state.isFocused ? '#F0F4FF' : 'white',
+      color: state.isSelected ? 'white' : '#202124',
       cursor: 'pointer',
     }),
     placeholder: (base: any) => ({
       ...base,
-      color: '#94a3b8',
-      fontWeight: '500',
+      color: '#9AA0A6',
+      fontWeight: '400',
     }),
     singleValue: (base: any) => ({
       ...base,
-      color: '#1d1d1f',
-      fontWeight: '600',
+      color: '#202124',
+      fontWeight: '500',
     }),
     indicatorSeparator: () => ({ display: 'none' }),
     dropdownIndicator: (base: any) => ({
       ...base,
-      color: '#F0247A',
+      color: '#5F6368',
     }),
   };
 
   return (
     <div className={styles.pageContainer}>
-      <div className={styles.topBlob}></div>
-      <div className={styles.bottomBlob}></div>
-
       <div className={styles.header}>
-        <h1 className={styles.headerTitle}>Store Miscellaneous Indent Form</h1>
-        <div className={styles.logoWrapper}>
-          <div className={styles.rkdLogoBox}>RKD</div>
-          <div className={styles.rkdLogoText}>GROUP</div>
+        <div className={styles.headerInner}>
+          <h1 className={styles.headerTitle}>Store Miscellaneous Indent</h1>
+          <div className={styles.logoWrapper}>
+            <div className={styles.rkdLogoBox}>RKD</div>
+          </div>
+        </div>
+        <div className={styles.progressStrip}>
+          <div className={styles.progressFill}></div>
         </div>
       </div>
 
       <div className={styles.contentArea}>
         
-        {/* User Details Section */}
+        {/* Employee Details Section */}
         <div className={styles.formCard}>
           <h2 className={styles.sectionTitle}>Employee Details</h2>
-          
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Person Name <span className={styles.required}>*</span></label>
-            <Select 
-              options={toSelectOptions(options.persons)} 
-              styles={selectStyles}
-              placeholder="Select person..."
-              value={form.personFillingName ? { value: form.personFillingName, label: form.personFillingName } : null}
-              onChange={(o: any) => handleChange("personFillingName", o?.value || "")}
-              isClearable
-            />
-          </div>
+          <div className={styles.cardBody}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Person Name <span className={styles.required}>*</span></label>
+              <Select 
+                options={toSelectOptions(options.persons)} 
+                styles={selectStyles}
+                placeholder="Select person..."
+                value={form.personFillingName ? { value: form.personFillingName, label: form.personFillingName } : null}
+                onChange={(o: any) => handleChange("personFillingName", o?.value || "")}
+                isClearable
+              />
+            </div>
 
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Department <span className={styles.required}>*</span></label>
-            <Select 
-              options={toSelectOptions(options.departments)} 
-              styles={selectStyles}
-              placeholder="Select department..."
-              value={form.department ? { value: form.department, label: form.department } : null}
-              onChange={(o: any) => handleChange("department", o?.value || "")}
-              isClearable
-            />
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Department <span className={styles.required}>*</span></label>
+              <Select 
+                options={toSelectOptions(options.departments)} 
+                styles={selectStyles}
+                placeholder="Select department..."
+                value={form.department ? { value: form.department, label: form.department } : null}
+                onChange={(o: any) => handleChange("department", o?.value || "")}
+                isClearable
+              />
+            </div>
           </div>
         </div>
 
         {/* Machine Section */}
         <div className={styles.formCard}>
           <h2 className={styles.sectionTitle}>Machine Details</h2>
-          
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Machine Name</label>
-            <Select 
-              options={toSelectOptions(options.machineNames)} 
-              styles={selectStyles}
-              placeholder="Select or type..."
-              value={form.machineName ? { value: form.machineName, label: form.machineName } : null}
-              onChange={(o: any) => handleChange("machineName", o?.value || "")}
-              isClearable
-            />
-          </div>
+          <div className={styles.cardBody}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Machine Name</label>
+              <Select 
+                options={toSelectOptions(options.machineNames)} 
+                styles={selectStyles}
+                placeholder="Select or type..."
+                value={form.machineName ? { value: form.machineName, label: form.machineName } : null}
+                onChange={(o: any) => handleChange("machineName", o?.value || "")}
+                isClearable
+              />
+            </div>
 
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Machine ID</label>
-            <Select 
-              options={toSelectOptions(options.machineIDs)} 
-              styles={selectStyles}
-              placeholder="Select ID..."
-              value={form.machineId ? { value: form.machineId, label: form.machineId } : null}
-              onChange={(o: any) => handleChange("machineId", o?.value || "")}
-              isClearable
-            />
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Machine ID</label>
+              <Select 
+                options={toSelectOptions(options.machineIDs)} 
+                styles={selectStyles}
+                placeholder="Select ID..."
+                value={form.machineId ? { value: form.machineId, label: form.machineId } : null}
+                onChange={(o: any) => handleChange("machineId", o?.value || "")}
+                isClearable
+              />
+            </div>
           </div>
         </div>
 
         {/* Requirement Section */}
         <div className={styles.formCard}>
-          <h2 className={styles.sectionTitle}>Requirement</h2>
-          
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Item Name <span className={styles.required}>*</span></label>
-            <Select 
-              options={toSelectOptions(options.items)} 
-              styles={selectStyles}
-              placeholder="Search item..."
-              value={form.itemName ? { value: form.itemName, label: form.itemName } : null}
-              onChange={(o: any) => handleChange("itemName", o?.value || "")}
-              isClearable
-            />
-          </div>
+          <h2 className={styles.sectionTitle}>Item Requirement</h2>
+          <div className={styles.cardBody}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Item Name <span className={styles.required}>*</span></label>
+              <Select 
+                options={toSelectOptions(options.items)} 
+                styles={selectStyles}
+                placeholder="Search item..."
+                value={form.itemName ? { value: form.itemName, label: form.itemName } : null}
+                onChange={(o: any) => handleChange("itemName", o?.value || "")}
+                isClearable
+              />
+            </div>
 
-          {form.itemName && (
-            <div className={styles.infoBox}>
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Current Stock</span>
-                <span className={styles.stockBadge}>{selectedItemData.stock}</span>
+            {form.itemName && (
+              <div className={styles.infoBox}>
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>📦 Current Stock in Store</span>
+                  <span className={styles.stockBadge}>{selectedItemData.stock}</span>
+                </div>
+              </div>
+            )}
+
+            <div className={styles.rowGrid}>
+              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                <label className={styles.formLabel}>Require Qty <span className={styles.required}>*</span></label>
+                <input 
+                  type="number" 
+                  step="any"
+                  className={styles.formInput} 
+                  placeholder="0" 
+                  value={form.requireQty}
+                  onChange={e => handleChange("requireQty", e.target.value)}
+                />
+              </div>
+              
+              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                <label className={styles.formLabel}>Units</label>
+                <input 
+                  type="text" 
+                  className={styles.formInput} 
+                  value={selectedItemData.units}
+                  disabled 
+                  placeholder="-" 
+                />
               </div>
             </div>
-          )}
-
-          <div className={styles.rowGrid}>
-            <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-              <label className={styles.formLabel}>Require Qty <span className={styles.required}>*</span></label>
-              <input 
-                type="number" 
-                step="any"
-                className={styles.formInput} 
-                placeholder="0.00" 
-                value={form.requireQty}
-                onChange={e => handleChange("requireQty", e.target.value)}
-              />
-            </div>
-            
-            <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-              <label className={styles.formLabel}>Units</label>
-              <input 
-                type="text" 
-                className={styles.formInput} 
-                value={selectedItemData.units}
-                disabled 
-                placeholder="-" 
-              />
-            </div>
           </div>
-
         </div>
 
       </div>
