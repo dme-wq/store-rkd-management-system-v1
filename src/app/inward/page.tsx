@@ -87,7 +87,7 @@ function ManualInwardModal({ isOpen, onClose, row, onSubmit, updating }: any) {
 
         <button
           className="rkdSpinBtn"
-          style={{ width: '100%', justifyContent: 'center', '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.3)' } as React.CSSProperties}
+          style={{ width: '100%', justifyContent: 'center', '--btn-bg': '#064e3b', '--btn-text': 'white', '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.3)' } as React.CSSProperties}
           onClick={() => onSubmit(inwardQty, rate)}
           disabled={updating || !inwardQty}
         >
