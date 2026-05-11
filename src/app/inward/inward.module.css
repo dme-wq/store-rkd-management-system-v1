@@ -1,24 +1,47 @@
-/* ── SAP Fiori Horizon Theme for Inward ──────────────────────────────────────── */
+/* ── Premium SAP Fiori Horizon Theme for Inward ──────────────────────────────────────── */
 .pageContainer {
   min-height: 100vh;
-  background: #f4f5f6; /* SAP Horizon Base */
+  background: #f8fafc;
   font-family: 'Inter', '72', 'Segoe UI', sans-serif;
   color: #32363a;
   position: relative;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+}
+
+.pageContainer::before {
+  content: '';
+  position: absolute;
+  top: -150px; right: -100px;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(8, 84, 160, 0.1) 0%, rgba(8, 84, 160, 0) 70%);
+  border-radius: 50%;
+  z-index: 0; pointer-events: none;
+}
+
+.pageContainer::after {
+  content: '';
+  position: absolute;
+  bottom: -200px; left: -150px;
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, rgba(16, 126, 62, 0.08) 0%, rgba(16, 126, 62, 0) 70%);
+  border-radius: 50%;
+  z-index: 0; pointer-events: none;
 }
 
 /* ── Shell Header ─────────────────────────────────────── */
 .topHeader {
+  position: relative; z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 32px;
-  background: #354a5f; /* SAP Horizon Shell Header */
-  color: #ffffff;
-  box-shadow: inset 0 -1px 0 0 rgba(0,0,0,0.15);
-  z-index: 10;
+  padding: 16px 32px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  color: #1d2d3e;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .headerLeft {
@@ -29,26 +52,32 @@
 
 .backBtn {
   display: flex; align-items: center; gap: 8px;
-  background: transparent;
-  color: #ffffff;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 6px 12px;
+  background: #ffffff;
+  color: #1d2d3e;
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  padding: 8px 16px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.875rem;
   transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 .backBtn:hover { 
-  background: rgba(255,255,255,0.1); 
-  border-color: rgba(255,255,255,0.2);
+  background: #f5faff; 
+  border-color: #0854a0;
+  color: #0854a0;
+  transform: translateY(-1px);
 }
 
 .headerTitle {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
   letter-spacing: 0.2px;
   margin: 0;
+  background: linear-gradient(135deg, #0854a0 0%, #1d2d3e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .headerRight { display: flex; align-items: center; gap: 16px; }
@@ -76,19 +105,25 @@
 
 /* ── SAP Cards (Panels) ─────────────────────────────────────────── */
 .appCard {
-  background: #ffffff;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   height: calc(100vh - 120px);
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+.appCard:hover {
+  box-shadow: 0 15px 40px rgba(8, 84, 160, 0.06);
 }
 
 .appHeader {
-  padding: 16px 24px;
-  border-bottom: 1px solid #e4e4e4;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: linear-gradient(to right, rgba(255,255,255,0.8), rgba(248,250,252,0.5));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -129,26 +164,28 @@
 
 /* ── SAP Table ─────────────────────────────────── */
 .tableScrollArea {
-  flex: 1; overflow: auto; background: #ffffff;
+  flex: 1; overflow: auto; background: transparent;
 }
 
 .dataTable {
-  width: 100%; border-collapse: collapse; font-size: 0.875rem;
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem;
 }
 .dataTable th {
-  background: #f4f5f6;
-  color: #556b82;
-  padding: 12px 16px; text-align: left;
-  font-weight: 600; white-space: nowrap;
+  background: rgba(248, 250, 252, 0.8);
+  backdrop-filter: blur(10px);
+  color: #475569;
+  padding: 16px 20px; text-align: left;
+  font-weight: 700; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px;
   position: sticky; top: 0; z-index: 20;
-  border-bottom: 1px solid #d9d9d9;
+  border-bottom: 2px solid #e2e8f0;
 }
 .dataTable td {
-  padding: 12px 16px; 
-  border-bottom: 1px solid #e4e4e4;
-  vertical-align: middle; color: #32363a;
+  padding: 16px 20px; 
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  vertical-align: middle; color: #1e293b;
+  transition: background 0.2s;
 }
-.dataTable tbody tr:hover td { background: #f5faff; }
+.dataTable tbody tr:hover td { background: rgba(248, 250, 252, 0.6); }
 
 .colMuted { color: #556b82; }
 .colBold { font-weight: 600; color: #1d2d3e; }
