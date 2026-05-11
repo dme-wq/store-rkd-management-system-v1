@@ -58,9 +58,16 @@ export async function GET(req: Request) {
       // Column indices (0-based in A:T):
       // A=0:#, B=1:RKDNum, E=4:ItemName, G=6:Units, I=8:Status,
       // N=13:VendorName, O=14:Rate, Q=16:ApprovalRequire, R=17:ApprovedQty
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const vendorSet = new Set<string>();
       rows.forEach((row: any) => {
         if (!isDataRow(row)) return;
+        const timestampStr = String(row[2] || "").trim(); // C=2: Timestamp
+        const entryDate = new Date(timestampStr);
+        if (isNaN(entryDate.getTime()) || entryDate < thirtyDaysAgo) return; // Only last 30 days
+        
         const vendor      = (row[13] || "").trim();
         const approvedQty = parseFloat(row[17] || "0");
         const status      = (row[8] || "").trim().toLowerCase();
@@ -104,9 +111,16 @@ export async function GET(req: Request) {
       });
       const rows = res.data.values || [];
 
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const items = rows
         .filter((row: any) => {
           if (!isDataRow(row)) return false;
+          const timestampStr = String(row[2] || "").trim(); // C=2: Timestamp
+          const entryDate = new Date(timestampStr);
+          if (isNaN(entryDate.getTime()) || entryDate < thirtyDaysAgo) return false;
+
           const rowVendor   = (row[13] || "").trim();
           const approvedQty = parseFloat(row[17] || "0");
           const status      = (row[8] || "").trim().toLowerCase();
