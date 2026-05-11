@@ -100,8 +100,9 @@ function ManualInwardModal({ isOpen, onClose, row, onSubmit, updating }: any) {
   );
 }
 
-export default function InwardPage() {
+export default function InwardEntrySystem() {
   const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -223,11 +224,17 @@ export default function InwardPage() {
 
   return (
     <div className={styles.pageContainer}>
+      {isNavigating && (
+        <div className={styles.navigatingOverlay}>
+          <div className={styles.navSpinner}></div>
+          <div className={styles.navText}>Please wait...</div>
+        </div>
+      )}
 
       {/* Header */}
       <header className={styles.topHeader}>
         <div className={styles.headerLeft}>
-          <button className={styles.backBtn} onClick={() => router.push("/")}>
+          <button className={styles.backBtn} onClick={() => { setIsNavigating(true); router.push("/"); }}>
             <ArrowLeft size={16} /> Back to Dashboard
           </button>
           <h1 className={styles.headerTitle}>Inward Entry System</h1>

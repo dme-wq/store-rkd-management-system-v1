@@ -234,6 +234,7 @@ interface POData {
 export default function PurchaseOrderPage() {
   const router = useRouter();
 
+  const [isNavigating, setIsNavigating] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "edit">("list");
   const [poList, setPoList] = useState<POData[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -313,6 +314,7 @@ export default function PurchaseOrderPage() {
   }, [includedItems]);
 
   const handleCreateNew = () => {
+    setIsNavigating(true);
     setIsEditing(false);
     setSelVendor(null);
     setItems([]);
@@ -322,9 +324,11 @@ export default function PurchaseOrderPage() {
     setSuccess(null); setError(null);
     fetch("/api/po?action=nextPO").then(r => r.json()).then(d => { if(d.success) setPoNumber(d.poNumber); });
     setViewMode("edit");
+    setTimeout(() => setIsNavigating(false), 300);
   };
 
   const handleEditPO = (po: POData) => {
+    setIsNavigating(true);
     setIsEditing(true);
     setPoNumber(po.poNumber);
     setSelVendor({ name: po.vendorName, address: po.vendorAddress });
@@ -341,6 +345,7 @@ export default function PurchaseOrderPage() {
     setItems(po.items);
     setSuccess(null); setError(null);
     setViewMode("edit");
+    setTimeout(() => setIsNavigating(false), 300);
   };
 
   const handleSave = async () => {
@@ -397,8 +402,14 @@ export default function PurchaseOrderPage() {
   if (viewMode === "list") {
     return (
       <div className={styles.page}>
+        {isNavigating && (
+          <div className={styles.navigatingOverlay}>
+            <div className={styles.navSpinner}></div>
+            <div className={styles.navText}>Please wait...</div>
+          </div>
+        )}
         <div className={styles.topBar}>
-          <button className={styles.backBtn} onClick={() => router.push("/")}>
+          <button className={styles.backBtn} onClick={() => { setIsNavigating(true); router.push("/"); }}>
             <ArrowLeft size={16} /> Back to Dashboard
           </button>
           <div className={styles.topBarTitle}>Purchase Order Management</div>
@@ -471,14 +482,25 @@ export default function PurchaseOrderPage() {
     );
   }
 
-  // ── Render Edit/Create View ─────────────────────────────────
+  // ── Render Edit View ────────────────────────────────────────
   return (
     <div className={styles.page}>
+      {isNavigating && (
+        <div className={styles.navigatingOverlay}>
+          <div className={styles.navSpinner}></div>
+          <div className={styles.navText}>Please wait...</div>
+        </div>
+      )}
       <div className={styles.topBar}>
-        <button className={styles.backBtn} onClick={() => setViewMode("list")}>
-          <ArrowLeft size={16} /> Back to List
-        </button>
-        <div className={styles.topBarTitle}>PO Workspace</div>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button className={styles.backBtn} onClick={() => { setIsNavigating(true); router.push("/"); }}>
+            <ArrowLeft size={16} /> Back to Dashboard
+          </button>
+          <button className={styles.backBtn} style={{ background: '#e0e6ed', color: '#1d2d3e' }} onClick={() => { setIsNavigating(true); setViewMode("list"); setTimeout(() => setIsNavigating(false), 300); }}>
+            <ArrowLeft size={16} /> Back to PO List
+          </button>
+        </div>
+        <div className={styles.topBarTitle}>New PO: {poNumber}</div>
         <div style={{ width: 150 }}></div>
       </div>
 

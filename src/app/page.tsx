@@ -469,6 +469,7 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
 
 export default function Home() {
   const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [stockMap, setStockMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -926,6 +927,12 @@ export default function Home() {
 
   return (
     <div className={styles.pageContainer}>
+      {isNavigating && (
+        <div className={styles.navigatingOverlay}>
+          <div className={styles.navSpinner}></div>
+          <div className={styles.navText}>Please wait...</div>
+        </div>
+      )}
       <div className={styles.bgTopShapeLayer1}></div>
       <div className={styles.bgTopShapeLayer2}></div>
       <div className={styles.bgBottomShape}></div>
@@ -985,7 +992,7 @@ export default function Home() {
                     <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Reverse Entry</span>
                   </button>
                   <button
-                    onClick={() => router.push("/po")}
+                    onClick={() => { setIsNavigating(true); router.push("/po"); }}
                     className="rkdSpinBtn"
                     style={{ '--btn-bg': '#431407', '--btn-text': 'white', '--btn-color': '#ea580c', '--btn-shadow': 'rgba(234,88,12,0.4)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
                   >
@@ -993,7 +1000,7 @@ export default function Home() {
                     <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Purchase Order</span>
                   </button>
                   <button
-                    onClick={() => router.push("/inward")}
+                    onClick={() => { setIsNavigating(true); router.push("/inward"); }}
                     className="rkdSpinBtn"
                     style={{ '--btn-bg': '#022c22', '--btn-text': 'white', '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.35)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
                   >
