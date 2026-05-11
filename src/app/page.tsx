@@ -362,15 +362,13 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
         </div>
 
         <button
-          className="rkdSpinBtn"
-          style={{ width: '100%', justifyContent: 'center', '--btn-bg': '#1e3a8a', '--btn-text': 'white', '--btn-color': '#2563eb', '--btn-shadow': 'rgba(37,99,235,0.3)' } as React.CSSProperties}
+          className={styles.dribbbleBtnPrimary}
+          style={{ width: '100%', justifyContent: 'center' }}
           onClick={() => onSubmit(qty, status)}
           disabled={updating}
         >
-          <span className="rkdSpinIcon">
-            {updating ? <Loader2 className={styles.btnSpin} size={20} /> : "✅"}
-          </span>
-          <span className="rkdSpinText">Update & Sync</span>
+          {updating ? <Loader2 className={styles.btnSpin} size={20} /> : <span>✅</span>}
+          <span>Update & Sync</span>
         </button>
       </div>
     </div>
@@ -452,15 +450,13 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
         </div>
 
         <button
-          className="rkdSpinBtn"
-          style={{ width: '100%', justifyContent: 'center', '--btn-bg': '#78350f', '--btn-text': 'white', '--btn-color': '#d97706', '--btn-shadow': 'rgba(217,119,6,0.3)' } as React.CSSProperties}
+          className={styles.dribbbleBtnPrimary}
+          style={{ width: '100%', justifyContent: 'center' }}
           onClick={() => onSubmit({ vendor, rate, status, approvedQty })}
           disabled={updating}
         >
-          <span className="rkdSpinIcon">
-            {updating ? <Loader2 className={styles.btnSpin} size={18} /> : "✅"}
-          </span>
-          <span className="rkdSpinText">Submit Approval</span>
+          {updating ? <Loader2 className={styles.btnSpin} size={18} /> : <span>✅</span>}
+          <span>Submit Approval</span>
         </button>
       </div>
     </div>
@@ -974,58 +970,42 @@ export default function Home() {
                 </div>
 
                 {/* 4 Action Buttons */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => { setIsDebitNoteOpen(true); setDnSelectedRKD(null); setDnQty(""); }}
-                    className="rkdSpinBtn"
-                    style={{ '--btn-bg': '#450a0a', '--btn-text': 'white', '--btn-color': '#dc2626', '--btn-shadow': 'rgba(220,38,38,0.35)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
-                  >
-                    <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.9rem' }}>📄</span>
-                    <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Debit Note</span>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button onClick={() => { setIsDebitNoteOpen(true); setDnSelectedRKD(null); setDnQty(""); }} className={styles.dribbbleBtnSecondary}>
+                    <span style={{ fontSize: '1rem' }}>📄</span>
+                    <span>Debit Note</span>
                   </button>
-                  <button
-                    onClick={() => { setIsReverseEntryOpen(true); setReSelectedRKD(null); setReQty(""); }}
-                    className="rkdSpinBtn"
-                    style={{ '--btn-bg': '#2e1065', '--btn-text': 'white', '--btn-color': '#7c3aed', '--btn-shadow': 'rgba(124,58,237,0.35)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
-                  >
-                    <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.9rem' }}>↩️</span>
-                    <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Reverse Entry</span>
+                  <button onClick={() => { setIsReverseEntryOpen(true); setReSelectedRKD(null); setReQty(""); }} className={styles.dribbbleBtnSecondary}>
+                    <span style={{ fontSize: '1rem' }}>↩️</span>
+                    <span>Reverse Entry</span>
                   </button>
-                  <button
-                    onClick={() => { setIsNavigating(true); router.push("/po"); }}
-                    className="rkdSpinBtn"
-                    style={{ '--btn-bg': '#431407', '--btn-text': 'white', '--btn-color': '#ea580c', '--btn-shadow': 'rgba(234,88,12,0.4)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
-                  >
-                    <span className="rkdSpinIcon" style={{ width: '24px', height: '24px' }}><FileText size={14} /></span>
-                    <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Purchase Order</span>
+                  <button onClick={() => { setIsNavigating(true); router.push("/po"); }} className={styles.dribbbleBtnPrimary}>
+                    <FileText size={16} />
+                    <span>Purchase Order</span>
                   </button>
-                  <button
-                    onClick={() => { setIsNavigating(true); router.push("/inward"); }}
-                    className="rkdSpinBtn"
-                    style={{ '--btn-bg': '#022c22', '--btn-text': 'white', '--btn-color': '#10b981', '--btn-shadow': 'rgba(16,185,129,0.35)', padding: '6px 16px 6px 6px' } as React.CSSProperties}
-                  >
-                    <span className="rkdSpinIcon" style={{ width: '24px', height: '24px', fontSize: '0.9rem' }}>📥</span>
-                    <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Inward Entry</span>
+                  <button onClick={() => { setIsNavigating(true); router.push("/inward"); }} className={styles.dribbbleBtnPrimary}>
+                    <span style={{ fontSize: '1rem' }}>📥</span>
+                    <span>Inward Entry</span>
                   </button>
                 </div>
 
                 {/* Scorecards */}
-                <div className={styles.appMetricsInline} style={{ gap: '8px' }}>
-                  <div className="rkdSpinBtn" style={{ '--btn-bg': '#022c22', '--btn-text': 'white', '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', '--btn-circle-size': '44px', '--btn-circle-offset': '4px', '--btn-padding': '4px 16px 4px 4px', gap: '10px', cursor: 'default' } as React.CSSProperties}>
-                    <span className="rkdSpinIcon" style={{ fontSize: '1.2rem', fontWeight: 900 }}>{scorecards.todayIndent}</span>
-                    <span className="rkdSpinText" style={{ fontSize: '0.75rem', lineHeight: 1.1, textAlign: 'left' }}>Today<br/>Indent</span>
+                <div className={styles.appMetricsInline} style={{ gap: '10px' }}>
+                  <div className={styles.dribbbleScorecard}>
+                    <div className={styles.dribbbleScorecardValue}>{scorecards.todayIndent}</div>
+                    <div className={styles.dribbbleScorecardLabel}>Today Indent</div>
                   </div>
-                  <div className="rkdSpinBtn" style={{ '--btn-bg': '#022c22', '--btn-text': 'white', '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', '--btn-circle-size': '44px', '--btn-circle-offset': '4px', '--btn-padding': '4px 16px 4px 4px', gap: '10px', cursor: 'default' } as React.CSSProperties}>
-                    <span className="rkdSpinIcon" style={{ fontSize: '1.2rem', fontWeight: 900 }}>{scorecards.todayIssue}</span>
-                    <span className="rkdSpinText" style={{ fontSize: '0.75rem', lineHeight: 1.1, textAlign: 'left' }}>Today<br/>Issue</span>
+                  <div className={styles.dribbbleScorecard}>
+                    <div className={styles.dribbbleScorecardValue}>{scorecards.todayIssue}</div>
+                    <div className={styles.dribbbleScorecardLabel}>Today Issue</div>
                   </div>
-                  <div className="rkdSpinBtn" style={{ '--btn-bg': '#022c22', '--btn-text': 'white', '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', '--btn-circle-size': '44px', '--btn-circle-offset': '4px', '--btn-padding': '4px 16px 4px 4px', gap: '10px', cursor: 'default' } as React.CSSProperties}>
-                    <span className="rkdSpinIcon" style={{ fontSize: '1.2rem', fontWeight: 900 }}>{scorecards.monthIndent}</span>
-                    <span className="rkdSpinText" style={{ fontSize: '0.75rem', lineHeight: 1.1, textAlign: 'left' }}>Monthly<br/>Indent</span>
+                  <div className={styles.dribbbleScorecard}>
+                    <div className={styles.dribbbleScorecardValue}>{scorecards.monthIndent}</div>
+                    <div className={styles.dribbbleScorecardLabel}>Monthly Indent</div>
                   </div>
-                  <div className="rkdSpinBtn" style={{ '--btn-bg': '#022c22', '--btn-text': 'white', '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', '--btn-circle-size': '44px', '--btn-circle-offset': '4px', '--btn-padding': '4px 16px 4px 4px', gap: '10px', cursor: 'default' } as React.CSSProperties}>
-                    <span className="rkdSpinIcon" style={{ fontSize: '1.2rem', fontWeight: 900 }}>{scorecards.monthIssue}</span>
-                    <span className="rkdSpinText" style={{ fontSize: '0.75rem', lineHeight: 1.1, textAlign: 'left' }}>Monthly<br/>Issue</span>
+                  <div className={styles.dribbbleScorecard}>
+                    <div className={styles.dribbbleScorecardValue}>{scorecards.monthIssue}</div>
+                    <div className={styles.dribbbleScorecardLabel}>Monthly Issue</div>
                   </div>
                 </div>
               </div>
@@ -1033,28 +1013,25 @@ export default function Home() {
               {/* Bottom Row: Status Filters */}
               <div className={styles.quickStatusFilters} style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', justifyContent: 'flex-start', gap: '10px' }}>
                 <button
-                  className={`rkdSpinBtn ${statusFilter === "Requirement Open" ? styles.btnActive : ""}`}
+                  className={`${styles.dribbbleBtnSecondary} ${statusFilter === "Requirement Open" ? styles.dribbbleBtnSecondaryActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Open" ? null : "Requirement Open")}
-                  style={{ '--btn-bg': '#451a03', '--btn-text': 'white', '--btn-color': '#d97706', '--btn-shadow': 'rgba(217,119,6,0.3)', '--btn-circle-size': '38px', '--btn-circle-offset': '4px', padding: '4px 16px 4px 4px' } as React.CSSProperties}
                 >
-                  <span className="rkdSpinIcon" style={{ fontSize: '0.9rem', fontWeight: 900 }}>{scorecards.statusCounts.open}</span>
-                  <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Requirement Open</span>
+                  <span style={{ fontWeight: 800 }}>{scorecards.statusCounts.open}</span>
+                  <span>Requirement Open</span>
                 </button>
                 <button
-                  className={`rkdSpinBtn ${statusFilter === "Requirement Closed" ? styles.btnActive : ""}`}
+                  className={`${styles.dribbbleBtnSecondary} ${statusFilter === "Requirement Closed" ? styles.dribbbleBtnSecondaryActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Closed" ? null : "Requirement Closed")}
-                  style={{ '--btn-bg': '#022c22', '--btn-text': 'white', '--btn-color': '#166534', '--btn-shadow': 'rgba(22,101,52,0.3)', '--btn-circle-size': '38px', '--btn-circle-offset': '4px', padding: '4px 16px 4px 4px' } as React.CSSProperties}
                 >
-                  <span className="rkdSpinIcon" style={{ fontSize: '0.9rem', fontWeight: 900 }}>{scorecards.statusCounts.closed}</span>
-                  <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Requirement Closed</span>
+                  <span style={{ fontWeight: 800 }}>{scorecards.statusCounts.closed}</span>
+                  <span>Requirement Closed</span>
                 </button>
                 <button
-                  className={`rkdSpinBtn ${statusFilter === "Requirement Cancelled" ? styles.btnActive : ""}`}
+                  className={`${styles.dribbbleBtnSecondary} ${statusFilter === "Requirement Cancelled" ? styles.dribbbleBtnSecondaryActive : ""}`}
                   onClick={() => setStatusFilter(statusFilter === "Requirement Cancelled" ? null : "Requirement Cancelled")}
-                  style={{ '--btn-bg': '#450a0a', '--btn-text': 'white', '--btn-color': '#991b1b', '--btn-shadow': 'rgba(153,27,27,0.3)', '--btn-circle-size': '38px', '--btn-circle-offset': '4px', padding: '4px 16px 4px 4px' } as React.CSSProperties}
                 >
-                  <span className="rkdSpinIcon" style={{ fontSize: '0.9rem', fontWeight: 900 }}>{scorecards.statusCounts.cancelled}</span>
-                  <span className="rkdSpinText" style={{ fontSize: '0.75rem' }}>Requirement Cancelled</span>
+                  <span style={{ fontWeight: 800 }}>{scorecards.statusCounts.cancelled}</span>
+                  <span>Requirement Cancelled</span>
                 </button>
               </div>
             </div>
@@ -1334,15 +1311,13 @@ export default function Home() {
             </div>
 
             <button
-              className="rkdSpinBtn"
-              style={{ width: '100%', justifyContent: 'center', '--btn-bg': '#450a0a', '--btn-text': 'white', '--btn-color': '#dc2626', '--btn-shadow': 'rgba(220,38,38,0.35)' } as React.CSSProperties}
+              className={styles.dribbbleBtnPrimary}
+              style={{ width: '100%', justifyContent: 'center' }}
               disabled={columnUpdating || !dnSelectedRKD || !dnQty}
               onClick={() => handleColumnUpdate(dnSelectedRKD["Store RKD Number"], "S", dnQty, dnSelectedRKD["Require Qty"])}
             >
-              <span className="rkdSpinIcon">
-                {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : "💾"}
-              </span>
-              <span className="rkdSpinText">Save Debit Note</span>
+              {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : <span>💾</span>}
+              <span>Save Debit Note</span>
             </button>
           </div>
         </div>
@@ -1393,15 +1368,13 @@ export default function Home() {
             </div>
 
             <button
-              className="rkdSpinBtn"
-              style={{ width: '100%', justifyContent: 'center', '--btn-bg': '#2e1065', '--btn-text': 'white', '--btn-color': '#7c3aed', '--btn-shadow': 'rgba(124,58,237,0.35)' } as React.CSSProperties}
+              className={styles.dribbbleBtnPrimary}
+              style={{ width: '100%', justifyContent: 'center' }}
               disabled={columnUpdating || !reSelectedRKD || !reQty}
               onClick={() => handleColumnUpdate(reSelectedRKD["Store RKD Number"], "T", reQty, reSelectedRKD["Require Qty"])}
             >
-              <span className="rkdSpinIcon">
-                {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : "💾"}
-              </span>
-              <span className="rkdSpinText">Save Reverse Entry</span>
+              {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : <span>💾</span>}
+              <span>Save Reverse Entry</span>
             </button>
           </div>
         </div>
