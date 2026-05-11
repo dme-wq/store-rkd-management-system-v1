@@ -1090,16 +1090,20 @@
 .formInput, .formSelect {
   width: 100%;
   padding: 12px 16px;
-  border: 1.5px solid #e5e7eb;
+  border: 2px solid #f59e0b;
   border-radius: 12px;
   font-size: 1rem;
   color: #111827;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background: #fff9db;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.1);
 }
 
 .formInput:focus, .formSelect:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background: #ffffff;
 }
 
 .formInfoBox {

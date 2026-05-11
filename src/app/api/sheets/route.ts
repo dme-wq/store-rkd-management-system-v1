@@ -149,12 +149,16 @@ export async function GET() {
         ]);
 
         // Process Stock
+        // Build parallel arrays skipping truly-empty rows so indexes stay in sync
         const stockMap: Record<string, string> = {};
-        const names = imsBatchRes.data.valueRanges?.[0].values || [];
-        const stocks = imsBatchRes.data.valueRanges?.[1].values || [];
-        names.forEach((row: any, i: number) => {
-          const name = (row[0] || "").trim().toLowerCase();
-          if (name) stockMap[name] = stocks[i]?.[0] || "0";
+        const namesRaw = imsBatchRes.data.valueRanges?.[0].values || [];
+        const stocksRaw = imsBatchRes.data.valueRanges?.[1].values || [];
+        namesRaw.forEach((row: any, i: number) => {
+          const name = (row[0] || "").toString().trim().toLowerCase();
+          if (!name) return; // skip blank rows
+          const rawVal = (stocksRaw[i]?.[0] ?? "").toString().trim();
+          // Store raw value as-is from IMS (can be negative if IMS is negative)
+          stockMap[name] = rawVal || "0";
         });
         cachedStockMap = stockMap;
 
@@ -269,17 +273,23 @@ export async function POST(req: Request) {
 
     const rowNumber = rowIndex + 1;
     
-    // Date formatting (shared)
+    // Date formatting — always use IST (Vercel serverless runs in UTC)
     const now = new Date();
-    const day = now.getDate();
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const month = monthNames[now.getMonth()];
-    const year = now.getFullYear();
-    let hours = now.getHours();
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    const formattedDate = `${day} ${month} ${year} ${hours}:${minutes} ${ampm}`;
+    // Also build individual parts for the formatted date used in sheets
+    const istParts = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: 'numeric', month: 'long', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true
+    }).formatToParts(now);
+    const partMap: Record<string,string> = {};
+    istParts.forEach(p => { partMap[p.type] = p.value; });
+    const day = partMap['day'];
+    const month = partMap['month'];
+    const year = partMap['year'];
+    const hours12 = partMap['hour'];
+    const minutes = partMap['minute'];
+    const ampm = partMap['dayPeriod']?.toUpperCase() || '';
+    const formattedDate = `${day} ${month} ${year} ${hours12}:${minutes} ${ampm}`;
 
     let finalRate = rate;
     let finalItemName = itemName;
@@ -390,7 +400,6 @@ ${approvalLink}
             }
           });
         }
-      }
       } else if (status === "No") {
         // Immediate update for "No Approval Required"
         await sheets.spreadsheets.values.update({
