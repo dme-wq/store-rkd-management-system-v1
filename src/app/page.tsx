@@ -8,7 +8,7 @@ import Select from "react-select";
 import { subDays, subMonths, isWithinInterval, startOfDay, endOfDay, isSameDay, isSameMonth } from "date-fns";
 
 const monthMap: Record<string, number> = {
-  "जनवरी": 0, "फरवरी": 1, "मार्च": 2, "अप्रैल": 3, "मई": 4, "जून": 5,
+  "जनवरी": 0, "फरवरी": 1, "मार्च": 2, "अप्रैल": 3, "मई": 4, "मयी": 4, "जून": 5,
   "जुलाई": 6, "अगस्त": 7, "सितंबर": 8, "अक्टूबर": 9, "नवंबर": 10, "दिसंबर": 11,
   "january": 0, "february": 1, "march": 2, "april": 3, "may": 4, "june": 5,
   "july": 6, "august": 7, "september": 8, "october": 9, "november": 10, "december": 11,
@@ -60,7 +60,9 @@ function parseCustomDate(dateStr: string): Date {
       return new Date(year, month, day);
     }
   }
-  return new Date(0);
+  // FALLBACK: If we can't parse, return a date far in the future or today 
+  // so it's not filtered out by "Last 30 Days"
+  return new Date(); 
 }
 
 const makeSelectStyles = (minW = 160) => ({
@@ -830,7 +832,7 @@ export default function Home() {
     return data.filter(row => {
       if (start && end) {
         const d = parseCustomDate(row["Timestamp"]);
-        if (d.getTime() === 0 || !isWithinInterval(d, { start, end })) return false;
+        if (d.getTime() > 0 && !isWithinInterval(d, { start, end })) return false;
       }
       if (searchTerm) {
         return Object.values(row).some(v => String(v).toLowerCase().includes(searchTerm.toLowerCase()));
