@@ -123,7 +123,7 @@ function parseDate(dateStr: string): Date {
 
 let lastFetchTime = 0;
 let cachedApiResponse: any = null;
-const CACHE_DURATION = 25000; // 25 seconds
+const CACHE_DURATION = 3000; // 3 seconds (near real-time)
 let cachedStockMap: any = null;
 let cachedMiscMap: any = null;
 let lastStaticFetchTime = 0;
@@ -220,47 +220,9 @@ export async function GET() {
 
   // If we have STALE main data but no cache at all yet — fetch it
   try {
-    // ── Main Data Fetch (only if cache is expired) ──
-    let res: any;
-    try {
-      res = await sheets.spreadsheets.values.get({
-        spreadsheetId: STORE_SHEET_ID,
-        range: "StoreDataEntry!A:A",
-      });
-    } catch (e: any) {
-      // If we have stale cache, return it rather than failing completely
-      if (cachedApiResponse) {
-        console.warn("[API] Using stale cache due to fetch error:", e.message);
-        return NextResponse.json({
-          ...cachedApiResponse,
-          stockMap: cachedStockMap || {},
-          miscMap: cachedMiscMap || {},
-          stale: true
-        });
-      }
-      return NextResponse.json({ 
-        success: false, 
-        error: `Cannot access StoreDataEntry: ${e.message}` 
-      }, { status: 500 });
-    }
-
-    // Optimization: Fetch only the last 2000 rows for the main table to keep it fast
-    const totalRows = (res.data.values || []).length;
-    
-    if (totalRows <= 1) {
-      // Sheet is empty (only header or nothing)
-      return NextResponse.json({
-        success: true,
-        data: [],
-        stockMap: {},
-        miscMap: {},
-        cached: false
-      });
-    }
-
-    const startRow = Math.max(2, totalRows - 1999);
-    const endRow = totalRows;
-    const dataRange = `StoreDataEntry!A${startRow}:T${endRow}`;
+    // Simplify: Just fetch the whole data range A2:P
+    // Google Sheets API only returns rows that actually contain values.
+    const dataRange = `StoreDataEntry!A2:P`;
     let storeRows: any[] = [];
     try {
       const storeRes = await sheets.spreadsheets.values.get({
@@ -284,7 +246,7 @@ export async function GET() {
     }
 
     const data = storeRows.map((row: any, idx: number) => {
-      const actualRowNumber = startRow + idx;
+      const actualRowNumber = 2 + idx; // We started from row 2
       const obj: any = { _id: idx, rowNumber: actualRowNumber };
       HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
       return obj;
@@ -296,7 +258,7 @@ export async function GET() {
       stockMap: cachedStockMap || {},
       miscMap: cachedMiscMap || {},
       fetchedAt: new Date().toISOString(),
-      debug: { rowsReturned: storeRows.length, totalRows }
+      debug: { rowsReturned: storeRows.length }
     };
 
     cachedApiResponse = responseData;
@@ -310,7 +272,6 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error("API error:", error);
-    // Always return a valid response even on error
     if (cachedApiResponse) {
       return NextResponse.json({ ...cachedApiResponse, stale: true });
     }

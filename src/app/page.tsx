@@ -1056,6 +1056,20 @@ export default function Home() {
                 />
               </div>
 
+              <button 
+                className={styles.dribbbleBtnSecondary} 
+                style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, border: '1px dashed #cbd5e1' }}
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelDateFilter(dateOptions[3]); // Reset to 30 days
+                  setSelRKDNum(null); setSelPerson(null); setSelItem(null);
+                  setSelDept(null); setSelMachine(null); setSelMachineID(null);
+                  setStatusFilter(null);
+                }}
+              >
+                Clear All Filters
+              </button>
+
               <Select
                 instanceId="date-filter"
                 options={dateOptions}
