@@ -21,7 +21,7 @@ export async function GET() {
     const sheets = google.sheets({ version: "v4", auth });
 
     const res = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
-    const sheetNames = res.data.sheets.map(s => s.properties.title);
+    const sheetNames = (res.data.sheets || []).map((s: any) => s.properties?.title || "unknown");
     
     return NextResponse.json({ 
       success: true, 
@@ -29,7 +29,7 @@ export async function GET() {
       serviceAccount: email,
       sheets: sheetNames 
     });
-  } catch (e) {
+  } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message });
   }
 }
