@@ -509,6 +509,10 @@ function getLiveStatus(
     } else {
       steps.push({ label: "Approval Pending", emoji: "⏳", color: "#f97316", bg: "rgba(249,115,22,0.15)", border: "rgba(249,115,22,0.4)" });
     }
+  } else if (approvalReq === "no" || approvalReq === "नहीं") {
+    steps.push({ label: "Approval Done", emoji: "✅", color: "#a78bfa", bg: "rgba(167,139,250,0.15)", border: "rgba(167,139,250,0.4)" });
+  } else if (approvalReq === "pending" || approvalReq === "pending owner approval") {
+    steps.push({ label: "Approval Pending", emoji: "⏳", color: "#f97316", bg: "rgba(249,115,22,0.15)", border: "rgba(249,115,22,0.4)" });
   }
 
   // Step 4: PO Created (from poMap lookup)
