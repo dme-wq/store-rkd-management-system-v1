@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText } from "lucide-react";
+import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText, BarChart3 } from "lucide-react";
 import Select from "react-select";
 import { subDays, subMonths, isWithinInterval, startOfDay, endOfDay, isSameDay, isSameMonth } from "date-fns";
 
@@ -1005,6 +1005,10 @@ export default function Home() {
                   <button onClick={() => { setIsNavigating(true); router.push("/inward"); }} className={styles.dribbbleBtnPrimary}>
                     <span style={{ fontSize: '1rem' }}>📥</span>
                     <span>Inward Entry</span>
+                  </button>
+                  <button onClick={() => { setIsNavigating(true); router.push("/ims"); }} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)', boxShadow: '0 4px 14px rgba(124,58,237,0.4)' }}>
+                    <BarChart3 size={16} />
+                    <span>IMS</span>
                   </button>
 
                 </div>
