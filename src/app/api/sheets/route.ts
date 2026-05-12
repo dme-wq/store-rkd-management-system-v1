@@ -504,12 +504,15 @@ ${approvalLink}
       return NextResponse.json({ success: true, message: "Action Completed" });
     } else if (action === "INSTANT_APPROVE") {
       // Instant Approval: Update Q (Approval Require?) to No and R (Approved Qty) to Require Qty
-      // Fetch Require Qty first to be safe
-      const rowRes = await sheets.spreadsheets.values.get({
+      // Fetch full row to get Vendor, Rate, and Require Qty
+      const fullRowRes = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!F${rowNumber}`,
+        range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
       });
-      const requireQty = rowRes.data.values?.[0]?.[0] || "0";
+      const rowData = fullRowRes.data.values?.[0] || [];
+      const requireQty = rowData[5] || "0"; // F is index 5
+      const vendorVal = rowData[13] || "";  // N is index 13
+      const rateVal = rowData[14] || "";    // O is index 14
 
       await sheets.spreadsheets.values.update({
         spreadsheetId: STORE_SHEET_ID,
@@ -519,6 +522,20 @@ ${approvalLink}
           values: [["No", requireQty]] 
         }
       });
+      
+      // Save to approvalDataBase
+      const d = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+      const cleanTimestamp = `${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()} ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`;
+      
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: STORE_SHEET_ID,
+        range: "approvalDataBase!A:F",
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [[cleanTimestamp, rkdNumber, vendorVal, rateVal, "No", requireQty]]
+        }
+      });
+
       return NextResponse.json({ success: true, message: "Instant Approval Completed" });
     } else if (action === "WHATSAPP_UPDATE") {
       // OWNER SIDE: Owner clicked the link and decided. NOW we update StoreDataEntry.
