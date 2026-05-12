@@ -70,3 +70,48 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { action, approvalRowNumber, rkdNumber, newQty } = body;
+    
+    if (action === "EDIT_QTY") {
+       const sheets = getSheetsClient();
+       
+       // 1. Update approvalDataBase column F (Approved Qty)
+       await sheets.spreadsheets.values.update({
+         spreadsheetId: STORE_SHEET_ID,
+         range: `${TAB_NAME}!F${approvalRowNumber}`,
+         valueInputOption: "USER_ENTERED",
+         requestBody: { values: [[newQty]] }
+       });
+       
+       // 2. Find row in StoreDataEntry
+       const searchRes = await sheets.spreadsheets.values.get({
+         spreadsheetId: STORE_SHEET_ID,
+         range: "StoreDataEntry!B:B",
+       });
+       const rkdList = searchRes.data.values || [];
+       const storeRowIndex = rkdList.findIndex((row: any) => row[0] === rkdNumber);
+       
+       // 3. Update StoreDataEntry Column R (Approved Qty) if found
+       if (storeRowIndex !== -1) {
+          const storeRowNumber = storeRowIndex + 1;
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: STORE_SHEET_ID,
+            range: `StoreDataEntry!R${storeRowNumber}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values: [[newQty]] }
+          });
+       }
+
+       return NextResponse.json({ success: true });
+    }
+    
+    return NextResponse.json({ success: false, error: "Invalid action" });
+  } catch (error: any) {
+    console.error("Approval API POST error:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}

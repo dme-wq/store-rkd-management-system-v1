@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../page.module.css";
-import { Search, Loader2, Filter, ArrowLeft } from "lucide-react";
+import { Search, Loader2, Filter, ArrowLeft, Edit2, CheckCircle } from "lucide-react";
 import Select from "react-select";
 
 export default function ApprovalEntries() {
@@ -22,6 +22,48 @@ export default function ApprovalEntries() {
   const [selRKD, setSelRKD] = useState<any>(null);
   const [selVendor, setSelVendor] = useState<any>(null);
   const [selApproval, setSelApproval] = useState<any>(null);
+
+  // Edit State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState<any>(null);
+  const [editQty, setEditQty] = useState("");
+  const [updatingRowId, setUpdatingRowId] = useState<number | null>(null);
+
+  const isEditable = (timestampStr: string) => {
+    if (!timestampStr || timestampStr === "-") return false;
+    const t = new Date(timestampStr).getTime();
+    if (isNaN(t)) return false;
+    return (Date.now() - t) / (1000 * 60) <= 30;
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingRow || !editQty) return;
+    setUpdatingRowId(editingRow._id);
+    try {
+      const res = await fetch("/api/approval", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "EDIT_QTY",
+          approvalRowNumber: editingRow.rowNumber,
+          rkdNumber: editingRow["Store RKD Number"],
+          newQty: editQty
+        })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      
+      // Update local state
+      setData(prev => prev.map(r => r._id === editingRow._id ? { ...r, "Approved Qty": editQty } : r));
+      setIsEditModalOpen(false);
+      alert("Quantity updated successfully!");
+    } catch (err: any) {
+      alert("Failed to update: " + err.message);
+    } finally {
+      setUpdatingRowId(null);
+      setEditingRow(null);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -213,6 +255,7 @@ export default function ApprovalEntries() {
                         <th>Rate</th>
                         <th>Approval Require?</th>
                         <th>Approved Qty</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody className={styles.dataTableBody}>
@@ -228,11 +271,27 @@ export default function ApprovalEntries() {
                             </span>
                           </td>
                           <td><span className={styles.pillIss}>{row["Approved Qty"] || "-"}</span></td>
+                          <td className={styles.actionCell}>
+                            <button 
+                              className={styles.manualBtn} 
+                              onClick={() => {
+                                setEditingRow(row);
+                                setEditQty(row["Approved Qty"] || "");
+                                setIsEditModalOpen(true);
+                              }}
+                              disabled={updatingRowId === row._id || !isEditable(row["Timestamp"])}
+                              style={{ opacity: isEditable(row["Timestamp"]) ? 1 : 0.5, cursor: isEditable(row["Timestamp"]) ? 'pointer' : 'not-allowed' }}
+                              title={isEditable(row["Timestamp"]) ? "Edit Quantity" : "Editing locked after 30 mins"}
+                            >
+                              {updatingRowId === row._id ? <Loader2 className={styles.btnSpin} size={14} /> : <Edit2 size={14} />}
+                              Edit
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       {apiError && (
                         <tr>
-                          <td colSpan={6} className={styles.noDataCell} style={{ color: '#ef4444' }}>
+                          <td colSpan={7} className={styles.noDataCell} style={{ color: '#ef4444' }}>
                             <p>Error: {apiError}</p>
                             <button onClick={() => fetchData()} className={styles.dribbbleBtnSecondary} style={{ margin: '10px auto' }}>Retry</button>
                           </td>
@@ -240,7 +299,7 @@ export default function ApprovalEntries() {
                       )}
                       {!apiError && filteredData.length === 0 && (
                         <tr>
-                          <td colSpan={6} className={styles.noDataCell}>
+                          <td colSpan={7} className={styles.noDataCell}>
                             <Filter size={32} />
                             <p>No matching records found.</p>
                           </td>
@@ -255,6 +314,47 @@ export default function ApprovalEntries() {
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && editingRow && (
+        <div className={styles.modalOverlay} onClick={() => setIsEditModalOpen(false)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalIconBox} style={{ background: '#eff6ff', color: '#2563eb' }}>
+                <Edit2 size={32} />
+              </div>
+            </div>
+            <h3 className={styles.modalTitle}>Edit Approved Quantity</h3>
+            <p className={styles.modalMessage}>You can edit the quantity within 30 minutes of approval.</p>
+
+            <div className={styles.formInfoBox}>
+              <div className={styles.modalInfoItem}><span className={styles.modalLabel}>RKD:</span> <span className={styles.modalValue}>{editingRow["Store RKD Number"]}</span></div>
+              <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Vendor:</span> <span className={styles.modalValue}>{editingRow["Vendor Name"]}</span></div>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>✏️ New Quantity</label>
+              <input
+                type="number"
+                className={styles.formInput}
+                value={editQty}
+                onChange={e => setEditQty(e.target.value)}
+                placeholder="Enter new quantity"
+              />
+            </div>
+
+            <button
+              className={styles.submitBtn}
+              onClick={handleEditSubmit}
+              disabled={updatingRowId !== null || !editQty}
+              style={{ background: '#2563eb' }}
+            >
+              {updatingRowId !== null ? <Loader2 className={styles.btnSpin} size={16} /> : <CheckCircle size={16} />}
+              {updatingRowId !== null ? "Updating..." : "Update Quantity"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
