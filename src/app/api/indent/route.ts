@@ -227,10 +227,13 @@ export async function POST(req: Request) {
 
     const rowData = {
       _id: Date.now(),
+      "Store RKD Number": storeRkdNumber,
       "Timestamp": timestamp,
       "Person Filling Name": personFillingName,
       "Item Name": itemName,
       "Require Qty": requireQty,
+      "Units": units,
+      "Status": "Requirement Open",
       "Department": department,
       "Machine Name": machineName,
       "Machine ID": machineId

@@ -60,20 +60,22 @@ export default function StandaloneIndentForm() {
   const loadData = async () => {
     setPageLoading(true);
     try {
-      // Fetch Options and MasterData concurrently
-      const [resOptions, resSheets] = await Promise.all([
-        fetch("/api/indent"),
-        fetch("/api/sheets")
-      ]);
+      const resOptions = await fetch("/api/indent");
       const jsonOptions = await resOptions.json();
-      const jsonSheets = await resSheets.json();
-      
       if (jsonOptions.success) setOptions(jsonOptions.options);
-      if (jsonSheets.success) setMasterData(jsonSheets.data);
     } catch (err: any) {
-      showToast("error", "Failed to load data.");
+      showToast("error", "Failed to load options.");
     } finally {
       setPageLoading(false);
+    }
+
+    // Load master data in background for the "My Recent Entries" table
+    try {
+      const resSheets = await fetch("/api/sheets");
+      const jsonSheets = await resSheets.json();
+      if (jsonSheets.success) setMasterData(jsonSheets.data);
+    } catch (err: any) {
+      console.error("Failed to load history.");
     }
   };
 
