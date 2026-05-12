@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Select from "react-select";
-import { CheckSquare, RefreshCw } from "lucide-react";
+import { CheckSquare, RefreshCw, Box, ClipboardList, Activity } from "lucide-react";
 import styles from "../indent.module.css";
 
 // ── Toast System ──
@@ -33,6 +33,7 @@ export default function StandaloneIndentForm() {
     persons: [], departments: [], machineNames: [], machineIDs: [],
     items: [], itemMap: {}
   });
+  const [masterData, setMasterData] = useState<any[]>([]);
 
   // UI State
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -59,14 +60,18 @@ export default function StandaloneIndentForm() {
   const loadData = async () => {
     setPageLoading(true);
     try {
-      // 1. Fetch Options only
-      const resOptions = await fetch("/api/indent");
+      // Fetch Options and MasterData concurrently
+      const [resOptions, resSheets] = await Promise.all([
+        fetch("/api/indent"),
+        fetch("/api/sheets")
+      ]);
       const jsonOptions = await resOptions.json();
-      if (jsonOptions.success) {
-        setOptions(jsonOptions.options);
-      }
+      const jsonSheets = await resSheets.json();
+      
+      if (jsonOptions.success) setOptions(jsonOptions.options);
+      if (jsonSheets.success) setMasterData(jsonSheets.data);
     } catch (err: any) {
-      showToast("error", "Failed to load options.");
+      showToast("error", "Failed to load data.");
     } finally {
       setPageLoading(false);
     }
@@ -76,24 +81,26 @@ export default function StandaloneIndentForm() {
     loadData();
   }, []);
 
-  // ── react-select AppSheet styles ──
+  // ── react-select AppSheet styles for MOBILE (bigger fields) ──
   const mkSelectStyles = () => ({
     control: (b: any, s: any) => ({
       ...b,
-      minHeight: "42px",
-      border: s.isFocused ? "2px solid var(--appsheet-green)" : "1px solid var(--table-border)",
-      borderRadius: "4px",
+      minHeight: "52px", // Mobile friendly bigger height
+      border: s.isFocused ? "2px solid var(--appsheet-green)" : "1px solid #d1d5db",
+      borderRadius: "8px",
       boxShadow: "none",
       "&:hover": { borderColor: "var(--appsheet-green)" },
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "0.9rem"
+      fontSize: "1rem", // Modern readable font size
+      padding: "2px"
     }),
     option: (b: any, s: any) => ({
       ...b,
       backgroundColor: s.isSelected ? "var(--appsheet-green)" : s.isFocused ? "#e8f5e9" : "white",
       color: s.isSelected ? "white" : "#333",
       fontFamily: "'Outfit', sans-serif",
-      fontSize: "0.9rem"
+      fontSize: "1rem",
+      padding: "12px"
     })
   });
   const selStyle = mkSelectStyles();
@@ -120,7 +127,11 @@ export default function StandaloneIndentForm() {
       const data = await res.json();
       if (data.success) {
         showToast("success", `Indent ${data.rkdNumber} Saved!`);
-        setForm({ personFillingName: "", department: "", machineName: "", machineId: "", itemName: "", requireQty: "" });
+        // Optimistically add to masterData for immediate view
+        if (data.rowData) {
+          setMasterData(prev => [data.rowData, ...prev]);
+        }
+        setForm({ ...form, machineName: "", machineId: "", itemName: "", requireQty: "" }); // Keep person and dept filled for faster multi-entry
       } else {
         showToast("error", data.error || "Failed to save.");
       }
@@ -141,119 +152,224 @@ export default function StandaloneIndentForm() {
     return (
       <div className={styles.page} style={{ alignItems: 'center', justifyContent: 'center' }}>
         <RefreshCw className={styles.syncSpinner} size={32} color="var(--appsheet-green)" />
-        <p style={{ marginTop: 16, color: "var(--appsheet-green)", fontWeight: 500 }}>Loading Form...</p>
+        <p style={{ marginTop: 16, color: "var(--appsheet-green)", fontWeight: 500 }}>Loading Elegant Form...</p>
       </div>
     );
   }
 
+  const myData = masterData.filter(r => r["Person Filling Name"] === form.personFillingName);
+
   return (
-    <div className={styles.page} style={{ background: '#f8f9fa', alignItems: 'center', padding: '20px' }}>
+    <div className={styles.page} style={{ background: '#f0f4f8', alignItems: 'center', padding: '16px', minHeight: '100vh', overflowY: 'auto' }}>
       <ToastContainer toasts={toasts} />
+      
+      {/* CSS Animation for Pulse Submit Button */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes pulsePurpleGlow {
+          0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.6); }
+          70% { box-shadow: 0 0 0 12px rgba(168, 85, 247, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}} />
 
       <div style={{
         width: '100%',
         maxWidth: '500px',
         background: '#fff',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-        overflow: 'hidden',
+        borderRadius: '16px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        marginBottom: '24px',
+        animation: 'fadeUp 0.4s ease-out'
       }}>
-        {/* Form Header matching Drawer Header */}
+        {/* Form Header */}
         <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid var(--table-border)',
+          padding: '24px 20px',
+          borderBottom: '1px solid #f1f5f9',
           display: 'flex',
-          justifyContent: 'space-between',
+          flexDirection: 'column',
           alignItems: 'center',
-          background: 'var(--appsheet-green)',
-          color: 'white'
+          background: 'linear-gradient(135deg, var(--appsheet-green), #14532d)',
+          color: 'white',
+          borderTopLeftRadius: '16px',
+          borderTopRightRadius: '16px',
+          textAlign: 'center'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '1px' }}>RKD</div>
-            <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 500 }}>New Indent Form</h3>
-          </div>
-          <button className={styles.btnSave} style={{ background: 'white', color: 'var(--appsheet-green)', border: 'none' }} onClick={handleSave} disabled={submitting}>
-            {submitting ? "Saving..." : "Submit"}
-          </button>
+          <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '20px', marginBottom: '12px', fontWeight: 800, letterSpacing: '2px', fontSize: '0.9rem' }}>RKD GROUP</div>
+          <h2 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>Material Request Form</h2>
+          <p style={{ margin: '6px 0 0 0', opacity: 0.9, fontSize: '0.9rem' }}>Fill details to raise a new indent</p>
         </div>
 
-        {/* Form Body matching Drawer Body */}
-        <div style={{ padding: '24px 20px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Form Body */}
+        <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
           
           <div className={styles.formField}>
-            <label className={styles.label}>Person Filing Name <span className={styles.req}>*</span></label>
+            <label className={styles.label} style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>Person Filing Name <span className={styles.req}>*</span></label>
             <Select
               options={toOpts(options.persons)}
               styles={selStyle} isClearable
-              placeholder="Add or search"
+              placeholder="Select your name"
               value={form.personFillingName ? { value: form.personFillingName, label: form.personFillingName } : null}
               onChange={(o: any) => setF("personFillingName", o?.value || "")}
             />
           </div>
 
           <div className={styles.formField}>
-            <label className={styles.label}>Item Name <span className={styles.req}>*</span></label>
+            <label className={styles.label} style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>Item Name <span className={styles.req}>*</span></label>
             <Select
               options={toOpts(options.items)}
               styles={selStyle} isClearable isSearchable
-              placeholder="Add or search"
+              placeholder="Search or select item"
               value={form.itemName ? { value: form.itemName, label: form.itemName } : null}
               onChange={(o: any) => setF("itemName", o?.value || "")}
             />
           </div>
 
           <div className={styles.formField}>
-            <label className={styles.label}>Require Qty <span className={styles.req}>*</span></label>
-            <div className={styles.qtyWrapper}>
+            <label className={styles.label} style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>Require Quantity <span className={styles.req}>*</span></label>
+            <div className={styles.qtyWrapper} style={{ height: '52px', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden' }}>
               <input 
                 type="number" 
                 className={styles.qtyInput} 
+                style={{ fontSize: '1.1rem', height: '100%', padding: '0 16px' }}
                 value={form.requireQty} 
                 onChange={e => setF("requireQty", e.target.value)} 
-                placeholder="0.00" 
+                placeholder="0" 
               />
-              <button className={styles.qtyBtn} onClick={() => adjQty(-1)}>−</button>
-              <button className={styles.qtyBtn} onClick={() => adjQty(1)}>+</button>
+              <button className={styles.qtyBtn} style={{ width: '48px', fontSize: '1.4rem', background: '#f8fafc', color: '#333' }} onClick={() => adjQty(-1)}>−</button>
+              <button className={styles.qtyBtn} style={{ width: '48px', fontSize: '1.4rem', background: '#f8fafc', color: '#333', borderLeft: '1px solid #e2e8f0' }} onClick={() => adjQty(1)}>+</button>
             </div>
           </div>
 
           <div className={styles.formField}>
-            <label className={styles.label}>Department <span className={styles.req}>*</span></label>
+            <label className={styles.label} style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>Department <span className={styles.req}>*</span></label>
             <Select
               options={toOpts(options.departments)}
               styles={selStyle} isClearable
-              placeholder="Add or search"
+              placeholder="Select department"
               value={form.department ? { value: form.department, label: form.department } : null}
               onChange={(o: any) => setF("department", o?.value || "")}
             />
           </div>
 
           <div className={styles.formField}>
-            <label className={styles.label}>Machine Name</label>
+            <label className={styles.label} style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>Machine Name</label>
             <Select
               options={toOpts(options.machineNames)}
               styles={selStyle} isClearable
-              placeholder="Add or search"
+              placeholder="Optional machine name"
               value={form.machineName ? { value: form.machineName, label: form.machineName } : null}
               onChange={(o: any) => setF("machineName", o?.value || "")}
             />
           </div>
 
           <div className={styles.formField}>
-            <label className={styles.label}>Machine ID</label>
+            <label className={styles.label} style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>Machine ID</label>
             <Select
               options={toOpts(options.machineIDs)}
               styles={selStyle} isClearable
-              placeholder="Add or search"
+              placeholder="Optional machine ID"
               value={form.machineId ? { value: form.machineId, label: form.machineId } : null}
               onChange={(o: any) => setF("machineId", o?.value || "")}
             />
           </div>
 
+          {/* New Animated Purple Submit Button at the Bottom */}
+          <button 
+            onClick={handleSave} 
+            disabled={submitting}
+            style={{
+              background: 'linear-gradient(135deg, #a855f7, #7e22ce)',
+              color: 'white',
+              border: 'none',
+              padding: '18px',
+              borderRadius: '12px',
+              fontSize: '1.15rem',
+              fontWeight: 600,
+              letterSpacing: '0.5px',
+              marginTop: '12px',
+              animation: submitting ? 'none' : 'pulsePurpleGlow 2s infinite',
+              cursor: submitting ? 'not-allowed' : 'pointer',
+              width: '100%',
+              fontFamily: "'Outfit', sans-serif",
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 15px rgba(126, 34, 206, 0.4)'
+            }}
+          >
+            {submitting ? (
+              <><RefreshCw size={20} className={styles.spin} /> Processing...</>
+            ) : (
+              <><CheckSquare size={20} /> Submit Indent</>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* User's Recent Entries Data Table (Cards for Mobile) */}
+      {form.personFillingName && myData.length > 0 && (
+        <div style={{ width: '100%', maxWidth: '500px', animation: 'fadeUp 0.5s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#334155' }}>
+            <ClipboardList size={22} color="#a855f7" />
+            <h3 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 600 }}>My Recent Entries</h3>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {myData.slice(0, 15).map((row, i) => {
+              const isOpen = row["Status"] === "Requirement Open";
+              return (
+                <div key={i} style={{ 
+                  background: 'white', 
+                  padding: '18px', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.04)', 
+                  borderLeft: `5px solid ${isOpen ? "#f59e0b" : "#22c55e"}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>{row["Store RKD Number"]}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '12px' }}>{row["Timestamp"]?.split(' ')[0]}</span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <Box size={16} color="#64748b" style={{ marginTop: '2px' }} />
+                    <span style={{ fontSize: '1.05rem', color: '#334155', fontWeight: 500, lineHeight: 1.3 }}>{row["Item Name"]}</span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', fontSize: '0.9rem', color: '#475569', border: '1px solid #e2e8f0', fontWeight: 600 }}>
+                        {row["Require Qty"]} <span style={{ fontSize: '0.8rem', fontWeight: 400 }}>{row["Units"]}</span>
+                      </span>
+                    </div>
+                    <span style={{ 
+                      color: isOpen ? "#d97706" : "#15803d", 
+                      background: isOpen ? "#fef3c7" : "#dcfce3",
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      fontWeight: 600
+                    }}>
+                      {isOpen ? "Pending" : "Closed"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
