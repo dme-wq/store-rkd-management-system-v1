@@ -28,31 +28,36 @@ function parseCustomDate(dateStr: string): Date {
   if (parts.length >= 3) {
     let day = NaN, month = NaN, year = NaN;
 
-    // Find Year (4 digits)
-    const yearIdx = parts.findIndex(p => p.length === 4 && !isNaN(parseInt(p, 10)));
+    // Find Year (4 digits or 2 digits)
+    let yearIdx = parts.findIndex(p => p.length === 4 && !isNaN(parseInt(p, 10)));
+    if (yearIdx === -1) yearIdx = parts.findIndex(p => p.length === 2 && parseInt(p, 10) > 20);
+    
     if (yearIdx !== -1) {
       year = parseInt(parts[yearIdx], 10);
+      if (year < 100) year += 2000;
+
       const otherParts = parts.filter((_, i) => i !== yearIdx);
 
       // Find Month (name or index)
       for (let i = 0; i < otherParts.length; i++) {
         const p = otherParts[i].toLowerCase();
-        // Check if monthMap key exists in the part or vice versa
         const foundMonthKey = Object.keys(monthMap).find(mKey => p.includes(mKey) || mKey.includes(p));
         if (foundMonthKey) {
           month = monthMap[foundMonthKey];
-          // Day is usually the first other part
-          day = parseInt(otherParts[0], 10);
+          // If we found a month, the OTHER part (not the time parts) is the day
+          // Usually first or second part
+          day = parseInt(otherParts[i === 0 ? 1 : 0], 10);
           break;
         }
       }
 
-      // Numeric month fallback
+      // Numeric month fallback (DD-MM or MM-DD)
       if (isNaN(month) && otherParts.length >= 2) {
         const p0 = parseInt(otherParts[0], 10);
         const p1 = parseInt(otherParts[1], 10);
-        if (p1 >= 1 && p1 <= 12) { month = p1 - 1; day = p0; }
+        if (p1 >= 1 && p1 <= 12 && p0 > 12) { month = p1 - 1; day = p0; }
         else if (p0 >= 1 && p0 <= 12) { month = p0 - 1; day = p1; }
+        else if (p1 >= 1 && p1 <= 12) { month = p1 - 1; day = p0; }
       }
     }
 
@@ -60,9 +65,7 @@ function parseCustomDate(dateStr: string): Date {
       return new Date(year, month, day);
     }
   }
-  // FALLBACK: If we can't parse, return a date far in the future or today 
-  // so it's not filtered out by "Last 30 Days"
-  return new Date(); 
+  return new Date(0); 
 }
 
 const makeSelectStyles = (minW = 160) => ({
@@ -832,6 +835,8 @@ export default function Home() {
     return data.filter(row => {
       if (start && end) {
         const d = parseCustomDate(row["Timestamp"]);
+        // If date is invalid, DON'T hide it from "Last 30 Days" etc., let user see it!
+        // But if it IS valid, it must be within the interval.
         if (d.getTime() > 0 && !isWithinInterval(d, { start, end })) return false;
       }
       if (searchTerm) {
@@ -906,7 +911,7 @@ export default function Home() {
       else if (isClosed) sClosed += 1;
       else if (status === "Requirement Cancelled") sCancelled += 1;
 
-      if (d.getTime() === 0) return;
+      if (d.getTime() === 0) return; // Ignore invalid dates for scorecards to avoid inflation
 
       if (isSameDay(d, today)) {
         tIndent += 1;
