@@ -93,14 +93,58 @@ export async function GET(req: Request) {
     const headers = rows[5]; // Row 6 is header
     const dataRows = rows.slice(6);
 
+    const monthMap: Record<string, number> = {
+      "जनवरी": 0, "फरवरी": 1, "मार्च": 2, "अप्रैल": 3, "मई": 4, "मयी": 4, "जून": 5,
+      "जुलाई": 6, "अगस्त": 7, "सितंबर": 8, "अक्टूबर": 9, "नवंबर": 10, "दिसंबर": 11,
+      "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
+      "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11
+    };
+
+    function parseDate(dateStr: string): Date {
+      if (!dateStr || typeof dateStr !== 'string') return new Date(0);
+      let d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d;
+      const parts = dateStr.split(/[^\w\u0900-\u097F]+/).filter(Boolean);
+      if (parts.length >= 3) {
+        const day = parseInt(parts[0], 10);
+        const mStr = parts[1].toLowerCase();
+        const year = parseInt(parts[2], 10);
+        let month = monthMap[mStr];
+        if (month === undefined) {
+          const key = Object.keys(monthMap).find(k => mStr.includes(k));
+          if (key) month = monthMap[key];
+        }
+        if (month !== undefined) return new Date(year, month, day);
+      }
+      return new Date(0);
+    }
+
+    const todayObj = new Date();
+    let todayIndent = 0;
+    let todayIssue = 0;
+
     const pendingIndents = dataRows.filter(r => {
       const status = String(r[8] || "").trim(); // Column I is Status
+      const tsDate = parseDate(r[2]);
+      
+      if (tsDate.getTime() > 0 && 
+          tsDate.getDate() === todayObj.getDate() && 
+          tsDate.getMonth() === todayObj.getMonth() && 
+          tsDate.getFullYear() === todayObj.getFullYear()) {
+        todayIndent++;
+        if (status === "Requirement Closed") {
+          todayIssue++;
+        }
+      }
+
       return status === "Requirement Open";
     });
 
-    if (pendingIndents.length === 0) {
-      console.log("[CRON] No pending indents today.");
-      return NextResponse.json({ success: true, message: "No pending indents." });
+    // We no longer strictly block if there are 0 pending indents because we might still want to report Today's stats.
+    // However, if there's no data at all, we could skip. Let's just generate it anyway to keep them updated!
+    if (pendingIndents.length === 0 && todayIndent === 0) {
+      console.log("[CRON] No pending indents and no activity today.");
+      return NextResponse.json({ success: true, message: "No activity." });
     }
 
     console.log(`[CRON] Found ${pendingIndents.length} pending indents. Generating PDF...`);
@@ -118,7 +162,10 @@ export async function GET(req: Request) {
     const today = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "short" });
     doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(80, 80, 80);
     doc.text(`Generated: ${today}`, W/2, 18, { align: "center" });
-    doc.text(`Total Pending Items: ${pendingIndents.length}`, W/2, 23, { align: "center" });
+    
+    // Add Scorecard Summary to PDF Header
+    doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(37, 99, 235);
+    doc.text(`Today's Indent: ${todayIndent}   |   Today's Issue: ${todayIssue}   |   Total Pending: ${pendingIndents.length}`, W/2, 23, { align: "center" });
 
     // Table data
     const tableBody = pendingIndents.map((r, i) => [
@@ -133,7 +180,7 @@ export async function GET(req: Request) {
     ]);
 
     autoTable(doc, {
-      startY: 30,
+      startY: 28,
       head: [["S.No", "RKD Number", "Date", "Item Name", "Required", "Person", "Department", "Machine"]],
       body: tableBody,
       theme: "grid",
@@ -197,7 +244,7 @@ export async function GET(req: Request) {
     }
 
     // 5. Send WhatsApp message
-    const msgText = `🔔 *Daily Pending Indent Report* 🔔\n\nTotal Pending Items: *${pendingIndents.length}*\n\nPlease find the attached PDF report for all open requirements.\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`;
+    const msgText = `🔔 *Daily Store Report* 🔔\n\n📊 *Today's Scorecard:*\n🔹 Today's Indent: *${todayIndent}*\n✅ Today's Issue: *${todayIssue}*\n\n📋 *Total Pending Items:* *${pendingIndents.length}*\n\nPlease find the attached PDF report for all open requirements.\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`;
 
     let sentCount = 0;
     for (const doer of doerContacts) {
