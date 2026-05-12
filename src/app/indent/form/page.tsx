@@ -33,7 +33,6 @@ export default function StandaloneIndentForm() {
     persons: [], departments: [], machineNames: [], machineIDs: [],
     items: [], itemMap: {}
   });
-  const [masterData, setMasterData] = useState<any[]>([]);
 
   // UI State
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -67,15 +66,6 @@ export default function StandaloneIndentForm() {
       showToast("error", "Failed to load options.");
     } finally {
       setPageLoading(false);
-    }
-
-    // Load master data in background for the "My Recent Entries" table
-    try {
-      const resSheets = await fetch("/api/sheets");
-      const jsonSheets = await resSheets.json();
-      if (jsonSheets.success) setMasterData(jsonSheets.data);
-    } catch (err: any) {
-      console.error("Failed to load history.");
     }
   };
 
@@ -129,10 +119,6 @@ export default function StandaloneIndentForm() {
       const data = await res.json();
       if (data.success) {
         showToast("success", `Indent ${data.rkdNumber} Saved!`);
-        // Optimistically add to masterData for immediate view
-        if (data.rowData) {
-          setMasterData(prev => [data.rowData, ...prev]);
-        }
         setForm({ ...form, machineName: "", machineId: "", itemName: "", requireQty: "" }); // Keep person and dept filled for faster multi-entry
       } else {
         showToast("error", data.error || "Failed to save.");
@@ -154,12 +140,10 @@ export default function StandaloneIndentForm() {
     return (
       <div className={styles.page} style={{ alignItems: 'center', justifyContent: 'center' }}>
         <RefreshCw className={styles.syncSpinner} size={32} color="var(--appsheet-green)" />
-        <p style={{ marginTop: 16, color: "var(--appsheet-green)", fontWeight: 500 }}>Loading Elegant Form...</p>
+        <p style={{ marginTop: 16, color: "var(--appsheet-green)", fontWeight: 500 }}>Loading Indent Form...</p>
       </div>
     );
   }
-
-  const myData = masterData.filter(r => r["Person Filling Name"] === form.personFillingName);
 
   return (
     <div className={styles.page} style={{ background: '#f0f4f8', alignItems: 'center', padding: '16px', minHeight: '100vh', overflowY: 'auto' }}>
@@ -315,62 +299,6 @@ export default function StandaloneIndentForm() {
           </button>
         </div>
       </div>
-
-      {/* User's Recent Entries Data Table (Cards for Mobile) */}
-      {form.personFillingName && myData.length > 0 && (
-        <div style={{ width: '100%', maxWidth: '500px', animation: 'fadeUp 0.5s ease-out' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#334155' }}>
-            <ClipboardList size={22} color="#a855f7" />
-            <h3 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 600 }}>My Recent Entries</h3>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {myData.slice(0, 15).map((row, i) => {
-              const isOpen = row["Status"] === "Requirement Open";
-              return (
-                <div key={i} style={{ 
-                  background: 'white', 
-                  padding: '18px', 
-                  borderRadius: '12px', 
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.04)', 
-                  borderLeft: `5px solid ${isOpen ? "#f59e0b" : "#22c55e"}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>{row["Store RKD Number"]}</span>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '12px' }}>{row["Timestamp"]?.split(' ')[0]}</span>
-                  </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                    <Box size={16} color="#64748b" style={{ marginTop: '2px' }} />
-                    <span style={{ fontSize: '1.05rem', color: '#334155', fontWeight: 500, lineHeight: 1.3 }}>{row["Item Name"]}</span>
-                  </div>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', fontSize: '0.9rem', color: '#475569', border: '1px solid #e2e8f0', fontWeight: 600 }}>
-                        {row["Require Qty"]} <span style={{ fontSize: '0.8rem', fontWeight: 400 }}>{row["Units"]}</span>
-                      </span>
-                    </div>
-                    <span style={{ 
-                      color: isOpen ? "#d97706" : "#15803d", 
-                      background: isOpen ? "#fef3c7" : "#dcfce3",
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      fontSize: '0.85rem',
-                      fontWeight: 600
-                    }}>
-                      {isOpen ? "Pending" : "Closed"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
     </div>
   );
