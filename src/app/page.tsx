@@ -464,57 +464,81 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
   );
 }
 
-// ── Smart Live Status ──────────────────────────────────────────────────────
-// Priority-based logic: highest priority state wins
-function getLiveStatus(row: any, stockMap: Record<string, string>) {
-  const status    = String(row["Status"] || "").trim();
-  const issueQty  = parseFloat(row["Issue Qty"]  || "0") || 0;
-  const reqQty    = parseFloat(row["Require Qty"] || "0") || 0;
+// ── Smart Live Status — MULTI-STEP stacked logic ─────────────────────────────
+// Returns an array of status steps, all relevant ones shown stacked top-to-bottom.
+// Each step = { label, emoji, color, bg, border }
+type StatusStep = { label: string; emoji: string; color: string; bg: string; border: string };
+
+function getLiveStatus(
+  row: any,
+  stockMap: Record<string, string>,
+  poMap: Record<string, { poNumber: string; poDate: string; vendorName: string }>,
+  inwardMap: Record<string, { inwardQty: string; inwardDate: string }>
+): StatusStep[] {
+  const steps: StatusStep[] = [];
+  const rkdNumber   = String(row["Store RKD Number"] || "").trim();
+  const status      = String(row["Status"] || "").trim();
+  const issueQty    = parseFloat(row["Issue Qty"]  || "0") || 0;
+  const reqQty      = parseFloat(row["Require Qty"] || "0") || 0;
   const approvalReq = String(row["Approval Require?"] || "").trim().toLowerCase();
   const approvedQty = parseFloat(row["Approved Quantity"] || "0") || 0;
-  const itemKey   = (row["Item Name"] || "").trim().toLowerCase();
+  const itemKey     = (row["Item Name"] || "").trim().toLowerCase();
   const imsStockStr = stockMap[itemKey];
-  const imsStock  = imsStockStr !== undefined ? parseFloat(imsStockStr) || 0 : NaN;
+  const imsStock    = imsStockStr !== undefined ? parseFloat(imsStockStr) || 0 : NaN;
 
-  // P1 — Final Closed States
+  // Step 1: Always show base state first
+  steps.push({ label: "Indent Done", emoji: "📋", color: "#94a3b8", bg: "rgba(148,163,184,0.1)", border: "rgba(148,163,184,0.25)" });
+
+  // Step 2: Stock status (if open and not yet issued)
+  if (status === "Requirement Open" && issueQty === 0) {
+    if (!isNaN(imsStock)) {
+      if (imsStock <= 0) {
+        steps.push({ label: "Out of Stock", emoji: "🔴", color: "#ef4444", bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.45)" });
+      } else if (imsStock < reqQty) {
+        steps.push({ label: "Low Stock", emoji: "⚠️", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.35)" });
+      } else {
+        steps.push({ label: "Stock Available", emoji: "🟢", color: "#4ade80", bg: "rgba(74,222,128,0.12)", border: "rgba(74,222,128,0.3)" });
+      }
+    }
+  }
+
+  // Step 3: Approval flow
+  if (approvalReq === "yes" || approvalReq === "हाँ") {
+    if (approvedQty > 0) {
+      steps.push({ label: "Approval Done", emoji: "✅", color: "#a78bfa", bg: "rgba(167,139,250,0.15)", border: "rgba(167,139,250,0.4)" });
+    } else {
+      steps.push({ label: "Approval Pending", emoji: "⏳", color: "#f97316", bg: "rgba(249,115,22,0.15)", border: "rgba(249,115,22,0.4)" });
+    }
+  }
+
+  // Step 4: PO Created (from poMap lookup)
+  const poInfo = poMap[rkdNumber];
+  if (poInfo && poInfo.poNumber) {
+    steps.push({ label: `Order Raised`, emoji: "📄", color: "#38bdf8", bg: "rgba(56,189,248,0.12)", border: "rgba(56,189,248,0.35)" });
+  }
+
+  // Step 5: Inward Done (from inwardMap lookup)
+  const inwardInfo = inwardMap[rkdNumber];
+  if (inwardInfo && inwardInfo.inwardQty) {
+    steps.push({ label: `Inward Done (${inwardInfo.inwardQty})`, emoji: "📦", color: "#34d399", bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.35)" });
+  }
+
+  // Step 6: Issue status
+  if (issueQty > 0 && issueQty >= reqQty) {
+    steps.push({ label: "Issued ✓", emoji: "✅", color: "#10b981", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.4)" });
+  } else if (issueQty > 0 && issueQty < reqQty) {
+    steps.push({ label: `Partial (${issueQty}/${reqQty})`, emoji: "🔄", color: "#60a5fa", bg: "rgba(96,165,250,0.12)", border: "rgba(96,165,250,0.35)" });
+  }
+
+  // Step 7: Final state overrides everything
   if (status === "Requirement Closed") {
-    return { label: "Indent Closed", emoji: "✅", color: "#22c55e", bg: "rgba(34,197,94,0.15)", border: "rgba(34,197,94,0.35)" };
+    return [{ label: "Indent Closed", emoji: "✅", color: "#22c55e", bg: "rgba(34,197,94,0.15)", border: "rgba(34,197,94,0.35)" }];
   }
   if (status === "Requirement Cancelled") {
-    return { label: "Cancelled", emoji: "🚫", color: "#94a3b8", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.3)" };
+    return [{ label: "Cancelled", emoji: "🚫", color: "#94a3b8", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.3)" }];
   }
 
-  // P2 — Issue Status (item was physically issued)
-  if (issueQty > 0 && issueQty >= reqQty) {
-    return { label: "Issued ✓", emoji: "📦", color: "#10b981", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.4)" };
-  }
-  if (issueQty > 0 && issueQty < reqQty) {
-    return { label: "Partial Issue", emoji: "🔄", color: "#38bdf8", bg: "rgba(56,189,248,0.12)", border: "rgba(56,189,248,0.35)" };
-  }
-
-  // P3 — Approval Flow
-  if (approvalReq === "yes" || approvalReq === "हाँ" || approvalReq === "haan") {
-    if (approvedQty > 0) {
-      return { label: "Approval Done", emoji: "✅", color: "#a78bfa", bg: "rgba(167,139,250,0.15)", border: "rgba(167,139,250,0.4)" };
-    }
-    return { label: "Approval Pending", emoji: "⏳", color: "#f97316", bg: "rgba(249,115,22,0.15)", border: "rgba(249,115,22,0.4)" };
-  }
-
-  // P4 — Stock Check (only relevant when open & no issue yet)
-  if (!isNaN(imsStock)) {
-    if (imsStock <= 0) {
-      return { label: "Out of Stock", emoji: "🔴", color: "#ef4444", bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.4)" };
-    }
-    if (imsStock < reqQty) {
-      return { label: "Low Stock", emoji: "⚠️", color: "#eab308", bg: "rgba(234,179,8,0.12)", border: "rgba(234,179,8,0.35)" };
-    }
-    if (imsStock >= reqQty) {
-      return { label: "Stock Available", emoji: "🟢", color: "#4ade80", bg: "rgba(74,222,128,0.12)", border: "rgba(74,222,128,0.3)" };
-    }
-  }
-
-  // P5 — Default (just created)
-  return { label: "Indent Done", emoji: "📝", color: "#64748b", bg: "rgba(100,116,139,0.12)", border: "rgba(100,116,139,0.3)" };
+  return steps;
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -555,6 +579,8 @@ export default function Home() {
   const [modalMsg, setModalMsg] = useState("");
   const [modalData, setModalData] = useState<any>(null);
   const [miscMap, setMiscMap] = useState<Record<string, { vendor: string, rate: string }>>({});
+  const [poMap, setPoMap] = useState<Record<string, { poNumber: string; poDate: string; vendorName: string }>>({});
+  const [inwardMap, setInwardMap] = useState<Record<string, { inwardQty: string; inwardDate: string }>>({}); 
 
   // Manual Issue State
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -615,6 +641,8 @@ export default function Home() {
         setData(json.data || []);
         setStockMap(json.stockMap || {});
         setMiscMap(json.miscMap || {});
+        setPoMap(json.poMap || {});
+        setInwardMap(json.inwardMap || {});
         setLastUpdated(new Date().toLocaleTimeString("en-IN"));
         setApiError(null);
       } else {
@@ -1236,25 +1264,29 @@ export default function Home() {
                           <td className={styles.colBold}>{row["Status"] || "-"}</td>
                           <td>
                             {(() => {
-                              const ls = getLiveStatus(row, stockMap);
+                              const steps = getLiveStatus(row, stockMap, poMap, inwardMap);
                               return (
-                                <span style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '3px 9px',
-                                  borderRadius: '20px',
-                                  fontSize: '0.72rem',
-                                  fontWeight: 700,
-                                  letterSpacing: '0.2px',
-                                  background: ls.bg,
-                                  border: `1px solid ${ls.border}`,
-                                  color: ls.color,
-                                  whiteSpace: 'nowrap',
-                                }}>
-                                  <span>{ls.emoji}</span>
-                                  <span>{ls.label}</span>
-                                </span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '120px' }}>
+                                  {steps.map((ls, i) => (
+                                    <span key={i} style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      padding: '2px 8px',
+                                      borderRadius: '20px',
+                                      fontSize: '0.68rem',
+                                      fontWeight: 700,
+                                      letterSpacing: '0.2px',
+                                      background: ls.bg,
+                                      border: `1px solid ${ls.border}`,
+                                      color: ls.color,
+                                      whiteSpace: 'nowrap',
+                                    }}>
+                                      <span style={{ fontSize: '0.7rem' }}>{ls.emoji}</span>
+                                      <span>{ls.label}</span>
+                                    </span>
+                                  ))}
+                                </div>
                               );
                             })()}
                           </td>

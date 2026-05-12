@@ -28,6 +28,8 @@ const STORE_SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 const IMS_SHEET_ID = "1qb6LF7uWTss8PjpN2MJ3iCRynEolm-Ryvjwe-GxiA_M";
 const MISC_SHEET_ID = process.env.MISC_SHEET_ID!;
 const WHATSAPP_LOG_SHEET_ID = process.env.WHATSAPP_LOG_SHEET_ID!;
+const PO_RESPONSES_SHEET_ID = process.env.PO_RESPONSES_SHEET_ID!;
+const INWARD_SHEET_ID = "1mOM0OdePjpGzFet9LKn3_yvAcJBxIMY_4dHb8t0AzOc";
 
 const MAYTAPI_TOKEN = process.env.MAYTAPI_TOKEN!;
 const MAYTAPI_PRODUCT_ID = process.env.MAYTAPI_PRODUCT_ID!;
@@ -129,6 +131,9 @@ let cachedMiscMap: any = null;
 let lastStaticFetchTime = 0;
 const STATIC_CACHE_DURATION = 300000; // 5 minutes
 let imsRefreshing = false; // prevent concurrent IMS refreshes
+// PO and Inward lookup maps (cached alongside IMS)
+let cachedPoMap: Record<string, { poNumber: string; poDate: string; vendorName: string }> = {}; // rkdNumber -> PO info
+let cachedInwardMap: Record<string, { inwardQty: string; inwardDate: string }> = {}; // rkdNumber -> Inward info
 
 // Fetch IMS + Misc in background with timeout
 async function refreshStaticCaches(sheets: any) {
@@ -145,30 +150,38 @@ async function refreshStaticCaches(sheets: any) {
 
   try {
     // IMS: B2:B7500 and K2:K7500 — start from row 2 to SKIP the header row
-    // Row 1 = "Item Name" | ... | "Remaining Stock" — skipping prevents the 1-row offset bug
-    const [imsBatchRes, miscRes] = await Promise.all([
+    const [imsBatchRes, miscRes, poRes, inwardRes] = await Promise.all([
       sheets.spreadsheets.values.batchGet({
         spreadsheetId: IMS_SHEET_ID,
-        ranges: ["IMS!B2:B7500", "IMS!K2:K7500"], // row 2 onwards — skip header!
+        ranges: ["IMS!B2:B7500", "IMS!K2:K7500"],
       }),
       sheets.spreadsheets.values.get({ 
         spreadsheetId: MISC_SHEET_ID, 
-        range: "Data!B2:F5000" // skip header
-      })
+        range: "Data!B2:F5000"
+      }),
+      // PO: RESPONSES!E=PONo, F=PODate, C=VendorName, T=RKDNumber
+      PO_RESPONSES_SHEET_ID ? sheets.spreadsheets.values.get({
+        spreadsheetId: PO_RESPONSES_SHEET_ID,
+        range: "RESPONSES!C:T",
+      }).catch(() => ({ data: { values: [] } })) : Promise.resolve({ data: { values: [] } }),
+      // Inward: F=IndentRequestNumber (RKD), J=InwardQty, L=TimestampOfInward
+      sheets.spreadsheets.values.get({
+        spreadsheetId: INWARD_SHEET_ID,
+        range: "Gate & Inward_Entry!F2:L",
+      }).catch(() => ({ data: { values: [] } })),
     ]);
 
-    // Process Stock — B and K are now perfectly aligned (both start at row 2)
+    // Process Stock
     const stockMap: Record<string, string> = {};
     const namesRaw = imsBatchRes.data.valueRanges?.[0].values || [];
     const stocksRaw = imsBatchRes.data.valueRanges?.[1].values || [];
     namesRaw.forEach((row: any, i: number) => {
       const name = (row[0] || "").toString().trim().toLowerCase();
-      if (!name) return; // skip blank item name rows
+      if (!name) return;
       const rawVal = (stocksRaw[i]?.[0] ?? "").toString().trim();
       stockMap[name] = rawVal || "0";
     });
     cachedStockMap = stockMap;
-    console.log(`[Cache] stockMap built: ${Object.keys(stockMap).length} items`);
 
     // Process Misc
     const miscMap: Record<string, { vendor: string, rate: string }> = {};
@@ -178,8 +191,37 @@ async function refreshStaticCaches(sheets: any) {
       if (name) miscMap[name] = { vendor: row[4] || "", rate: row[3] || "" };
     });
     cachedMiscMap = miscMap;
+
+    // Process PO map: RESPONSES!C=VendorName, E=PONo(col3), F=PODate(col4), T=RKDNumber(col17 from C)
+    // Range C:T means col0=C(VendorName), col2=E(PONo), col3=F(PODate), col17=T(RKDNo)
+    const newPoMap: Record<string, { poNumber: string; poDate: string; vendorName: string }> = {};
+    const poRows = (poRes as any).data?.values || [];
+    poRows.slice(1).forEach((row: any) => {
+      const rkdNo   = (row[17] || "").trim(); // T column = index 17 from C
+      const poNum   = (row[2]  || "").trim(); // E column = index 2 from C
+      const poDate  = (row[3]  || "").trim(); // F column = index 3 from C
+      const vendor  = (row[0]  || "").trim(); // C column = index 0
+      if (rkdNo && poNum && !newPoMap[rkdNo]) {
+        newPoMap[rkdNo] = { poNumber: poNum, poDate, vendorName: vendor };
+      }
+    });
+    cachedPoMap = newPoMap;
+
+    // Process Inward map: F=IndentRequestNumber(rkd), J=InwardQty(col4 from F), L=InwardTimestamp(col6 from F)
+    const newInwardMap: Record<string, { inwardQty: string; inwardDate: string }> = {};
+    const inwardRows = (inwardRes as any).data?.values || [];
+    inwardRows.forEach((row: any) => {
+      const rkdNo    = (row[0] || "").trim(); // F col = idx 0
+      const inwardQty = (row[4] || "").trim(); // J col = idx 4
+      const inwardDate = (row[6] || "").trim(); // L col = idx 6
+      if (rkdNo && inwardQty && !newInwardMap[rkdNo]) {
+        newInwardMap[rkdNo] = { inwardQty, inwardDate };
+      }
+    });
+    cachedInwardMap = newInwardMap;
+
     lastStaticFetchTime = Date.now();
-    console.log(`[Cache] miscMap built: ${Object.keys(miscMap).length} items`);
+    console.log(`[Cache] stockMap:${Object.keys(stockMap).length}, PO:${Object.keys(newPoMap).length}, Inward:${Object.keys(newInwardMap).length}`);
 
   } catch (e: any) {
     if (e.name === "AbortError") {
@@ -270,6 +312,8 @@ export async function GET() {
       totalRows,
       stockMap: cachedStockMap || {},
       miscMap: cachedMiscMap || {},
+      poMap: cachedPoMap || {},
+      inwardMap: cachedInwardMap || {},
       fetchedAt: new Date().toISOString(),
       debug: { startRow, endRow, rowsFetched: storeRows.length }
     };
