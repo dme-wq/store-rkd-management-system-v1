@@ -260,10 +260,11 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error("API error:", error);
-    if (cachedApiResponse) {
-      return NextResponse.json({ ...cachedApiResponse, stale: true });
-    }
-    return NextResponse.json({ success: true, data: [], stockMap: {}, miscMap: {} });
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message || "Internal Server Error",
+      data: [] 
+    }, { status: 500 });
   }
 }
 

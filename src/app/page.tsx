@@ -980,6 +980,8 @@ export default function Home() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <div className={styles.appHeaderTitles}>
                   <h2 className={styles.liveTitle} style={{ fontSize: '1.2rem', margin: 0 }}>Live Data</h2>
+                  {apiError && <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 800, marginTop: '4px' }}>⚠️ {apiError}</div>}
+                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px' }}>Last Sync: {lastUpdated || "Never"}</div>
                 </div>
 
                 {/* 4 Action Buttons */}
