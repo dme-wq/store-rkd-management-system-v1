@@ -1035,7 +1035,16 @@ export default function Home() {
       
       // Extract date part from Timestamp (e.g., "07-May-2026 11:30" -> "07-May-2026")
       const fullTs = row["Timestamp"] || "-";
-      const dateOnly = fullTs !== "-" ? fullTs.split(" ")[0] : "-";
+      let dateOnly = fullTs !== "-" ? fullTs.split(" ")[0] : "-";
+
+      // Fix Hindi characters in date (jsPDF helvetica doesn't support them)
+      const hindiToEnglishMonths: Record<string, string> = {
+        "जनवरी": "Jan", "फरवरी": "Feb", "मार्च": "Mar", "अप्रैल": "Apr", "मई": "May", "मयी": "May", "जून": "Jun",
+        "जुलाई": "Jul", "अगस्त": "Aug", "सितंबर": "Sep", "अक्टूबर": "Oct", "नवंबर": "Nov", "दिसंबर": "Dec"
+      };
+      Object.keys(hindiToEnglishMonths).forEach(hi => {
+        dateOnly = dateOnly.replace(hi, hindiToEnglishMonths[hi]);
+      });
 
       return [
         idx + 1,
@@ -1074,6 +1083,7 @@ export default function Home() {
         "",
         { content: `Rs. ${grandTotal.toFixed(2)}`, styles: { fontStyle: "bold", textColor: [220, 20, 100] } }
       ]],
+      showFoot: "lastPage",
       styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
       headStyles: { fillColor: [30, 30, 50], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
       footStyles: { fillColor: [240, 240, 240], textColor: [30, 30, 30], fontSize: 8 },
