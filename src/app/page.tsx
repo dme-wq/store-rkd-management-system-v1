@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText, BarChart3 } from "lucide-react";
+import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText, BarChart3, Download } from "lucide-react";
 import Select from "react-select";
 import { subDays, subMonths, isWithinInterval, startOfDay, endOfDay, isSameDay, isSameMonth } from "date-fns";
 
@@ -976,6 +976,117 @@ export default function Home() {
 
   const totalRequests = filteredData.length;
   const rawTotalQty = filteredData.reduce((acc, row) => acc + (Number(row["Issue Qty"]) || 0), 0);
+
+  // ── PDF Generation ──────────────────────────────────────────────────────────
+  const generateIssuePDF = async () => {
+    const { jsPDF } = await import("jspdf");
+    const autoTable = (await import("jspdf-autotable")).default;
+
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const now = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+    // Header
+    doc.setFillColor(220, 20, 100);
+    doc.rect(0, 0, pageW, 20, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("RKD Store — Issue Report", pageW / 2, 8, { align: "center" });
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated: ${now}`, pageW / 2, 14, { align: "center" });
+
+    // Filter summary sub-header
+    const filterParts: string[] = [];
+    if (statusFilter) filterParts.push(`Status: ${statusFilter}`);
+    if (selDateFilter?.label) filterParts.push(`Date: ${selDateFilter.label}`);
+    if (selDept?.value) filterParts.push(`Dept: ${selDept.value}`);
+    if (selItem?.value) filterParts.push(`Item: ${selItem.value}`);
+    if (selPerson?.value) filterParts.push(`Person: ${selPerson.value}`);
+    if (selMachine?.value) filterParts.push(`Machine: ${selMachine.value}`);
+    if (filterParts.length > 0) {
+      doc.setFontSize(7);
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Filters: ${filterParts.join(" | ")}`, 14, 25);
+    }
+
+    // Build table rows
+    const rows = filteredData.map((row, idx) => {
+      const issueQty = parseFloat(row["Issue Qty"] || "0") || 0;
+      const rate     = parseFloat(row["Price"]     || "0") || 0;
+      const total    = issueQty * rate;
+      return [
+        idx + 1,
+        row["Timestamp"]         || "-",
+        row["Store RKD Number"]  || "-",
+        row["Department"]        || "-",
+        row["Item Name"]         || "-",
+        row["Machine Name"]      || "-",
+        row["Machine ID"]        || "-",
+        row["Person Filling Name"] || "-",
+        row["Vendor Name"]       || "-",
+        row["Require Qty"]       || "0",
+        issueQty > 0 ? issueQty : "0",
+        rate > 0 ? `\u20B9${rate.toFixed(2)}` : "-",
+        total > 0 ? `\u20B9${total.toFixed(2)}` : "-",
+      ];
+    });
+
+    // Grand Total
+    const grandTotal = filteredData.reduce((sum, row) => {
+      const qty  = parseFloat(row["Issue Qty"] || "0") || 0;
+      const rate = parseFloat(row["Price"]     || "0") || 0;
+      return sum + qty * rate;
+    }, 0);
+
+    autoTable(doc, {
+      startY: filterParts.length > 0 ? 30 : 26,
+      head: [[
+        "#", "Timestamp", "RKD Number", "Department", "Item Name",
+        "Machine Name", "Machine ID", "Person", "Vendor",
+        "Indent Qty", "Issue Qty", "Rate", "Total Price"
+      ]],
+      body: rows,
+      foot: [["", "", "", "", "", "", "", "", "",
+        { content: "GRAND TOTAL", colSpan: 2, styles: { fontStyle: "bold", halign: "right" } },
+        "",
+        { content: `\u20B9${grandTotal.toFixed(2)}`, styles: { fontStyle: "bold", textColor: [220, 20, 100] } }
+      ]],
+      styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
+      headStyles: { fillColor: [30, 30, 50], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+      footStyles: { fillColor: [240, 240, 240], textColor: [30, 30, 30], fontSize: 8 },
+      alternateRowStyles: { fillColor: [252, 252, 255] },
+      columnStyles: {
+        0:  { cellWidth: 7 },
+        1:  { cellWidth: 28 },
+        2:  { cellWidth: 26 },
+        3:  { cellWidth: 22 },
+        4:  { cellWidth: 30 },
+        5:  { cellWidth: 22 },
+        6:  { cellWidth: 18 },
+        7:  { cellWidth: 22 },
+        8:  { cellWidth: 24 },
+        9:  { cellWidth: 14, halign: "center" },
+        10: { cellWidth: 14, halign: "center" },
+        11: { cellWidth: 18, halign: "right" },
+        12: { cellWidth: 20, halign: "right" },
+      },
+      didDrawPage: (data: any) => {
+        // Page footer
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        doc.setFontSize(7);
+        doc.setTextColor(150);
+        doc.text(`Page ${data.pageNumber} of ${pageCount}`, pageW - 14, doc.internal.pageSize.getHeight() - 6, { align: "right" });
+        doc.text("RKD Furnishings Pvt Ltd.", 14, doc.internal.pageSize.getHeight() - 6);
+      }
+    });
+
+    const dateStr = new Date().toLocaleDateString("en-IN").replace(/\//g, "-");
+    const label = statusFilter ? statusFilter.replace("Requirement ", "") : "All";
+    doc.save(`RKD_Issue_Report_${label}_${dateStr}.pdf`);
+  };
+  // ────────────────────────────────────────────────────────────────────────────
   const totalItemsQty = Number.isInteger(rawTotalQty) ? rawTotalQty : Number(rawTotalQty.toFixed(2));
 
   // Scorecard Calculations (based on all 30 days data)
@@ -1092,6 +1203,15 @@ export default function Home() {
                   <button onClick={() => { setIsNavigating(true); router.push("/ims"); }} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)', boxShadow: '0 4px 14px rgba(124,58,237,0.4)' }}>
                     <BarChart3 size={16} />
                     <span>IMS</span>
+                  </button>
+                  <button
+                    onClick={generateIssuePDF}
+                    className={styles.dribbbleBtnPrimary}
+                    style={{ background: 'linear-gradient(135deg, #0f766e, #0369a1)', boxShadow: '0 4px 14px rgba(15,118,110,0.4)', gap: '6px' }}
+                    title={`Download Issue Report PDF (${filteredData.length} records)`}
+                  >
+                    <Download size={15} />
+                    <span>Issue Report PDF</span>
                   </button>
 
                 </div>
