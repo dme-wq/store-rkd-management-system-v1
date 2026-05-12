@@ -43,11 +43,24 @@ export async function GET(req: Request) {
 
     const rows = res.data.values || [];
     
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
     const data = rows.map((row: any[], idx: number) => {
       const obj: any = { _id: idx, rowNumber: idx + 2 };
       HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
       return obj;
-    }).filter((r: any) => r["Store RKD Number"] && r["Store RKD Number"].startsWith("RKD"));
+    }).filter((r: any) => {
+      if (!r["Store RKD Number"] || !r["Store RKD Number"].startsWith("RKD")) return false;
+      const dateStr = r["Timestamp"];
+      if (dateStr) {
+        const entryDate = new Date(dateStr);
+        if (!isNaN(entryDate.getTime()) && entryDate < thirtyDaysAgo) {
+          return false;
+        }
+      }
+      return true;
+    });
 
     return new NextResponse(JSON.stringify({ success: true, data: data.reverse() }), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
