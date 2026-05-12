@@ -474,7 +474,7 @@ export default function Home() {
   const [apiError, setApiError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selDateFilter, setSelDateFilter] = useState<any>(dateOptions[3]); // Last 30 Days
+  const [selDateFilter, setSelDateFilter] = useState<any>(dateOptions[4]); // Last 3 Months default
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
@@ -550,7 +550,7 @@ export default function Home() {
     try {
       // Hard 12-second timeout — loading NEVER freezes permanently
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 12000);
+      const timer = setTimeout(() => controller.abort(), 25000);
       
       const res = await fetch(`/api/sheets?t=${Date.now()}`, { signal: controller.signal });
       clearTimeout(timer);
@@ -569,9 +569,10 @@ export default function Home() {
     } catch (err: any) {
       // On timeout or network error, just show empty state — don't freeze
       if (err.name === "AbortError") {
-        console.warn("fetchData timed out — showing empty state");
-        setData([]);
-        setApiError(null); // Don't show error to user, just show empty table
+        console.warn("fetchData timed out — keeping existing data if available");
+        // Don't clear data — show stale data instead of empty screen!
+        setApiError("Slow connection — showing cached data. Retrying...");
+        setTimeout(() => setApiError(null), 5000);
       } else {
         setApiError(err.message);
         console.error("Fetch Error:", err);
@@ -1073,7 +1074,7 @@ export default function Home() {
                 style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, border: '1px dashed #cbd5e1' }}
                 onClick={() => {
                   setSearchTerm("");
-                  setSelDateFilter(dateOptions[3]); // Reset to 30 days
+                  setSelDateFilter(dateOptions[4]); // Reset to 3 months default
                   setSelRKDNum(null); setSelPerson(null); setSelItem(null);
                   setSelDept(null); setSelMachine(null); setSelMachineID(null);
                   setStatusFilter(null);

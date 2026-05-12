@@ -204,7 +204,7 @@ export async function GET() {
   const now = Date.now();
   const sheets = getSheetsClient();
 
-  // If we have fresh main data cache, return immediately with latest stockMap
+  // Always return fresh data if cache is valid
   if (cachedApiResponse && (now - lastFetchTime < CACHE_DURATION)) {
     return NextResponse.json({
       ...cachedApiResponse,
@@ -213,40 +213,65 @@ export async function GET() {
     });
   }
 
-  // Define static refresh promise — fire and forget, don't await
+  // Fire background IMS/Misc refresh
   if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
-    refreshStaticCaches(sheets).catch(() => {}); // background, no await
+    refreshStaticCaches(sheets).catch(() => {});
   }
 
-  // If we have STALE main data but no cache at all yet — fetch it
   try {
-    // Fetch the whole data range A:P
-    const dataRange = `StoreDataEntry!A:P`;
-    let storeRows: any[] = [];
+    // ── Step 1: Get total row count cheaply ──
+    let totalRows = 1;
     try {
-      const storeRes = await sheets.spreadsheets.values.get({
+      const countRes = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
-        range: dataRange,
+        range: "StoreDataEntry!A:A",
       });
-      storeRows = storeRes.data.values || [];
+      totalRows = (countRes.data.values || []).length;
     } catch (e: any) {
+      // If even count fails, return stale cache or empty
+      if (cachedApiResponse) {
+        return NextResponse.json({ ...cachedApiResponse, stockMap: cachedStockMap || {}, miscMap: cachedMiscMap || {}, stale: true });
+      }
       return NextResponse.json({ success: false, error: e.message }, { status: 500 });
     }
 
-    // Process rows — skip the header row (index 0)
-    const data = storeRows.slice(1).map((row: any, idx: number) => {
-      const obj: any = { _id: idx, rowNumber: idx + 2 };
+    // ── Step 2: Fetch only LAST 500 rows (approx 3 months) ──
+    // This keeps payload small and prevents Vercel timeout
+    const FETCH_LIMIT = 500;
+    const startRow = Math.max(2, totalRows - FETCH_LIMIT + 1);
+    const endRow = totalRows;
+    let storeRows: any[] = [];
+
+    if (endRow >= startRow) {
+      try {
+        const storeRes = await sheets.spreadsheets.values.get({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!A${startRow}:P${endRow}`,
+        });
+        storeRows = storeRes.data.values || [];
+      } catch (e: any) {
+        if (cachedApiResponse) {
+          return NextResponse.json({ ...cachedApiResponse, stockMap: cachedStockMap || {}, miscMap: cachedMiscMap || {}, stale: true });
+        }
+        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+      }
+    }
+
+    // Map to objects (no header row in range since startRow>=2)
+    const data = storeRows.map((row: any, idx: number) => {
+      const obj: any = { _id: idx, rowNumber: startRow + idx };
       HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
       return obj;
-    });
+    }).filter((r: any) => r["Store RKD Number"] && r["Store RKD Number"].startsWith("RKD"));
 
-    const responseData = { 
-      success: true, 
+    const responseData = {
+      success: true,
       data: data.reverse(),
+      totalRows,
       stockMap: cachedStockMap || {},
       miscMap: cachedMiscMap || {},
       fetchedAt: new Date().toISOString(),
-      debug: { rowsFound: storeRows.length }
+      debug: { startRow, endRow, rowsFetched: storeRows.length }
     };
 
     cachedApiResponse = responseData;
@@ -255,16 +280,15 @@ export async function GET() {
     return new NextResponse(JSON.stringify(responseData), {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "no-store, max-age=0, must-revalidate"
+        "Cache-Control": "no-store"
       }
     });
   } catch (error: any) {
-    console.error("API error:", error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message || "Internal Server Error",
-      data: [] 
-    }, { status: 500 });
+    console.error("API GET error:", error);
+    if (cachedApiResponse) {
+      return NextResponse.json({ ...cachedApiResponse, stale: true });
+    }
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
