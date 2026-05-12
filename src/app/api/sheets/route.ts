@@ -263,9 +263,9 @@ export async function GET() {
   }
 
   try {
-    // ── 3. SINGLE batchGet: count column A + speculative last-500-rows ────────
+    // ── 3. SINGLE batchGet: count column A + speculative last-3000-rows ────────
     // Using lastKnownRowCount to speculate where data ends (avoids 2-step round trips)
-    const FETCH_LIMIT = 500;
+    const FETCH_LIMIT = 3000;
     const speculativeStart = lastKnownRowCount > FETCH_LIMIT
       ? Math.max(2, lastKnownRowCount - FETCH_LIMIT)
       : 2;
