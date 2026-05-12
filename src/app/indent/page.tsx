@@ -64,8 +64,12 @@ export default function IndentMasterDetail() {
     if (!silent) setPageLoading(true);
     setSyncing(true);
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      
       // 1. Fetch Master Data
-      const resSheets = await fetch("/api/sheets");
+      const resSheets = await fetch("/api/sheets", { signal: controller.signal });
+      clearTimeout(timer);
       const jsonSheets = await resSheets.json();
       if (jsonSheets.success) {
         setMasterData(jsonSheets.data || []);
@@ -78,7 +82,12 @@ export default function IndentMasterDetail() {
         setOptions(jsonOptions.options);
       }
     } catch (err: any) {
-      showToast("error", "Failed to load data.");
+      if (err.name === "AbortError") {
+        // Timeout — show empty, don't block user
+        setMasterData([]);
+      } else {
+        showToast("error", "Failed to load data.");
+      }
     } finally {
       setPageLoading(false);
       setSyncing(false);

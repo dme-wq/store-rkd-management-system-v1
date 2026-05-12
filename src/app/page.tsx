@@ -547,7 +547,13 @@ export default function Home() {
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await fetch("/api/sheets");
+      // Hard 12-second timeout — loading NEVER freezes permanently
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      
+      const res = await fetch("/api/sheets", { signal: controller.signal });
+      clearTimeout(timer);
+      
       const json = await res.json();
       if (json.success) {
         setData(json.data || []);
@@ -560,10 +566,17 @@ export default function Home() {
         console.error("API Success False:", json.error);
       }
     } catch (err: any) {
-      setApiError(err.message);
-      console.error("Fetch Error:", err);
+      // On timeout or network error, just show empty state — don't freeze
+      if (err.name === "AbortError") {
+        console.warn("fetchData timed out — showing empty state");
+        setData([]);
+        setApiError(null); // Don't show error to user, just show empty table
+      } else {
+        setApiError(err.message);
+        console.error("Fetch Error:", err);
+      }
     } finally {
-      setLoading(false);
+      setLoading(false); // ALWAYS dismiss loading, no matter what
     }
   };
 
