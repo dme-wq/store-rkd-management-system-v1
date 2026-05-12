@@ -277,7 +277,7 @@ export async function GET() {
       spreadsheetId: STORE_SHEET_ID,
       ranges: [
         "StoreDataEntry!A:A",                                           // for actual row count
-        `StoreDataEntry!A${speculativeStart}:P${speculativeEnd}`,       // speculative data range
+        `StoreDataEntry!A${speculativeStart}:T${speculativeEnd}`,       // speculative data range
       ],
     });
 
@@ -293,7 +293,7 @@ export async function GET() {
       const actualStart = Math.max(2, totalRows - FETCH_LIMIT + 1);
       const refetch = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!A${actualStart}:P${totalRows}`,
+        range: `StoreDataEntry!A${actualStart}:T${totalRows}`,
       });
       storeRows = refetch.data.values || [];
     }
