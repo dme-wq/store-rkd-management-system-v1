@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Select from "react-select";
-import { Search, Plus, Filter, CheckSquare, X, RefreshCw } from "lucide-react";
+import { Search, Plus, Filter, CheckSquare, X, RefreshCw, Share2 } from "lucide-react";
 import styles from "./indent.module.css";
 
 // ── Toast System ──
@@ -229,6 +229,9 @@ export default function IndentMasterDetail() {
       <div className={styles.toolbar}>
         <h2 className={styles.toolbarTitle}>Indent Details</h2>
         <div className={styles.toolbarActions}>
+          <button className={styles.addBtn} onClick={() => window.open('/indent/form', '_blank')} style={{ background: 'white', color: 'var(--appsheet-green)', border: '1px solid var(--appsheet-green)' }}>
+            <Share2 size={16} /> Share Form Link
+          </button>
           <button className={styles.addBtn} onClick={() => setIsFormOpen(true)}>
             <Plus size={16} /> Add
           </button>
