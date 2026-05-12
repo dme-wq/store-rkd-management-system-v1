@@ -981,7 +981,10 @@ export default function Home() {
                 <div className={styles.appHeaderTitles}>
                   <h2 className={styles.liveTitle} style={{ fontSize: '1.2rem', margin: 0 }}>Live Data</h2>
                   {apiError && <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 800, marginTop: '4px' }}>⚠️ {apiError}</div>}
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px' }}>Last Sync: {lastUpdated || "Never"}</div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px', display: 'flex', gap: '10px' }}>
+                    <span>Last Sync: {lastUpdated || "Never"}</span>
+                    <a href="/api/debug-sheet" target="_blank" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Run Diagnostics</a>
+                  </div>
                 </div>
 
                 {/* 4 Action Buttons */}
