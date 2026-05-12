@@ -464,7 +464,62 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
   );
 }
 
+// ── Smart Live Status ──────────────────────────────────────────────────────
+// Priority-based logic: highest priority state wins
+function getLiveStatus(row: any, stockMap: Record<string, string>) {
+  const status    = String(row["Status"] || "").trim();
+  const issueQty  = parseFloat(row["Issue Qty"]  || "0") || 0;
+  const reqQty    = parseFloat(row["Require Qty"] || "0") || 0;
+  const approvalReq = String(row["Approval Require?"] || "").trim().toLowerCase();
+  const approvedQty = parseFloat(row["Approved Quantity"] || "0") || 0;
+  const itemKey   = (row["Item Name"] || "").trim().toLowerCase();
+  const imsStockStr = stockMap[itemKey];
+  const imsStock  = imsStockStr !== undefined ? parseFloat(imsStockStr) || 0 : NaN;
+
+  // P1 — Final Closed States
+  if (status === "Requirement Closed") {
+    return { label: "Indent Closed", emoji: "✅", color: "#22c55e", bg: "rgba(34,197,94,0.15)", border: "rgba(34,197,94,0.35)" };
+  }
+  if (status === "Requirement Cancelled") {
+    return { label: "Cancelled", emoji: "🚫", color: "#94a3b8", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.3)" };
+  }
+
+  // P2 — Issue Status (item was physically issued)
+  if (issueQty > 0 && issueQty >= reqQty) {
+    return { label: "Issued ✓", emoji: "📦", color: "#10b981", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.4)" };
+  }
+  if (issueQty > 0 && issueQty < reqQty) {
+    return { label: "Partial Issue", emoji: "🔄", color: "#38bdf8", bg: "rgba(56,189,248,0.12)", border: "rgba(56,189,248,0.35)" };
+  }
+
+  // P3 — Approval Flow
+  if (approvalReq === "yes" || approvalReq === "हाँ" || approvalReq === "haan") {
+    if (approvedQty > 0) {
+      return { label: "Approval Done", emoji: "✅", color: "#a78bfa", bg: "rgba(167,139,250,0.15)", border: "rgba(167,139,250,0.4)" };
+    }
+    return { label: "Approval Pending", emoji: "⏳", color: "#f97316", bg: "rgba(249,115,22,0.15)", border: "rgba(249,115,22,0.4)" };
+  }
+
+  // P4 — Stock Check (only relevant when open & no issue yet)
+  if (!isNaN(imsStock)) {
+    if (imsStock <= 0) {
+      return { label: "Out of Stock", emoji: "🔴", color: "#ef4444", bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.4)" };
+    }
+    if (imsStock < reqQty) {
+      return { label: "Low Stock", emoji: "⚠️", color: "#eab308", bg: "rgba(234,179,8,0.12)", border: "rgba(234,179,8,0.35)" };
+    }
+    if (imsStock >= reqQty) {
+      return { label: "Stock Available", emoji: "🟢", color: "#4ade80", bg: "rgba(74,222,128,0.12)", border: "rgba(74,222,128,0.3)" };
+    }
+  }
+
+  // P5 — Default (just created)
+  return { label: "Indent Done", emoji: "📝", color: "#64748b", bg: "rgba(100,116,139,0.12)", border: "rgba(100,116,139,0.3)" };
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function Home() {
+
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
   const [data, setData] = useState<any[]>([]);
@@ -1138,7 +1193,7 @@ export default function Home() {
                       <th>Machine ID</th>
                       <th>Stock in Store</th>
                       <th>Status</th>
-                      <th>Approval Status</th>
+                      <th>Live Status</th>
                       {(!statusFilter || statusFilter === "Requirement Open") && <th className={styles.actionCol}>Action</th>}
                     </tr>
                   </thead>
@@ -1180,11 +1235,28 @@ export default function Home() {
                           </td>
                           <td className={styles.colBold}>{row["Status"] || "-"}</td>
                           <td>
-                            <span className={`${styles.pillId} ${row["Approval Require?"] === "Yes" ? styles.pillIdLowStock :
-                              row["Approval Require?"] === "No" ? styles.stockDanger : ""
-                              }`}>
-                              {row["Approval Require?"] || "-"}
-                            </span>
+                            {(() => {
+                              const ls = getLiveStatus(row, stockMap);
+                              return (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '3px 9px',
+                                  borderRadius: '20px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  letterSpacing: '0.2px',
+                                  background: ls.bg,
+                                  border: `1px solid ${ls.border}`,
+                                  color: ls.color,
+                                  whiteSpace: 'nowrap',
+                                }}>
+                                  <span>{ls.emoji}</span>
+                                  <span>{ls.label}</span>
+                                </span>
+                              );
+                            })()}
                           </td>
                           {(!statusFilter || statusFilter === "Requirement Open") && (
                             <td className={styles.actionCell}>
