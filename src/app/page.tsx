@@ -1596,11 +1596,6 @@ export default function Home() {
                 </table>
               )}
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Modern Modal */}
       <Modal
         isOpen={isModalOpen}
@@ -1751,6 +1746,12 @@ export default function Home() {
         message={alertModal.msg}
         type={alertModal.type}
       />
+
+            </div>
+          </div>
+        </div>
+      </div>
+
 
     </div>
   );
