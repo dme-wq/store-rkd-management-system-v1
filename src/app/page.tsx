@@ -1032,9 +1032,14 @@ export default function Home() {
       const issueQty = parseFloat(row["Issue Qty"] || "0") || 0;
       const rate     = parseFloat(row["Price"]     || "0") || 0;
       const total    = issueQty * rate;
+      
+      // Extract date part from Timestamp (e.g., "07-May-2026 11:30" -> "07-May-2026")
+      const fullTs = row["Timestamp"] || "-";
+      const dateOnly = fullTs !== "-" ? fullTs.split(" ")[0] : "-";
+
       return [
         idx + 1,
-        row["Timestamp"]         || "-",
+        dateOnly,
         row["Store RKD Number"]  || "-",
         row["Department"]        || "-",
         row["Item Name"]         || "-",
@@ -1044,8 +1049,8 @@ export default function Home() {
         row["Vendor Name"]       || "-",
         row["Require Qty"]       || "0",
         issueQty > 0 ? issueQty : "0",
-        rate > 0 ? `\u20B9${rate.toFixed(2)}` : "-",
-        total > 0 ? `\u20B9${total.toFixed(2)}` : "-",
+        rate > 0 ? `Rs. ${rate.toFixed(2)}` : "-",
+        total > 0 ? `Rs. ${total.toFixed(2)}` : "-",
       ];
     });
 
@@ -1067,15 +1072,15 @@ export default function Home() {
       foot: [["", "", "", "", "", "", "", "", "",
         { content: "GRAND TOTAL", colSpan: 2, styles: { fontStyle: "bold", halign: "right" } },
         "",
-        { content: `\u20B9${grandTotal.toFixed(2)}`, styles: { fontStyle: "bold", textColor: [220, 20, 100] } }
+        { content: `Rs. ${grandTotal.toFixed(2)}`, styles: { fontStyle: "bold", textColor: [220, 20, 100] } }
       ]],
       styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
       headStyles: { fillColor: [30, 30, 50], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
       footStyles: { fillColor: [240, 240, 240], textColor: [30, 30, 30], fontSize: 8 },
       alternateRowStyles: { fillColor: [252, 252, 255] },
       columnStyles: {
-        0:  { cellWidth: 7 },
-        1:  { cellWidth: 28 },
+        0:  { cellWidth: 10 },
+        1:  { cellWidth: 21 },
         2:  { cellWidth: 26 },
         3:  { cellWidth: 22 },
         4:  { cellWidth: 30 },
