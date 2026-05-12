@@ -303,6 +303,11 @@ export async function GET() {
   }
 }
 
+function toTitleCase(str: string) {
+  if (!str) return "";
+  return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -395,25 +400,21 @@ export async function POST(req: Request) {
             else if (phone.startsWith("0") && phone.length === 11) phone = "91" + phone.slice(1);
 
             const personalizedMessage =
-`👋 *Namaste ${contactName} Ji!*
+`👋 *Namaste ${toTitleCase(contactName)} Sir!*
 
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-🏪 *STORE MISCELLANEOUS APPROVAL*
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+🏪 *Store Miscellaneous Approval*
 
 📋 *Approval Required*
 
-🔖 RKD No:      *${rkdNumber}*
-📦 Item:            *${finalItemName}*
-🏪 Vendor:       *${finalVendorName}*
-🔢 Qty:              *${approvedQty}*
-💰 Rate:           *₹ ${finalRate}*
-🧾 Total:          *₹ ${totalPrice}*
+🔖 RKD No: *${rkdNumber}*
+📦 Item: *${toTitleCase(finalItemName)}*
+🏪 Vendor: *${toTitleCase(finalVendorName)}*
+🔢 Qty: *${approvedQty}*
+💰 Rate: *₹ ${finalRate}*
+🧾 Total: *₹ ${totalPrice}*
 
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-👆 Tap to Approve / Reject:
+👆 Tap To Approve / Reject:
 ${approvalLink}
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 
 ⏰ ${formattedDate}
 🤖 _Store Miscellaneous System_`;
@@ -511,12 +512,17 @@ ${approvalLink}
         });
         const rowData = fullRowRes.data.values?.[0] || [];
         
+        // Match approvalDataBase columns: Timestamp, Store RKD Number, Vendor Name, Rate, Approval Require?, Approved Qty
+        const timestampVal = rowData[2] || formattedDate;
+        const vendorVal = rowData[13] || finalVendor || "";
+        const rateVal = rowData[14] || finalOwnRate || "";
+        
         await sheets.spreadsheets.values.append({
           spreadsheetId: STORE_SHEET_ID,
-          range: "approvalDataBase!A:T",
+          range: "approvalDataBase!A:F",
           valueInputOption: "USER_ENTERED",
           requestBody: {
-            values: [rowData]
+            values: [[timestampVal, rkdNumber, vendorVal, rateVal, ownerStatus, finalQty || approvedQty || ""]]
           }
         });
       }
@@ -543,24 +549,20 @@ ${approvalLink}
             else if (doerPhone.startsWith("0") && doerPhone.length === 11) doerPhone = "91" + doerPhone.slice(1);
 
             const doerMessage =
-`👋 *Namaste ${doerName} Ji!*
+`👋 *Namaste ${toTitleCase(doerName)} Sir!*
 
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-🏪 *STORE MISCELLANEOUS APPROVAL*
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+🏪 *Store Miscellaneous Approval*
 
-${statusColor} *REQUEST ${statusText}* ${statusEmoji}
+${statusColor} *Request ${toTitleCase(statusText)}* ${statusEmoji}
 
-🔖 RKD No:    *${rkdNumber}*
-📦 Item:          *${finalItemName}*
-🔢 Qty:            *${finalQty || approvedQty}*
-💰 Rate:          *₹ ${finalRate}*
+🔖 RKD No: *${rkdNumber}*
+📦 Item: *${toTitleCase(finalItemName)}*
+🔢 Qty: *${finalQty || approvedQty}*
+💰 Rate: *₹ ${finalRate}*
 
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 ${isApproved
-  ? "✅ Your material request has been *Approved* by the management. It will be processed shortly."
-  : "❌ Your material request has been *Rejected* by the management. Please contact the store."}
-▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+  ? "✅ Your Material Request Has Been *Approved* By The Management. It Will Be Processed Shortly."
+  : "❌ Your Material Request Has Been *Rejected* By The Management. Please Contact The Store."}
 
 ⏰ ${formattedDate}
 🤖 _Store Miscellaneous System_`;
