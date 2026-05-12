@@ -43,12 +43,13 @@ async function generatePDF(data: any): Promise<string> {
   const W = doc.internal.pageSize.getWidth();
 
   // ── Colors ──
-  const DARK  = [0, 0, 0]  as [number,number,number];
-  const LGRAY = [230, 230, 230] as [number,number,number];
+  const DARK  = [30, 41, 59]  as [number,number,number]; // Slate 800
+  const LGRAY = [241, 245, 249] as [number,number,number]; // Slate 100
+  const PRIMARY = [37, 99, 235] as [number,number,number]; // Blue 600
 
   // ── Header band ──
   doc.setFillColor(...LGRAY);
-  doc.rect(W/2 - 25, 8, 50, 6, "F");
+  doc.rect(W/2 - 30, 8, 60, 6, "F");
   doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
   doc.text("PURCHASE ORDER", W/2, 12.5, { align:"center" });
 
@@ -57,11 +58,11 @@ async function generatePDF(data: any): Promise<string> {
   const startY = y;
 
   // ── Company block ──
-  doc.setFontSize(14); doc.setFont("helvetica","bold");
-  doc.text("M/S RKD Furnishings Pvt Ltd.", 14, y+10);
-  doc.setFontSize(7.5); doc.setFont("helvetica","normal");
-  doc.text("Plot No. 238-239, Sector-29, Part-II,\nHUDA, Panipat-132103, Haryana", 14, y+15);
-  doc.text("GSTIN/UIN: 06AAKCR0233R1Z1\nMr. Sachin  /  +91 98120 00642", 14, y+23);
+  doc.setFontSize(15); doc.setFont("helvetica","bold"); doc.setTextColor(...PRIMARY);
+  doc.text("M/S RKD Furnishings Pvt Ltd.", 8, y+10);
+  doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(80, 80, 80);
+  doc.text("Plot No. 238-239, Sector-29, Part-II,\nHUDA, Panipat-132103, Haryana", 8, y+15);
+  doc.text("GSTIN/UIN: 06AAKCR0233R1Z1\nMr. Sachin  /  +91 98120 00642", 8, y+23);
 
   // ── RKD Logo box (Geometric drawing matching the image) ──
   doc.setDrawColor(0,0,0); doc.setLineWidth(1.2);
@@ -78,26 +79,26 @@ async function generatePDF(data: any): Promise<string> {
 
   // ── Vendor + PO info split ──
   // Left side: Vendor Details
-  doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(0);
-  doc.text("Vendor Details", 14, y+5);
-  doc.setLineWidth(0.3); doc.line(14, y+6, 40, y+6); // Underline
+  doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
+  doc.text("Vendor Details", 8, y+5);
+  doc.setLineWidth(0.4); doc.setDrawColor(...PRIMARY); doc.line(8, y+6, 35, y+6); // Underline
 
-  doc.setFontSize(8); doc.setFont("helvetica","bold");
-  doc.text(data.vendorName || "-", 14, y+10);
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+  doc.text(data.vendorName || "-", 8, y+10);
   doc.setFont("helvetica","normal");
-  const addrLines = doc.splitTextToSize(data.vendorAddress || "-", 80);
-  doc.text(addrLines, 14, y+14);
+  const addrLines = doc.splitTextToSize(data.vendorAddress || "-", 85);
+  doc.text(addrLines, 8, y+14);
   const addrH = addrLines.length * 3.5;
   
-  doc.text(`Contact Number-${data.contactNumber || "-"}`, 14, y+16+addrH);
-  doc.text(`GST No-- ${data.gstDetails || "-"}`, 14, y+20+addrH);
+  doc.text(`Contact Number: ${data.contactNumber || "-"}`, 8, y+16+addrH);
+  doc.text(`GST No: ${data.gstDetails || "-"}`, 8, y+20+addrH);
 
   const delivY = y + 28 + addrH;
-  doc.setFontSize(10); doc.setFont("helvetica","bold");
-  doc.text("Delivery Designation", 14, delivY);
-  doc.line(14, delivY+1, 48, delivY+1); // Underline
-  doc.setFontSize(8); doc.setFont("helvetica","normal");
-  doc.text("RKD Furnishings Pvt Ltd.\nPlot No. 238-239, Sector-29, Part-II,\nHUDA, Panipat-132103, Haryana", 14, delivY+5);
+  doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
+  doc.text("Delivery Designation", 8, delivY);
+  doc.setLineWidth(0.4); doc.setDrawColor(...PRIMARY); doc.line(8, delivY+1, 45, delivY+1); // Underline
+  doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
+  doc.text("RKD Furnishings Pvt Ltd.\nPlot No. 238-239, Sector-29, Part-II,\nHUDA, Panipat-132103, Haryana", 8, delivY+5);
 
   // Right side: PO Details table
   const infoRows = [
@@ -114,15 +115,16 @@ async function generatePDF(data: any): Promise<string> {
     ["PO Checked by",        data.poCheckedBy     || "—"],
   ];
 
-  const colX = 115, colW1 = 35, colW2 = 45;
+  const colX = 120, colW1 = 35, colW2 = 45;
   let iy = y;
-  doc.setDrawColor(180,180,180); doc.setLineWidth(0.2);
+  doc.setDrawColor(200,205,210); doc.setLineWidth(0.2);
   infoRows.forEach(([label, val]) => {
-    doc.rect(colX, iy, colW1, 5);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(colX, iy, colW1, 5, "FD");
     doc.rect(colX+colW1, iy, colW2, 5);
-    doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(0);
+    doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
     doc.text(label, colX+2, iy+3.5);
-    doc.setFont("helvetica","normal");
+    doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
     doc.text(String(val), colX+colW1+2, iy+3.5);
     iy += 5;
   });
@@ -131,9 +133,9 @@ async function generatePDF(data: any): Promise<string> {
   y = sectionBottom + 5;
 
   // ── Description of Goods ──
-  doc.setFillColor(...LGRAY); doc.rect(10, y, W-20, 6, "F");
-  doc.setDrawColor(180,180,180); doc.rect(10, y, W-20, 6);
-  doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(0);
+  doc.setFillColor(...LGRAY); doc.rect(5, y, W-10, 6, "F");
+  doc.setDrawColor(200,205,210); doc.rect(5, y, W-10, 6);
+  doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...PRIMARY);
   doc.text("Description of Goods", W/2, y+4, { align:"center" });
   y += 6;
 
@@ -158,14 +160,14 @@ async function generatePDF(data: any): Promise<string> {
     startY: y,
     head: [["S.No","Item Description","Request No","Quantity","Units","Rate","GST%","Total Amount Rs"]],
     body: tableBody,
-    margin: { left: 10, right: 10 },
+    margin: { left: 5, right: 5 },
     theme: "grid",
-    styles: { fontSize: 7.5, cellPadding: 2, textColor: 0, lineColor: [180,180,180], lineWidth: 0.2 },
-    headStyles: { fillColor: [100,100,100], textColor: 255, fontStyle: "bold", halign:"center", valign:"middle" },
+    styles: { fontSize: 7.5, cellPadding: 2, textColor: 40, lineColor: [200,205,210], lineWidth: 0.2 },
+    headStyles: { fillColor: PRIMARY, textColor: 255, fontStyle: "bold", halign:"center", valign:"middle" },
     columnStyles: {
       0: { halign:"center", cellWidth: 10 },
-      2: { halign:"center", cellWidth: 30 },
-      3: { halign:"center", cellWidth: 14 },
+      2: { halign:"center", cellWidth: 32 },
+      3: { halign:"center", cellWidth: 16 },
       4: { halign:"center", cellWidth: 12 },
       5: { halign:"right",  cellWidth: 18 },
       6: { halign:"center", cellWidth: 12 },
@@ -187,37 +189,42 @@ async function generatePDF(data: any): Promise<string> {
   }, { subtotal: 0, gstAmt: 0 });
   const grandTotal = totals.subtotal + totals.gstAmt;
 
-  doc.setFillColor(...LGRAY); doc.rect(10, finalY, W-20, 6, "F");
-  doc.setDrawColor(180,180,180); doc.rect(10, finalY, W-20, 6);
-  doc.setFontSize(8); doc.setFont("helvetica","bold");
-  doc.text(formatCurr(totals.subtotal), W-12, finalY+4, { align:"right" });
+  doc.setFillColor(...LGRAY); doc.rect(5, finalY, W-10, 6, "F");
+  doc.setDrawColor(200,205,210); doc.rect(5, finalY, W-10, 6);
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(...DARK);
+  doc.text(formatCurr(totals.subtotal), W-8, finalY+4, { align:"right" });
 
   let ty = finalY + 12;
-  doc.text("GST Amount", W-50, ty, { align:"right" });
-  doc.text(formatCurr(totals.gstAmt), W-12, ty, { align:"right" });
+  doc.text("GST Amount", W-45, ty, { align:"right" });
+  doc.text(formatCurr(totals.gstAmt), W-8, ty, { align:"right" });
   
   ty += 6;
-  doc.text("Total Bill Value", W-50, ty, { align:"right" });
-  doc.text(formatCurr(grandTotal), W-12, ty, { align:"right" });
+  doc.text("Total Bill Value", W-45, ty, { align:"right" });
+  doc.text(formatCurr(grandTotal), W-8, ty, { align:"right" });
   
   // Red box around Total Bill Value row area
-  doc.setDrawColor(220,50,50); doc.setLineWidth(0.4);
-  doc.rect(10, ty-4.5, W-20, 6.5); 
+  doc.setDrawColor(220,38,38); doc.setLineWidth(0.4); doc.setFillColor(254,242,242);
+  doc.rect(5, ty-4.5, W-10, 6.5, "FD"); 
+  doc.setTextColor(220,38,38);
+  doc.text("Total Bill Value", W-45, ty, { align:"right" });
+  doc.text(formatCurr(grandTotal), W-8, ty, { align:"right" });
 
   // ── Signature box ──
-  const sigY = ty + 10;
-  doc.setDrawColor(0,0,0); doc.setLineWidth(0.5);
-  doc.rect(W-70, sigY, 60, 25);
-  doc.setFontSize(6.5); doc.setFont("helvetica","bold");
-  doc.text("For RKD FURNISHINGS PVT LTD", W-68, sigY+4);
+  const sigY = ty + 15;
+  doc.setDrawColor(...PRIMARY); doc.setLineWidth(0.4); doc.setFillColor(244,248,255);
+  doc.rect(W-70, sigY, 65, 25, "FD");
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(...PRIMARY);
+  doc.text("For RKD FURNISHINGS PVT LTD", W-37.5, sigY+6, { align: "center" });
+  doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
+  doc.text("Authorized Signatory", W-37.5, sigY+22, { align: "center" });
 
   // ── Footer ──
-  doc.setFontSize(7.5); doc.setFont("helvetica","bold");
+  doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(150,150,150);
   doc.text("This is a Computer Generated Copy", W/2, sigY+40, { align:"center" });
 
   // Draw main outer box around everything up to here
-  doc.setDrawColor(180,180,180); doc.setLineWidth(0.3);
-  doc.rect(10, startY, W-20, sigY+45-startY);
+  doc.setDrawColor(200,205,210); doc.setLineWidth(0.4);
+  doc.rect(5, startY, W-10, sigY+45-startY);
 
   return doc.output("datauristring").split(",")[1]; // Return base64
 }
