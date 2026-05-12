@@ -163,9 +163,17 @@ export async function GET(req: Request) {
     doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(80, 80, 80);
     doc.text(`Generated: ${today}`, W/2, 18, { align: "center" });
     
-    // Add Scorecard Summary to PDF Header
-    doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(37, 99, 235);
-    doc.text(`Today's Indent: ${todayIndent}   |   Today's Issue: ${todayIssue}   |   Total Pending: ${pendingIndents.length}`, W/2, 23, { align: "center" });
+    // Add Scorecard Summary to PDF Header ONLY in evening
+    const currentUTCHour = new Date().getUTCHours();
+    const isEvening = currentUTCHour >= 10; // 10:00 UTC = 3:30 PM IST (so evening cron at 1:00 PM UTC / 6:30 PM IST will be true)
+
+    if (isEvening) {
+      doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(37, 99, 235);
+      doc.text(`Today's Indent: ${todayIndent}   |   Today's Issue: ${todayIssue}   |   Total Pending: ${pendingIndents.length}`, W/2, 23, { align: "center" });
+    } else {
+      doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(37, 99, 235);
+      doc.text(`Total Pending Items: ${pendingIndents.length}`, W/2, 23, { align: "center" });
+    }
 
     // Table data
     const tableBody = pendingIndents.map((r, i) => [
@@ -244,7 +252,9 @@ export async function GET(req: Request) {
     }
 
     // 5. Send WhatsApp message
-    const msgText = `🔔 *Daily Store Report* 🔔\n\n📊 *Today's Scorecard:*\n🔹 Today's Indent: *${todayIndent}*\n✅ Today's Issue: *${todayIssue}*\n\n📋 *Total Pending Items:* *${pendingIndents.length}*\n\nPlease find the attached PDF report for all open requirements.\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`;
+    const msgText = isEvening 
+      ? `🔔 *Daily Store Report (Evening)* 🔔\n\n📊 *Today's Scorecard:*\n🔹 Today's Indent: *${todayIndent}*\n✅ Today's Issue: *${todayIssue}*\n\n📋 *Total Pending Items:* *${pendingIndents.length}*\n\nPlease find the attached PDF report for all open requirements.\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`
+      : `🔔 *Daily Store Report (Morning)* 🔔\n\n📋 *Total Pending Items:* *${pendingIndents.length}*\n\nPlease find the attached PDF report for all open requirements.\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`;
 
     let sentCount = 0;
     for (const doer of doerContacts) {

@@ -707,6 +707,18 @@ export default function Home() {
     }
   };
 
+  // Safe JSON parser — avoids crash when API returns HTML (e.g. Vercel 504 timeout)
+  const safeResJson = async (res: Response) => {
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      // If the sheet update already succeeded (2xx range but garbled body), treat it as success
+      if (res.ok) return { success: true };
+      throw new Error(`Server error (${res.status}): Please check your connection and try again.`);
+    }
+  };
+
   const handleDirectIssue = async (row: any) => {
     const rowId = row._id;
     const rkdNumber = row["Store RKD Number"];
@@ -758,8 +770,8 @@ export default function Home() {
           rate: row["Price"] || "0"
         })
       });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error);
+      const json = await safeResJson(res);
+      if (!json.success) throw new Error(json.error || "Update failed");
     } catch (err: any) {
       showAlert("Failed to update: " + err.message, "error");
       setData(originalData); // Rollback
@@ -828,8 +840,8 @@ export default function Home() {
           rate: manualRow["Price"] || "0"
         })
       });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error);
+      const json = await safeResJson(res);
+      if (!json.success) throw new Error(json.error || "Update failed");
     } catch (err: any) {
       showAlert("Failed to update: " + err.message, "error");
       setData(originalData);
@@ -864,8 +876,8 @@ export default function Home() {
           approvedQty: reqQty
         })
       });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error);
+      const json = await safeResJson(res);
+      if (!json.success) throw new Error(json.error || "Update failed");
 
       setModalTitle("Instant Approval! ✅");
       setModalMsg(`Approval status set to "No" and Approved Quantity set to "${reqQty}" for ${rkdNumber}.`);
@@ -910,9 +922,8 @@ export default function Home() {
           status: formData.status // Yes/No
         })
       });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error);
-
+      const json = await safeResJson(res);
+      if (!json.success) throw new Error(json.error || "Update failed");
       setModalTitle("Approved Successfully! ✅");
       setModalMsg(`Manual Approval for "${manualRow["Item Name"]}" has been logged.`);
       setModalData(null);
