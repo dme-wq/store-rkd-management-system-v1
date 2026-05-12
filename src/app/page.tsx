@@ -583,6 +583,27 @@ export default function Home() {
   const [inwardMap, setInwardMap] = useState<Record<string, { inwardQty: string; inwardDate: string }>>({}); 
   const hasLoadedOnce = useRef(false); // track if we ever got real data
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const fullScreenRef = useRef<HTMLDivElement>(null);
+
+  const toggleFullScreen = async () => {
+    if (!document.fullscreenElement) {
+      try {
+        await fullScreenRef.current?.requestFullscreen();
+      } catch (err) {
+        console.error("Fullscreen API failed", err);
+      }
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullScreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
 
   // Manual Issue State
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -1249,7 +1270,7 @@ export default function Home() {
                     <span>📱</span>
                     <span>New Indent</span>
                   </button>
-                  <button onClick={() => setIsFullScreen(true)} className={styles.dribbbleBtnSecondary}>
+                  <button onClick={toggleFullScreen} className={styles.dribbbleBtnSecondary}>
                     <span>⛶</span>
                     <span>Full Screen</span>
                   </button>
@@ -1358,16 +1379,24 @@ export default function Home() {
             </div>
 
             {/* Table */}
-            <div style={isFullScreen ? {
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              zIndex: 99999, backgroundColor: '#f1f5f9', padding: '20px',
-              display: 'flex', flexDirection: 'column',
-              animation: 'fadeIn 0.3s ease-in-out'
-            } : {}}>
+            <div 
+              ref={fullScreenRef}
+              style={isFullScreen ? {
+                backgroundColor: '#f1f5f9', 
+                padding: '24px',
+                display: 'flex', 
+                flexDirection: 'column',
+                width: '100vw',
+                height: '100vh',
+                overflow: 'hidden'
+              } : { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+            >
               {isFullScreen && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h2 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', color: '#1e293b' }}>Live Data (Full Screen)</h2>
-                  <button onClick={() => setIsFullScreen(false)} className={styles.dribbbleBtnPrimary} style={{ background: '#ef4444', color: 'white', border: 'none', boxShadow: '0 4px 14px rgba(239,68,68,0.4)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h2 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: '1.8rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.4rem' }}>🔴 LIVE</span> Data Dashboard
+                  </h2>
+                  <button onClick={toggleFullScreen} className={styles.dribbbleBtnPrimary} style={{ background: '#ef4444', color: 'white', border: 'none', boxShadow: '0 4px 14px rgba(239,68,68,0.4)', padding: '10px 20px', fontSize: '1rem' }}>
                     Exit Full Screen ✖
                   </button>
                 </div>
