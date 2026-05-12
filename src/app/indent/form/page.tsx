@@ -221,28 +221,7 @@ export default function StandaloneIndentForm() {
         {/* Form Body */}
         <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
           
-          <div className={styles.formField}>
-            <label className={styles.label} style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>Store RKD Number</label>
-            <input 
-              type="text" 
-              className={styles.qtyInput} 
-              disabled
-              value={options.nextRkdNumber ? `${options.nextRkdNumber} (Estimated)` : "Loading RKD..."} 
-              style={{ 
-                minHeight: '52px', 
-                fontSize: '0.95rem', 
-                background: '#f8fafc', 
-                color: '#94a3b8', 
-                border: '1px dashed #cbd5e1', 
-                borderRadius: '8px',
-                padding: '0 16px',
-                fontWeight: 600,
-                textAlign: 'center',
-                width: '100%'
-              }} 
-            />
-          </div>
-          
+
           <div className={styles.formField}>
             <label className={styles.label} style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>Person Filing Name <span className={styles.req}>*</span></label>
             <Select
