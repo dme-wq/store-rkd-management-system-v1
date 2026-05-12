@@ -157,7 +157,7 @@ export async function POST(req: Request) {
     const rows = idRes.data.values || [];
     
     // Find the last numeric serial number
-    let lastSerial = 32189; // Default before start
+    let lastSerial = 0; // Start fresh from 1
     for (let i = rows.length - 1; i >= 0; i--) {
       const val = parseInt(rows[i][0] || "0", 10);
       if (!isNaN(val) && val > 0) {
@@ -225,7 +225,18 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json({ success: true, rkdNumber: storeRkdNumber });
+    const rowData = {
+      _id: Date.now(),
+      "Timestamp": timestamp,
+      "Person Filling Name": personFillingName,
+      "Item Name": itemName,
+      "Require Qty": requireQty,
+      "Department": department,
+      "Machine Name": machineName,
+      "Machine ID": machineId
+    };
+
+    return NextResponse.json({ success: true, rkdNumber: storeRkdNumber, rowData });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message });
   }

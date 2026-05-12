@@ -160,7 +160,14 @@ export default function IndentMasterDetail() {
         showToast("success", `Indent ${data.rkdNumber} Saved!`);
         setIsFormOpen(false);
         setForm({ personFillingName: "", department: "", machineName: "", machineId: "", itemName: "", requireQty: "" });
-        loadData(true); // refresh
+        
+        // Optimistic UI Update for instant real-time feel
+        if (data.rowData) {
+          setMasterData(prev => [data.rowData, ...prev]);
+        }
+        
+        // Still call loadData in background to sync fully, but don't show the syncing spinner if we already updated optimistically
+        fetch("/api/sheets"); 
       } else {
         showToast("error", data.error || "Failed to save.");
       }
