@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText, BarChart3, Download } from "lucide-react";
@@ -581,6 +581,7 @@ export default function Home() {
   const [miscMap, setMiscMap] = useState<Record<string, { vendor: string, rate: string }>>({});
   const [poMap, setPoMap] = useState<Record<string, { poNumber: string; poDate: string; vendorName: string }>>({});
   const [inwardMap, setInwardMap] = useState<Record<string, { inwardQty: string; inwardDate: string }>>({}); 
+  const hasLoadedOnce = useRef(false); // track if we ever got real data
 
   // Manual Issue State
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -629,14 +630,12 @@ export default function Home() {
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      // Hard 12-second timeout — loading NEVER freezes permanently
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 25000);
-      
-      const res = await fetch(`/api/sheets?t=${Date.now()}`, { signal: controller.signal });
+      const res = await fetch(`/api/sheets?t=${Date.now()}`, { signal: controller.signal, cache: 'no-store' });
       clearTimeout(timer);
-      
       const json = await res.json();
+
       if (json.success) {
         setData(json.data || []);
         setStockMap(json.stockMap || {});
@@ -645,23 +644,40 @@ export default function Home() {
         setInwardMap(json.inwardMap || {});
         setLastUpdated(new Date().toLocaleTimeString("en-IN"));
         setApiError(null);
+        hasLoadedOnce.current = true;
       } else {
-        setApiError(json.error || "Failed to fetch data");
-        console.error("API Success False:", json.error);
+        // success:false — only clear data if we never loaded before AND no error yet
+        console.error("[fetchData] API success=false:", json.error);
+        if (!hasLoadedOnce.current) {
+          // Auto-retry once after 4 seconds on cold start failure
+          setApiError("Connecting... retrying automatically.");
+          setTimeout(() => fetchData(true), 4000);
+        } else {
+          // We have stale data — show a mild warning but keep the table
+          setApiError("Sync warning — showing last loaded data.");
+          setTimeout(() => setApiError(null), 6000);
+        }
       }
     } catch (err: any) {
-      // On timeout or network error, just show empty state — don't freeze
       if (err.name === "AbortError") {
-        console.warn("fetchData timed out — keeping existing data if available");
-        // Don't clear data — show stale data instead of empty screen!
-        setApiError("Slow connection — showing cached data. Retrying...");
-        setTimeout(() => setApiError(null), 5000);
+        if (!hasLoadedOnce.current) {
+          setApiError("Slow connection — retrying automatically...");
+          setTimeout(() => fetchData(true), 4000);
+        } else {
+          setApiError("Slow connection — showing cached data.");
+          setTimeout(() => setApiError(null), 6000);
+        }
       } else {
-        setApiError(err.message);
-        console.error("Fetch Error:", err);
+        if (!hasLoadedOnce.current) {
+          setApiError("Network error — retrying automatically...");
+          setTimeout(() => fetchData(true), 4000);
+        } else {
+          setApiError(err.message);
+        }
+        console.error("[fetchData] Error:", err);
       }
     } finally {
-      setLoading(false); // ALWAYS dismiss loading, no matter what
+      setLoading(false);
     }
   };
 
@@ -1475,15 +1491,26 @@ export default function Home() {
                         </tr>
                       );
                     })}
-                    {apiError && (
+                    {/* Connecting / Retry State — show spinner not error */}
+                    {apiError && (apiError.includes("retry") || apiError.includes("Connecting") || apiError.includes("Slow")) && filteredData.length === 0 && (
+                      <tr>
+                        <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell}>
+                          <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: '#ec4899' }} />
+                          <p style={{ color: '#64748b', marginTop: 8 }}>{apiError}</p>
+                        </td>
+                      </tr>
+                    )}
+                    {/* Hard Error — show only if not a retry and no data */}
+                    {apiError && !apiError.includes("retry") && !apiError.includes("Connecting") && !apiError.includes("Slow") && filteredData.length === 0 && (
                       <tr>
                         <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell} style={{ color: '#ef4444' }}>
-                          <p>Error: {apiError}</p>
+                          <p>⚠️ {apiError}</p>
                           <button onClick={() => fetchData(true)} className={styles.statusBtn} style={{ marginTop: '10px' }}>Retry</button>
                         </td>
                       </tr>
                     )}
-                    {!apiError && filteredData.length === 0 && (
+                    {/* Empty state — only after first successful load */}
+                    {!apiError && hasLoadedOnce.current && filteredData.length === 0 && (
                       <tr>
                         <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell}>
                           <Filter size={32} />

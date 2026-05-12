@@ -130,10 +130,10 @@ let cachedStockMap: any = null;
 let cachedMiscMap: any = null;
 let lastStaticFetchTime = 0;
 const STATIC_CACHE_DURATION = 300000; // 5 minutes
-let imsRefreshing = false; // prevent concurrent IMS refreshes
-// PO and Inward lookup maps (cached alongside IMS)
-let cachedPoMap: Record<string, { poNumber: string; poDate: string; vendorName: string }> = {}; // rkdNumber -> PO info
-let cachedInwardMap: Record<string, { inwardQty: string; inwardDate: string }> = {}; // rkdNumber -> Inward info
+let imsRefreshing = false;
+let lastKnownRowCount = 0; // Persists across warm Lambda instances for faster speculation
+let cachedPoMap: Record<string, { poNumber: string; poDate: string; vendorName: string }> = {};
+let cachedInwardMap: Record<string, { inwardQty: string; inwardDate: string }> = {};
 
 // Fetch IMS + Misc in background with timeout
 async function refreshStaticCaches(sheets: any) {
@@ -246,65 +246,67 @@ export async function GET() {
   const now = Date.now();
   const sheets = getSheetsClient();
 
-  // Always return fresh data if cache is valid
+  // ── 1. Serve hot cache immediately (< 3s old) ──────────────────────────────
   if (cachedApiResponse && (now - lastFetchTime < CACHE_DURATION)) {
     return NextResponse.json({
       ...cachedApiResponse,
       stockMap: cachedStockMap || {},
-      miscMap: cachedMiscMap || {}
+      miscMap: cachedMiscMap || {},
+      poMap: cachedPoMap || {},
+      inwardMap: cachedInwardMap || {},
     });
   }
 
-  // Fire background IMS/Misc refresh
+  // ── 2. Kick off background IMS/Misc/PO/Inward refresh ─────────────────────
   if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
     refreshStaticCaches(sheets).catch(() => {});
   }
 
   try {
-    // ── Step 1: Get total row count cheaply ──
-    let totalRows = 1;
-    try {
-      const countRes = await sheets.spreadsheets.values.get({
-        spreadsheetId: STORE_SHEET_ID,
-        range: "StoreDataEntry!A:A",
-      });
-      totalRows = (countRes.data.values || []).length;
-    } catch (e: any) {
-      // If even count fails, return stale cache or empty
-      if (cachedApiResponse) {
-        return NextResponse.json({ ...cachedApiResponse, stockMap: cachedStockMap || {}, miscMap: cachedMiscMap || {}, stale: true });
-      }
-      return NextResponse.json({ success: false, error: e.message }, { status: 500 });
-    }
-
-    // ── Step 2: Fetch only LAST 500 rows (approx 3 months) ──
-    // This keeps payload small and prevents Vercel timeout
+    // ── 3. SINGLE batchGet: count column A + speculative last-500-rows ────────
+    // Using lastKnownRowCount to speculate where data ends (avoids 2-step round trips)
     const FETCH_LIMIT = 500;
-    const startRow = Math.max(2, totalRows - FETCH_LIMIT + 1);
-    const endRow = totalRows;
-    let storeRows: any[] = [];
+    const speculativeStart = lastKnownRowCount > FETCH_LIMIT
+      ? Math.max(2, lastKnownRowCount - FETCH_LIMIT)
+      : 2;
+    const speculativeEnd = lastKnownRowCount > 0
+      ? lastKnownRowCount + 50 // buffer for new rows added since last fetch
+      : 33000; // first cold-start estimate
 
-    if (endRow >= startRow) {
-      try {
-        const storeRes = await sheets.spreadsheets.values.get({
-          spreadsheetId: STORE_SHEET_ID,
-          range: `StoreDataEntry!A${startRow}:P${endRow}`,
-        });
-        storeRows = storeRes.data.values || [];
-      } catch (e: any) {
-        if (cachedApiResponse) {
-          return NextResponse.json({ ...cachedApiResponse, stockMap: cachedStockMap || {}, miscMap: cachedMiscMap || {}, stale: true });
-        }
-        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
-      }
+    const batchRes = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId: STORE_SHEET_ID,
+      ranges: [
+        "StoreDataEntry!A:A",                                           // for actual row count
+        `StoreDataEntry!A${speculativeStart}:P${speculativeEnd}`,       // speculative data range
+      ],
+    });
+
+    const countValues = batchRes.data.valueRanges?.[0]?.values || [];
+    const totalRows = countValues.length;
+    lastKnownRowCount = totalRows; // update for next warm request
+
+    let storeRows = batchRes.data.valueRanges?.[1]?.values || [];
+
+    // If speculation missed (too few RKD rows returned), do one targeted refetch
+    const validCount = storeRows.filter((r: any) => String(r[1] || "").startsWith("RKD")).length;
+    if (validCount < 5 && totalRows > 10) {
+      const actualStart = Math.max(2, totalRows - FETCH_LIMIT + 1);
+      const refetch = await sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!A${actualStart}:P${totalRows}`,
+      });
+      storeRows = refetch.data.values || [];
     }
 
-    // Map to objects (no header row in range since startRow>=2)
-    const data = storeRows.map((row: any, idx: number) => {
-      const obj: any = { _id: idx, rowNumber: startRow + idx };
-      HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
-      return obj;
-    }).filter((r: any) => r["Store RKD Number"] && r["Store RKD Number"].startsWith("RKD"));
+    // ── 4. Map rows to objects ────────────────────────────────────────────────
+    const startRow = Math.max(2, totalRows > FETCH_LIMIT ? totalRows - FETCH_LIMIT : 2);
+    const data = storeRows
+      .map((row: any, idx: number) => {
+        const obj: any = { _id: idx, rowNumber: startRow + idx };
+        HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
+        return obj;
+      })
+      .filter((r: any) => r["Store RKD Number"] && r["Store RKD Number"].startsWith("RKD"));
 
     const responseData = {
       success: true,
@@ -315,22 +317,29 @@ export async function GET() {
       poMap: cachedPoMap || {},
       inwardMap: cachedInwardMap || {},
       fetchedAt: new Date().toISOString(),
-      debug: { startRow, endRow, rowsFetched: storeRows.length }
+      debug: { startRow, totalRows, rowsFetched: storeRows.length, validRows: validCount }
     };
 
     cachedApiResponse = responseData;
     lastFetchTime = now;
 
     return new NextResponse(JSON.stringify(responseData), {
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store"
-      }
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
+
   } catch (error: any) {
-    console.error("API GET error:", error);
+    console.error("[API] GET error:", error.message);
+    // ALWAYS return stale cache — NEVER return empty to the frontend
     if (cachedApiResponse) {
-      return NextResponse.json({ ...cachedApiResponse, stale: true });
+      console.log("[API] Returning stale cache due to error");
+      return NextResponse.json({
+        ...cachedApiResponse,
+        stockMap: cachedStockMap || {},
+        miscMap: cachedMiscMap || {},
+        poMap: cachedPoMap || {},
+        inwardMap: cachedInwardMap || {},
+        stale: true
+      });
     }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
