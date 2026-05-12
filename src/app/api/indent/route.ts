@@ -67,25 +67,14 @@ export async function GET() {
 
     const storeRows = (storeFreqRes as any).data?.values || [];
     
-    // Find Next RKD Number
+    // Find Next RKD Number — now row number IS the serial (row 2 = serial 1, etc.)
+    // So next serial = current total data rows + 1
     const istOffset = 5.5 * 60 * 60 * 1000;
     const istDate = new Date(Date.now() + istOffset);
     const yearPrefix = istDate.getUTCFullYear();
 
-    let lastSerial = 0;
-    for (let i = storeRows.length - 1; i >= 0; i--) {
-      // Column B (index 1) has the RKD Number
-      const rkdStr = storeRows[i][1] || "";
-      if (rkdStr.startsWith(`RKD_S_${yearPrefix}_`)) {
-        const parts = rkdStr.split('_');
-        const val = parseInt(parts[parts.length - 1], 10);
-        if (!isNaN(val) && val > 0) {
-          lastSerial = val;
-          break;
-        }
-      }
-    }
-    const nextSerial = lastSerial + 1;
+    const totalDataRows = storeRows.length; // includes header row 1
+    const nextSerial = totalDataRows; // next row will be totalDataRows + 1, serial = (totalDataRows + 1) - 1 = totalDataRows
     const nextRkdNumber = `RKD_S_${yearPrefix}_${nextSerial}`;
 
     // Take last 2000 rows for recency-weighted analysis
@@ -183,38 +172,14 @@ export async function POST(req: Request) {
     const yearPrefix = istDate.getUTCFullYear();
 
     // First, get the last serial number from StoreDataEntry by checking Column B
-    const idRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: STORE_SHEET_ID,
-      range: "StoreDataEntry!A:B", 
-    });
-    
-    const rows = idRes.data.values || [];
-    
-    // Find the last numeric serial number strictly for this year's RKD format
-    let lastSerial = 0; // Start fresh from 1
-    for (let i = rows.length - 1; i >= 0; i--) {
-      const rkdStr = rows[i][1] || "";
-      if (rkdStr.startsWith(`RKD_S_${yearPrefix}_`)) {
-        const parts = rkdStr.split('_');
-        const val = parseInt(parts[parts.length - 1], 10);
-        if (!isNaN(val) && val > 0) {
-          lastSerial = val;
-          break;
-        }
-      }
-    }
-    
-    const newSerial = lastSerial + 1;
     const day = String(istDate.getUTCDate()).padStart(2, '0');
     const monthIndex = istDate.getUTCMonth();
     const months = ["जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"];
     const month = months[monthIndex];
     const hours = String(istDate.getUTCHours()).padStart(2, '0');
     const mins = String(istDate.getUTCMinutes()).padStart(2, '0');
-    
     const timestamp = `${day}-${month}-${yearPrefix} ${hours}:${mins}`;
-    const storeRkdNumber = `RKD_S_${yearPrefix}_${newSerial}`;
-    
+
     const { 
       personFillingName, 
       itemName, 
@@ -228,34 +193,38 @@ export async function POST(req: Request) {
       stockInStore 
     } = body;
 
-    const newRow = [
-      newSerial,              // A: #
-      storeRkdNumber,         // B: Store RKD Number
-      timestamp,              // C: Timestamp
-      personFillingName,      // D: Person Filling Name
-      itemName,               // E: Item Name
-      requireQty,             // F: Require Qty
-      units,                  // G: Units
-      "",                     // H: Issue Qty
-      "Requirement Open",     // I: Status
-      department,             // J: Department
-      machineName,            // K: Machine Name
-      machineId,              // L: Machine ID
-      "",                     // M: Breakdown Number
-      vendorName,             // N: Vendor Name
-      price,                  // O: Price
-      stockInStore            // P: Stock in Store
-    ];
-
-    await sheets.spreadsheets.values.append({
+    // ── RACE-CONDITION-SAFE SERIAL GENERATION ──
+    // Step 1: Append a placeholder row — Google Sheets append is ATOMIC
+    // The response tells us the EXACT row number written, with no race condition possible
+    const appendRes = await sheets.spreadsheets.values.append({
       spreadsheetId: STORE_SHEET_ID,
       range: "StoreDataEntry!A:A",
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       requestBody: {
-        values: [newRow]
+        values: [["PENDING", "PENDING", timestamp, personFillingName, itemName, requireQty, units, "", "Requirement Open", department, machineName, machineId, "", vendorName, price, stockInStore]]
       }
     });
+
+    // Step 2: Extract the actual row number from the append response
+    // e.g. "StoreDataEntry!A271:P271" → row 271
+    const updatedRange = (appendRes as any).data?.updates?.updatedRange || "";
+    const rowMatch = updatedRange.match(/(\d+):/);
+    const actualRowNumber = rowMatch ? parseInt(rowMatch[1], 10) : null;
+
+    // Step 3: Derive serial from actual row (row 2 = serial 1, row 3 = serial 2, etc.)
+    const newSerial = actualRowNumber ? actualRowNumber - 1 : Date.now(); // fallback to timestamp if row unknown
+    const storeRkdNumber = `RKD_S_${yearPrefix}_${newSerial}`;
+
+    // Step 4: Backfill the correct serial and RKD number into the exact row we wrote
+    if (actualRowNumber) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!A${actualRowNumber}:B${actualRowNumber}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [[newSerial, storeRkdNumber]] }
+      });
+    }
 
     const rowData = {
       _id: Date.now(),
