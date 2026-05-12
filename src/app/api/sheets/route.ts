@@ -220,9 +220,8 @@ export async function GET() {
 
   // If we have STALE main data but no cache at all yet — fetch it
   try {
-    // Simplify: Just fetch the whole data range A2:P
-    // Google Sheets API only returns rows that actually contain values.
-    const dataRange = `StoreDataEntry!A2:P`;
+    // Fetch the whole data range A:P
+    const dataRange = `StoreDataEntry!A:P`;
     let storeRows: any[] = [];
     try {
       const storeRes = await sheets.spreadsheets.values.get({
@@ -231,26 +230,15 @@ export async function GET() {
       });
       storeRows = storeRes.data.values || [];
     } catch (e: any) {
-      if (cachedApiResponse) {
-        return NextResponse.json({
-          ...cachedApiResponse,
-          stockMap: cachedStockMap || {},
-          miscMap: cachedMiscMap || {},
-          stale: true
-        });
-      }
-      return NextResponse.json({ 
-        success: false, 
-        error: `Failed to fetch store data: ${e.message}` 
-      }, { status: 500 });
+      return NextResponse.json({ success: false, error: e.message }, { status: 500 });
     }
 
-    const data = storeRows.map((row: any, idx: number) => {
-      const actualRowNumber = 2 + idx; // We started from row 2
-      const obj: any = { _id: idx, rowNumber: actualRowNumber };
+    // Process rows — skip the header row (index 0)
+    const data = storeRows.slice(1).map((row: any, idx: number) => {
+      const obj: any = { _id: idx, rowNumber: idx + 2 };
       HEADERS.forEach((h: string, i: number) => { obj[h] = row[i] || ""; });
       return obj;
-    }).filter((r: any) => r["Store RKD Number"] && r["Store RKD Number"] !== "#");
+    });
 
     const responseData = { 
       success: true, 
@@ -258,7 +246,7 @@ export async function GET() {
       stockMap: cachedStockMap || {},
       miscMap: cachedMiscMap || {},
       fetchedAt: new Date().toISOString(),
-      debug: { rowsReturned: storeRows.length }
+      debug: { rowsFound: storeRows.length }
     };
 
     cachedApiResponse = responseData;
@@ -267,7 +255,7 @@ export async function GET() {
     return new NextResponse(JSON.stringify(responseData), {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, s-maxage=1, stale-while-revalidate=59"
+        "Cache-Control": "no-store, max-age=0, must-revalidate"
       }
     });
   } catch (error: any) {

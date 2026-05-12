@@ -552,7 +552,7 @@ export default function Home() {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12000);
       
-      const res = await fetch("/api/sheets", { signal: controller.signal });
+      const res = await fetch(`/api/sheets?t=${Date.now()}`, { signal: controller.signal });
       clearTimeout(timer);
       
       const json = await res.json();
