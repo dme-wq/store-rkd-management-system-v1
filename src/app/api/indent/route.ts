@@ -62,18 +62,25 @@ export async function GET() {
     const storeRows = (storeFreqRes as any).data?.values || [];
     
     // Find Next RKD Number
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(Date.now() + istOffset);
+    const yearPrefix = istDate.getUTCFullYear();
+
     let lastSerial = 0;
     for (let i = storeRows.length - 1; i >= 0; i--) {
-      const val = parseInt(storeRows[i][0] || "0", 10);
-      if (!isNaN(val) && val > 0) {
-        lastSerial = val;
-        break;
+      // Column B (index 1) has the RKD Number
+      const rkdStr = storeRows[i][1] || "";
+      if (rkdStr.startsWith(`RKD_S_${yearPrefix}_`)) {
+        const parts = rkdStr.split('_');
+        const val = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(val) && val > 0) {
+          lastSerial = val;
+          break;
+        }
       }
     }
     const nextSerial = lastSerial + 1;
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istDate = new Date(Date.now() + istOffset);
-    const nextRkdNumber = `RKD_S_${istDate.getUTCFullYear()}_${nextSerial}`;
+    const nextRkdNumber = `RKD_S_${yearPrefix}_${nextSerial}`;
 
     // Take last 2000 rows for recency-weighted analysis
     const recentRows = storeRows.slice(-2000);
@@ -163,35 +170,39 @@ export async function POST(req: Request) {
     const body = await req.json();
     const sheets = getSheetsClient();
     
-    // First, get the last serial number from StoreDataEntry
+    // Generate IST Timestamp & Year Prefix
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    const yearPrefix = istDate.getUTCFullYear();
+
+    // First, get the last serial number from StoreDataEntry by checking Column B
     const idRes = await sheets.spreadsheets.values.get({
       spreadsheetId: STORE_SHEET_ID,
-      range: "StoreDataEntry!A:A", 
+      range: "StoreDataEntry!A:B", 
     });
     
     const rows = idRes.data.values || [];
     
-    // Find the last numeric serial number
+    // Find the last numeric serial number strictly for this year's RKD format
     let lastSerial = 0; // Start fresh from 1
     for (let i = rows.length - 1; i >= 0; i--) {
-      const val = parseInt(rows[i][0] || "0", 10);
-      if (!isNaN(val) && val > 0) {
-        lastSerial = val;
-        break;
+      const rkdStr = rows[i][1] || "";
+      if (rkdStr.startsWith(`RKD_S_${yearPrefix}_`)) {
+        const parts = rkdStr.split('_');
+        const val = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(val) && val > 0) {
+          lastSerial = val;
+          break;
+        }
       }
     }
     
     const newSerial = lastSerial + 1;
-    // Generate IST Timestamp
-    const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istDate = new Date(now.getTime() + istOffset);
-    
     const day = String(istDate.getUTCDate()).padStart(2, '0');
     const monthIndex = istDate.getUTCMonth();
     const months = ["जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"];
     const month = months[monthIndex];
-    const yearPrefix = istDate.getUTCFullYear();
     const hours = String(istDate.getUTCHours()).padStart(2, '0');
     const mins = String(istDate.getUTCMinutes()).padStart(2, '0');
     
