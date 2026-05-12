@@ -367,6 +367,14 @@ export async function POST(req: Request) {
       console.log(`Clerk Requesting Approval for RKD: ${rkdNumber}. Qty: ${approvedQty}, Rate: ${finalRate}`);
 
       if (status === "Yes") {
+        // Save "Pending" and the requested approvedQty to StoreDataEntry
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [["Pending", approvedQty || ""]] }
+        });
+
         const whatsappRes = await sheets.spreadsheets.values.get({
           spreadsheetId: STORE_SHEET_ID,
           range: "whatsappApproval!A:B",
@@ -512,8 +520,12 @@ ${approvalLink}
         });
         const rowData = fullRowRes.data.values?.[0] || [];
         
+        // Format timestamp to match existing approvalDataBase format: M/D/YYYY HH:MM:SS
+        const d = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+        const cleanTimestamp = `${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()} ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`;
+        
         // Match approvalDataBase columns: Timestamp, Store RKD Number, Vendor Name, Rate, Approval Require?, Approved Qty
-        const timestampVal = rowData[2] || formattedDate;
+        const timestampVal = cleanTimestamp;
         const vendorVal = rowData[13] || finalVendor || "";
         const rateVal = rowData[14] || finalOwnRate || "";
         
