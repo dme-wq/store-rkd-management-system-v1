@@ -1270,6 +1270,10 @@ export default function Home() {
                     <span>📱</span>
                     <span>New Indent</span>
                   </button>
+                  <button onClick={() => { setIsNavigating(true); router.push("/approval"); }} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 14px rgba(245,158,11,0.4)' }}>
+                    <span>✅</span>
+                    <span>Approval Entries</span>
+                  </button>
                   <button onClick={toggleFullScreen} className={styles.dribbbleBtnSecondary}>
                     <span>⛶</span>
                     <span>Full Screen</span>
