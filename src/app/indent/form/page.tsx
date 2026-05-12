@@ -57,13 +57,28 @@ export default function StandaloneIndentForm() {
     : { units: "", rate: "", vendor: "", stock: "" };
 
   const loadData = async () => {
-    setPageLoading(true);
+    // Check cache first for instant load
+    const cached = localStorage.getItem("rkd_form_options");
+    if (cached) {
+      try {
+        setOptions(JSON.parse(cached));
+        setPageLoading(false); // Stop loading instantly!
+      } catch (e) {
+        console.error("Cache parsing error", e);
+      }
+    } else {
+      setPageLoading(true); // Only show loading spinner if no cache exists
+    }
+
     try {
       const resOptions = await fetch("/api/indent");
       const jsonOptions = await resOptions.json();
-      if (jsonOptions.success) setOptions(jsonOptions.options);
+      if (jsonOptions.success) {
+        setOptions(jsonOptions.options);
+        localStorage.setItem("rkd_form_options", JSON.stringify(jsonOptions.options));
+      }
     } catch (err: any) {
-      showToast("error", "Failed to load options.");
+      if (!cached) showToast("error", "Failed to load options. Please check your internet connection.");
     } finally {
       setPageLoading(false);
     }
