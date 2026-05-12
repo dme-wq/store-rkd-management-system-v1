@@ -92,10 +92,14 @@ const monthMap: Record<string, number> = {
 };
 
 function parseDate(dateStr: string): Date {
-  if (!dateStr) return new Date(0);
-  const d = new Date(dateStr);
+  if (!dateStr || typeof dateStr !== 'string') return new Date(0);
+
+  // Try native parsing first
+  let d = new Date(dateStr);
   if (!isNaN(d.getTime())) return d;
-  const parts = dateStr.split(/[-\s/:]+/);
+
+  // Split by anything that isn't a word character or a Hindi character
+  const parts = dateStr.split(/[^\w\u0900-\u097F]+/).filter(Boolean);
   if (parts.length >= 3) {
     const day = parseInt(parts[0], 10);
     const mStr = parts[1].toLowerCase();
@@ -217,13 +221,12 @@ export async function GET() {
   // If we have STALE main data but no cache at all yet — fetch it
   try {
     // ── Main Data Fetch (only if cache is expired) ──
-    let totalRows = 0;
+    let res: any;
     try {
-      const idRes = await sheets.spreadsheets.values.get({
+      res = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
         range: "StoreDataEntry!A:A",
       });
-      totalRows = idRes.data.values?.length || 0;
     } catch (e: any) {
       // If we have stale cache, return it rather than failing completely
       if (cachedApiResponse) {
@@ -241,13 +244,28 @@ export async function GET() {
       }, { status: 500 });
     }
 
-    // Fetch only last 1500 rows for speed (was 3000 — unnecessarily large)
-    const startRow = Math.max(1, totalRows - 1499);
+    // Optimization: Fetch only the last 2000 rows for the main table to keep it fast
+    const totalRows = (res.data.values || []).length;
+    
+    if (totalRows <= 1) {
+      // Sheet is empty (only header or nothing)
+      return NextResponse.json({
+        success: true,
+        data: [],
+        stockMap: {},
+        miscMap: {},
+        cached: false
+      });
+    }
+
+    const startRow = Math.max(2, totalRows - 1999);
+    const endRow = totalRows;
+    const dataRange = `StoreDataEntry!A${startRow}:T${endRow}`;
     let storeRows: any[] = [];
     try {
       const storeRes = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!A${startRow}:T${totalRows}`,
+        range: dataRange,
       });
       storeRows = storeRes.data.values || [];
     } catch (e: any) {

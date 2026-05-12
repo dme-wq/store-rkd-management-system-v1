@@ -17,46 +17,42 @@ const monthMap: Record<string, number> = {
 };
 
 function parseCustomDate(dateStr: string): Date {
-  if (!dateStr) return new Date(0);
+  if (!dateStr || typeof dateStr !== 'string') return new Date(0);
 
   // Try native parsing first
   let d = new Date(dateStr);
   if (!isNaN(d.getTime())) return d;
 
-  // Split by anything that isn't a word character or a Hindi character
-  const parts = dateStr.split(/[^\w\u0900-\u097F]+/);
+  // Split by non-word/non-hindi chars
+  const parts = dateStr.split(/[^\w\u0900-\u097F]+/).filter(Boolean);
   if (parts.length >= 3) {
     let day = NaN, month = NaN, year = NaN;
 
-    // 1. Find Year (4 digits)
+    // Find Year (4 digits)
     const yearIdx = parts.findIndex(p => p.length === 4 && !isNaN(parseInt(p, 10)));
     if (yearIdx !== -1) {
       year = parseInt(parts[yearIdx], 10);
-      // Remove year from parts to find day/month
       const otherParts = parts.filter((_, i) => i !== yearIdx);
 
-      // 2. Find Month (either name or number)
+      // Find Month (name or index)
       for (let i = 0; i < otherParts.length; i++) {
         const p = otherParts[i].toLowerCase();
-        if (monthMap[p] !== undefined) {
-          month = monthMap[p];
-          day = parseInt(otherParts[1 - i], 10);
+        // Check if monthMap key exists in the part or vice versa
+        const foundMonthKey = Object.keys(monthMap).find(mKey => p.includes(mKey) || mKey.includes(p));
+        if (foundMonthKey) {
+          month = monthMap[foundMonthKey];
+          // Day is usually the first other part
+          day = parseInt(otherParts[0], 10);
           break;
         }
       }
 
-      // If month still NaN, try to find numeric month
+      // Numeric month fallback
       if (isNaN(month) && otherParts.length >= 2) {
         const p0 = parseInt(otherParts[0], 10);
         const p1 = parseInt(otherParts[1], 10);
-        // Ambiguity: DD-MM vs MM-DD. Assume DD-MM for this system.
-        if (p1 >= 1 && p1 <= 12) {
-          month = p1 - 1;
-          day = p0;
-        } else if (p0 >= 1 && p0 <= 12) {
-          month = p0 - 1;
-          day = p1;
-        }
+        if (p1 >= 1 && p1 <= 12) { month = p1 - 1; day = p0; }
+        else if (p0 >= 1 && p0 <= 12) { month = p0 - 1; day = p1; }
       }
     }
 
