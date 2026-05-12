@@ -117,32 +117,34 @@ export default function StandaloneIndentForm() {
       showToast("warning", "Please fill all required (*) fields.");
       return;
     }
-    setSubmitting(true);
-    try {
-      const payload = {
-        personFillingName: form.personFillingName, department: form.department,
-        machineName: form.machineName, machineId: form.machineId,
-        itemName: form.itemName, requireQty: form.requireQty,
-        units: itemData.units, vendorName: itemData.vendor,
-        price: itemData.rate, stockInStore: itemData.stock
-      };
-      const res  = await fetch("/api/indent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
+
+    // ── OPTIMISTIC SUBMIT: Reset form instantly, save in background ──
+    const payload = {
+      personFillingName: form.personFillingName, department: form.department,
+      machineName: form.machineName, machineId: form.machineId,
+      itemName: form.itemName, requireQty: form.requireQty,
+      units: itemData.units, vendorName: itemData.vendor,
+      price: itemData.rate, stockInStore: itemData.stock
+    };
+
+    // 1. Immediately reset form — user can start next entry right away
+    setForm({ ...form, machineName: "", machineId: "", itemName: "", requireQty: "" });
+    showToast("info", "Submitting...");
+
+    // 2. Fire API in background — do NOT await
+    fetch("/api/indent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(res => res.json()).then(data => {
       if (data.success) {
-        showToast("success", `Indent ${data.rkdNumber} Saved!`);
-        setForm({ ...form, machineName: "", machineId: "", itemName: "", requireQty: "" }); // Keep person and dept filled for faster multi-entry
+        showToast("success", `✅ Indent ${data.rkdNumber} Saved!`);
       } else {
-        showToast("error", data.error || "Failed to save.");
+        showToast("error", data.error || "Save failed. Please retry.");
       }
-    } catch (e: any) {
-      showToast("error", "Network Error.");
-    } finally {
-      setSubmitting(false);
-    }
+    }).catch(() => {
+      showToast("error", "Network error. Please retry.");
+    });
   };
 
   const adjQty = (delta: number) => {

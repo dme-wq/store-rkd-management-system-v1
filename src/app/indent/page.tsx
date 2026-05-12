@@ -141,41 +141,39 @@ export default function IndentMasterDetail() {
       showToast("warning", "Please fill all required (*) fields.");
       return;
     }
-    setSubmitting(true);
-    try {
-      const payload = {
-        personFillingName: form.personFillingName, department: form.department,
-        machineName: form.machineName, machineId: form.machineId,
-        itemName: form.itemName, requireQty: form.requireQty,
-        units: itemData.units, vendorName: itemData.vendor,
-        price: itemData.rate, stockInStore: itemData.stock
-      };
-      const res  = await fetch("/api/indent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
+
+    // ── OPTIMISTIC SUBMIT ──
+    const payload = {
+      personFillingName: form.personFillingName, department: form.department,
+      machineName: form.machineName, machineId: form.machineId,
+      itemName: form.itemName, requireQty: form.requireQty,
+      units: itemData.units, vendorName: itemData.vendor,
+      price: itemData.rate, stockInStore: itemData.stock
+    };
+
+    // 1. Close drawer & reset form immediately — instant UX
+    setIsFormOpen(false);
+    setForm({ personFillingName: "", department: "", machineName: "", machineId: "", itemName: "", requireQty: "" });
+    showToast("info", "Saving indent...");
+
+    // 2. Fire API in background
+    fetch("/api/indent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(res => res.json()).then(data => {
       if (data.success) {
-        showToast("success", `Indent ${data.rkdNumber} Saved!`);
-        setIsFormOpen(false);
-        setForm({ personFillingName: "", department: "", machineName: "", machineId: "", itemName: "", requireQty: "" });
-        
-        // Optimistic UI Update for instant real-time feel
-        if (data.rowData) {
-          setMasterData(prev => [data.rowData, ...prev]);
-        }
-        
-        // Still call loadData in background to sync fully, but don't show the syncing spinner if we already updated optimistically
-        fetch("/api/sheets"); 
+        showToast("success", `✅ Indent ${data.rkdNumber} Saved!`);
+        // Optimistic UI: prepend the new row
+        if (data.rowData) setMasterData(prev => [data.rowData, ...prev]);
+        // Background sync to get server-confirmed data
+        setTimeout(() => fetch("/api/sheets"), 3000);
       } else {
-        showToast("error", data.error || "Failed to save.");
+        showToast("error", data.error || "Save failed. Please retry.");
       }
-    } catch (e: any) {
-      showToast("error", "Network Error.");
-    } finally {
-      setSubmitting(false);
-    }
+    }).catch(() => {
+      showToast("error", "Network error. Please retry.");
+    });
   };
 
   const adjQty = (delta: number) => {
