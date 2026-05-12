@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const maxDuration = 30; // Extend to 30s on Vercel
 
 let cachedSheets: any = null;
 
@@ -208,10 +209,9 @@ export async function GET() {
     });
   }
 
-  // Define static refresh promise but don't await it yet
-  let staticRefreshPromise = Promise.resolve();
+  // Define static refresh promise — fire and forget, don't await
   if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
-    staticRefreshPromise = refreshStaticCaches(sheets);
+    refreshStaticCaches(sheets).catch(() => {}); // background, no await
   }
 
   // If we have STALE main data but no cache at all yet — fetch it
@@ -281,13 +281,6 @@ export async function GET() {
       debug: { rowsReturned: storeRows.length, totalRows }
     };
 
-    // AWAIT the static refresh before returning, so Vercel doesn't freeze the process mid-fetch
-    await staticRefreshPromise;
-
-    // Update responseData with fresh stockMap if it just finished
-    responseData.stockMap = cachedStockMap || {};
-    responseData.miscMap = cachedMiscMap || {};
-
     cachedApiResponse = responseData;
     lastFetchTime = now;
 
@@ -299,7 +292,11 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error("API error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    // Always return a valid response even on error
+    if (cachedApiResponse) {
+      return NextResponse.json({ ...cachedApiResponse, stale: true });
+    }
+    return NextResponse.json({ success: true, data: [], stockMap: {}, miscMap: {} });
   }
 }
 

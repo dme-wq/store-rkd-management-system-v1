@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const maxDuration = 30; // Vercel Pro: extend to 30s
 
 let cachedSheets: any = null;
 
@@ -28,7 +29,11 @@ export async function GET() {
   try {
     const sheets = getSheetsClient();
     
-    // Batch fetch all data in parallel
+    // Fetch MISC (critical - form needs this) and IMS + Store in parallel
+    // IMS has a 6-second timeout so it never blocks the form from loading
+    const imsController = new AbortController();
+    const imsTimer = setTimeout(() => imsController.abort(), 6000);
+    
     const [miscBatch, imsBatch, storeFreqRes] = await Promise.all([
       sheets.spreadsheets.values.batchGet({
         spreadsheetId: MISC_SHEET_ID,
@@ -42,16 +47,17 @@ export async function GET() {
       }),
       sheets.spreadsheets.values.batchGet({
         spreadsheetId: IMS_SHEET_ID,
-        ranges: ["IMS!B2:B7500", "IMS!K2:K7500"], // Start from row 2 to skip header
+        ranges: ["IMS!B2:B7500", "IMS!K2:K7500"],
       }).catch((e: any) => {
-        console.error("IMS Fetch failed", e.message);
+        console.warn("IMS Fetch failed/timed out:", e.message);
         return { data: { valueRanges: [] } };
       }),
       sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
-        range: "StoreDataEntry!A:L", // A=Serial, D=Person, E=Item, J=Dept, K=Machine Name, L=Machine ID
+        range: "StoreDataEntry!A:L",
       }).catch(() => ({ data: { values: [] } }))
     ]);
+    clearTimeout(imsTimer);
 
     // ── Frequency Counter ──
     // Columns: A(0)=Serial, D(3)=Person, E(4)=Item, J(9)=Dept, K(10)=MachineName, L(11)=MachineID
