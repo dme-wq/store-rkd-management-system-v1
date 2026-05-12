@@ -65,26 +65,28 @@ export default function IndentMasterDetail() {
     setSyncing(true);
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10000);
-      
-      // 1. Fetch Master Data
-      const resSheets = await fetch("/api/sheets", { signal: controller.signal });
+      const timer = setTimeout(() => controller.abort(), 25000);
+
+      // Use dedicated fast list endpoint — last 500 rows only (~3 months)
+      const [resSheets, resOptions] = await Promise.all([
+        fetch(`/api/indent?action=list&t=${Date.now()}`, { signal: controller.signal }),
+        fetch(`/api/indent?t=${Date.now()}`),
+      ]);
       clearTimeout(timer);
+
       const jsonSheets = await resSheets.json();
-      if (jsonSheets.success) {
-        setMasterData(jsonSheets.data || []);
+      if (jsonSheets.success && jsonSheets.data) {
+        setMasterData(jsonSheets.data);
       }
 
-      // 2. Fetch Options
-      const resOptions = await fetch("/api/indent");
       const jsonOptions = await resOptions.json();
       if (jsonOptions.success) {
         setOptions(jsonOptions.options);
       }
     } catch (err: any) {
       if (err.name === "AbortError") {
-        // Timeout — show empty, don't block user
-        setMasterData([]);
+        // Timeout — keep existing data, don't clear it!
+        showToast("warning", "Slow connection — showing last loaded data.");
       } else {
         showToast("error", "Failed to load data.");
       }
@@ -101,26 +103,13 @@ export default function IndentMasterDetail() {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter Data (Today's Indents + Search)
+  // Show all recent data (last 500 rows from API) with search filter
   const filteredData = useMemo(() => {
-    const todayStr = new Date().toLocaleDateString("en-US"); // Simplistic today check. Real app might need better parse
-    const today = new Date();
-    
-    return masterData.filter(row => {
-      // Search filter
-      const q = search.toLowerCase();
-      const matchSearch = !q || Object.values(row).some(v => String(v).toLowerCase().includes(q));
-      
-      // Today filter based on Timestamp column (e.g. "12 May 2026 12:00 PM" or "12-मई-2026")
-      // Since it's complex, we just check if it contains today's day and year as a proxy if it's recent
-      const ts = String(row["Timestamp"] || "");
-      const isRecent = ts.includes(today.getFullYear().toString()) && (ts.includes(today.getDate().toString()) || ts.includes(String(today.getDate()).padStart(2, '0')));
-      
-      // For this demo, let's just show top 50 recent matching search if we can't parse perfectly,
-      // but assuming the prompt means "show the latest" we can just show everything or filter top N
-      // I will filter top 50 that match search for performance.
-      return matchSearch;
-    }).slice(0, 100);
+    if (!search.trim()) return masterData;
+    const q = search.toLowerCase();
+    return masterData.filter(row =>
+      Object.values(row).some(v => String(v).toLowerCase().includes(q))
+    );
   }, [masterData, search]);
 
   // ── react-select AppSheet styles ──

@@ -25,7 +25,61 @@ const STORE_SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 const MISC_SHEET_ID = process.env.MISC_SHEET_ID!;
 const IMS_SHEET_ID = "1qb6LF7uWTss8PjpN2MJ3iCRynEolm-Ryvjwe-GxiA_M"; 
 
-export async function GET() {
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const action = url.searchParams.get("action");
+
+  // ── action=list: Fast last-3-months data for Master View ──────────────────
+  if (action === "list") {
+    try {
+      const sheets = getSheetsClient();
+
+      // Step 1: Get total row count cheaply
+      const countRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: "StoreDataEntry!A:A",
+      });
+      const totalRows = (countRes.data.values || []).length;
+
+      // Step 2: Fetch only last 500 rows (≈3 months)
+      const FETCH_LIMIT = 500;
+      const startRow = Math.max(2, totalRows - FETCH_LIMIT + 1);
+      const endRow = totalRows;
+
+      let rows: any[] = [];
+      if (endRow >= startRow) {
+        const res = await sheets.spreadsheets.values.get({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!A${startRow}:P${endRow}`,
+        });
+        rows = res.data.values || [];
+      }
+
+      const HDRS = [
+        "#", "Store RKD Number", "Timestamp", "Person Filling Name",
+        "Item Name", "Require Qty", "Units", "Issue Qty",
+        "Status", "Department", "Machine Name", "Machine ID",
+        "Breakdown/Civil Complain Number", "Vendor Name", "Price", "Stock in Store"
+      ];
+
+      const data = rows
+        .map((row: any, idx: number) => {
+          const obj: any = { _id: idx, rowNumber: startRow + idx };
+          HDRS.forEach((h, i) => { obj[h] = row[i] || ""; });
+          return obj;
+        })
+        .filter((r: any) => r["Store RKD Number"] && String(r["Store RKD Number"]).startsWith("RKD"))
+        .reverse(); // newest first
+
+      return new NextResponse(JSON.stringify({ success: true, data }), {
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+      });
+    } catch (e: any) {
+      return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   try {
     const sheets = getSheetsClient();
     
