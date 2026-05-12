@@ -47,28 +47,42 @@ export async function GET() {
         console.error("IMS Fetch failed", e.message);
         return { data: { valueRanges: [] } };
       }),
-      // Fetch last 2000 StoreDataEntry rows for frequency analysis
       sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
-        range: "StoreDataEntry!D:L", // D=Person, E=Item, J=Dept, K=Machine Name, L=Machine ID
+        range: "StoreDataEntry!A:L", // A=Serial, D=Person, E=Item, J=Dept, K=Machine Name, L=Machine ID
       }).catch(() => ({ data: { values: [] } }))
     ]);
 
     // ── Frequency Counter ──
-    // Columns: D(0)=Person, E(1)=Item, J(6)=Dept, K(7)=MachineName, L(8)=MachineID
+    // Columns: A(0)=Serial, D(3)=Person, E(4)=Item, J(9)=Dept, K(10)=MachineName, L(11)=MachineID
     const freq: Record<string, Record<string, number>> = {
       person: {}, item: {}, dept: {}, machineName: {}, machineId: {}
     };
 
     const storeRows = (storeFreqRes as any).data?.values || [];
+    
+    // Find Next RKD Number
+    let lastSerial = 0;
+    for (let i = storeRows.length - 1; i >= 0; i--) {
+      const val = parseInt(storeRows[i][0] || "0", 10);
+      if (!isNaN(val) && val > 0) {
+        lastSerial = val;
+        break;
+      }
+    }
+    const nextSerial = lastSerial + 1;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(Date.now() + istOffset);
+    const nextRkdNumber = `RKD_S_${istDate.getUTCFullYear()}_${nextSerial}`;
+
     // Take last 2000 rows for recency-weighted analysis
     const recentRows = storeRows.slice(-2000);
     recentRows.forEach((row: any) => {
-      const person = (row[0] || "").trim();
-      const item   = (row[1] || "").trim();
-      const dept   = (row[6] || "").trim();
-      const mName  = (row[7] || "").trim();
-      const mId    = (row[8] || "").trim();
+      const person = (row[3] || "").trim();
+      const item   = (row[4] || "").trim();
+      const dept   = (row[9] || "").trim();
+      const mName  = (row[10] || "").trim();
+      const mId    = (row[11] || "").trim();
       if (person) freq.person[person] = (freq.person[person] || 0) + 1;
       if (item)   freq.item[item]     = (freq.item[item] || 0) + 1;
       if (dept)   freq.dept[dept]     = (freq.dept[dept] || 0) + 1;
@@ -134,7 +148,8 @@ export async function GET() {
         machineIDs, 
         items,
         itemMap,
-        freq  // Pass frequency data to frontend for badge display
+        freq,  // Pass frequency data to frontend for badge display
+        nextRkdNumber
       }
     });
   } catch (e: any) {

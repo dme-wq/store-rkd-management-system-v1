@@ -227,7 +227,7 @@ export default function StandaloneIndentForm() {
               type="text" 
               className={styles.qtyInput} 
               disabled
-              value="Auto-Assigned on Submit" 
+              value={options.nextRkdNumber ? `${options.nextRkdNumber} (Estimated)` : "Loading RKD..."} 
               style={{ 
                 minHeight: '52px', 
                 fontSize: '0.95rem', 
