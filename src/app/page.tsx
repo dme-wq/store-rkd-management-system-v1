@@ -582,6 +582,7 @@ export default function Home() {
   const [poMap, setPoMap] = useState<Record<string, { poNumber: string; poDate: string; vendorName: string }>>({});
   const [inwardMap, setInwardMap] = useState<Record<string, { inwardQty: string; inwardDate: string }>>({}); 
   const hasLoadedOnce = useRef(false); // track if we ever got real data
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Manual Issue State
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -1244,7 +1245,14 @@ export default function Home() {
                     <Download size={15} />
                     <span>Issue Report PDF</span>
                   </button>
-
+                  <button onClick={() => window.open('/indent', '_blank')} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
+                    <span>📱</span>
+                    <span>New Indent</span>
+                  </button>
+                  <button onClick={() => setIsFullScreen(true)} className={styles.dribbbleBtnSecondary}>
+                    <span>⛶</span>
+                    <span>Full Screen</span>
+                  </button>
                 </div>
 
                 {/* Scorecards */}
@@ -1350,7 +1358,21 @@ export default function Home() {
             </div>
 
             {/* Table */}
-            <div className={styles.tableScrollArea}>
+            <div style={isFullScreen ? {
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              zIndex: 99999, backgroundColor: '#f1f5f9', padding: '20px',
+              display: 'flex', flexDirection: 'column',
+              animation: 'fadeIn 0.3s ease-in-out'
+            } : {}}>
+              {isFullScreen && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h2 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', color: '#1e293b' }}>Live Data (Full Screen)</h2>
+                  <button onClick={() => setIsFullScreen(false)} className={styles.dribbbleBtnPrimary} style={{ background: '#ef4444', color: 'white', border: 'none', boxShadow: '0 4px 14px rgba(239,68,68,0.4)' }}>
+                    Exit Full Screen ✖
+                  </button>
+                </div>
+              )}
+              <div className={styles.tableScrollArea} style={isFullScreen ? { flex: 1, maxHeight: 'none', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' } : {}}>
               {loading ? (
                 <div className={styles.loaderCenter}>
                   <Loader2 className={styles.spinnerIcon} size={32} />
@@ -1536,6 +1558,7 @@ export default function Home() {
                   </tbody>
                 </table>
               )}
+              </div>
             </div>
           </div>
         </div>
@@ -1692,14 +1715,6 @@ export default function Home() {
         type={alertModal.type}
       />
 
-      {/* Floating Action Button for New Indent */}
-      <button
-        className={styles.fabIndent}
-        onClick={() => window.open('/indent', '_blank')}
-        title="Create New Indent"
-      >
-        📱
-      </button>
     </div>
   );
 }
