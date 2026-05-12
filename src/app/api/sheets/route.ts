@@ -125,11 +125,11 @@ let lastStaticFetchTime = 0;
 const STATIC_CACHE_DURATION = 300000; // 5 minutes
 let imsRefreshing = false; // prevent concurrent IMS refreshes
 
-// Fetch IMS + Misc in background with timeout — never blocks the main response
+// Fetch IMS + Misc in background with timeout
 async function refreshStaticCaches(sheets: any) {
   if (imsRefreshing) return;
   imsRefreshing = true;
-  console.log("[Cache] Refreshing IMS + Misc in background...");
+  // console.log("[Cache] Refreshing IMS + Misc...");
 
   // 8-second timeout for the entire static refresh
   const controller = new AbortController();
@@ -199,14 +199,6 @@ export async function GET() {
   const now = Date.now();
   const sheets = getSheetsClient();
 
-  // ── STRATEGY: Return cached data IMMEDIATELY if available, refresh in background ──
-  // This prevents the "Syncing Database..." freeze on repeated visits.
-  
-  // Trigger background IMS/Misc refresh if stale (non-blocking)
-  if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
-    refreshStaticCaches(sheets); // fire and forget — don't await
-  }
-
   // If we have fresh main data cache, return immediately with latest stockMap
   if (cachedApiResponse && (now - lastFetchTime < CACHE_DURATION)) {
     return NextResponse.json({
@@ -216,8 +208,13 @@ export async function GET() {
     });
   }
 
-  // If we have STALE main data but no cache at all yet — return stale + trigger bg refresh
-  // This only blocks on the very first cold start
+  // Define static refresh promise but don't await it yet
+  let staticRefreshPromise = Promise.resolve();
+  if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
+    staticRefreshPromise = refreshStaticCaches(sheets);
+  }
+
+  // If we have STALE main data but no cache at all yet — fetch it
   try {
     // ── Main Data Fetch (only if cache is expired) ──
     let totalRows = 0;
@@ -283,6 +280,13 @@ export async function GET() {
       fetchedAt: new Date().toISOString(),
       debug: { rowsReturned: storeRows.length, totalRows }
     };
+
+    // AWAIT the static refresh before returning, so Vercel doesn't freeze the process mid-fetch
+    await staticRefreshPromise;
+
+    // Update responseData with fresh stockMap if it just finished
+    responseData.stockMap = cachedStockMap || {};
+    responseData.miscMap = cachedMiscMap || {};
 
     cachedApiResponse = responseData;
     lastFetchTime = now;
