@@ -1530,34 +1530,44 @@ export default function Home() {
                                     </div>
                                   </div>
 
-                                  <div className={styles.actionGroup}>
-                                    <span className={styles.groupLabel}>Approval</span>
-                                    <div className={styles.groupButtons}>
-                                      <button
-                                        className={styles.instantApprovalBtn}
-                                        onClick={() => handleInstantApproval(row)}
-                                        disabled={updatingRowId === row._id}
-                                        title="Instant Approval"
-                                      >
-                                        {updatingRowId === row._id ? (
-                                          <Loader2 className={styles.btnSpin} size={14} />
-                                        ) : (
-                                          <CheckCircle size={14} />
-                                        )}
-                                      </button>
-                                      <button
-                                        className={styles.manualApprovalBtn}
-                                        onClick={() => {
-                                          setManualRow(row);
-                                          setIsManualApprovalModalOpen(true);
-                                        }}
-                                        disabled={updatingRowId === row._id}
-                                        title="Manual Approval"
-                                      >
-                                        <UserCheck size={14} />
-                                      </button>
-                                    </div>
-                                  </div>
+                                  {(() => {
+                                    const appReq = String(row["Approval Require?"] || "").trim().toLowerCase();
+                                    const appQty = parseFloat(String(row["Approved Quantity"] || "0"));
+                                    const isApprovalDone = (appReq === "no" || appReq === "नहीं") || ((appReq === "yes" || appReq === "हाँ") && appQty > 0);
+                                    
+                                    if (isApprovalDone) return null;
+
+                                    return (
+                                      <div className={styles.actionGroup}>
+                                        <span className={styles.groupLabel}>Approval</span>
+                                        <div className={styles.groupButtons}>
+                                          <button
+                                            className={styles.instantApprovalBtn}
+                                            onClick={() => handleInstantApproval(row)}
+                                            disabled={updatingRowId === row._id}
+                                            title="Instant Approval"
+                                          >
+                                            {updatingRowId === row._id ? (
+                                              <Loader2 className={styles.btnSpin} size={14} />
+                                            ) : (
+                                              <CheckCircle size={14} />
+                                            )}
+                                          </button>
+                                          <button
+                                            className={styles.manualApprovalBtn}
+                                            onClick={() => {
+                                              setManualRow(row);
+                                              setIsManualApprovalModalOpen(true);
+                                            }}
+                                            disabled={updatingRowId === row._id}
+                                            title="Manual Approval"
+                                          >
+                                            <UserCheck size={14} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </>
                               )}
                             </td>
