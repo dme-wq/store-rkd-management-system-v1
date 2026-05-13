@@ -238,16 +238,21 @@ async function refreshStaticCaches(sheets: any) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!STORE_SHEET_ID) {
     return NextResponse.json({ error: "Missing GOOGLE_SHEET_ID" }, { status: 500 });
   }
 
+  const url = new URL(req.url);
+  const isFullMode = url.searchParams.get("mode") === "full";
+  // Initial load fetches only last 500 rows (fast). Full mode fetches 3000.
+  const FETCH_LIMIT = isFullMode ? 3000 : 500;
+
   const now = Date.now();
   const sheets = getSheetsClient();
 
-  // ── 1. Serve hot cache immediately (< 3s old) ──────────────────────────────
-  if (cachedApiResponse && (now - lastFetchTime < CACHE_DURATION)) {
+  // ── 1. Serve hot cache immediately (< 3s old) — only for same mode ────────
+  if (cachedApiResponse && !isFullMode && (now - lastFetchTime < CACHE_DURATION)) {
     return NextResponse.json({
       ...cachedApiResponse,
       stockMap: cachedStockMap || {},
@@ -263,9 +268,8 @@ export async function GET() {
   }
 
   try {
-    // ── 3. SINGLE batchGet: count column A + speculative last-3000-rows ────────
-    // Using lastKnownRowCount to speculate where data ends (avoids 2-step round trips)
-    const FETCH_LIMIT = 3000;
+    // ── 3. SINGLE batchGet: count column A + speculative last-N-rows ──────────
+    // Initial load: 500 rows (fast, ~30 days). Full mode: 3000 rows.
     const speculativeStart = lastKnownRowCount > FETCH_LIMIT
       ? Math.max(2, lastKnownRowCount - FETCH_LIMIT)
       : 2;
@@ -312,16 +316,20 @@ export async function GET() {
       success: true,
       data: data.reverse(),
       totalRows,
+      isFullData: isFullMode,
       stockMap: cachedStockMap || {},
       miscMap: cachedMiscMap || {},
       poMap: cachedPoMap || {},
       inwardMap: cachedInwardMap || {},
       fetchedAt: new Date().toISOString(),
-      debug: { startRow, totalRows, rowsFetched: storeRows.length, validRows: validCount }
+      debug: { startRow, totalRows, rowsFetched: storeRows.length, validRows: validCount, mode: isFullMode ? 'full' : 'initial' }
     };
 
-    cachedApiResponse = responseData;
-    lastFetchTime = now;
+    // Only cache initial-mode responses (full-mode is on-demand)
+    if (!isFullMode) {
+      cachedApiResponse = responseData;
+      lastFetchTime = now;
+    }
 
     return new NextResponse(JSON.stringify(responseData), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }

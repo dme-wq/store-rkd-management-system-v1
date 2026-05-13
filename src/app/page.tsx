@@ -557,7 +557,7 @@ export default function Home() {
   const [apiError, setApiError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selDateFilter, setSelDateFilter] = useState<any>(dateOptions[4]); // Last 3 Months default
+  const [selDateFilter, setSelDateFilter] = useState<any>(dateOptions[3]); // Last 30 Days default
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
@@ -586,6 +586,7 @@ export default function Home() {
   const [poMap, setPoMap] = useState<Record<string, { poNumber: string; poDate: string; vendorName: string }>>({});
   const [inwardMap, setInwardMap] = useState<Record<string, { inwardQty: string; inwardDate: string }>>({}); 
   const hasLoadedOnce = useRef(false); // track if we ever got real data
+  const fullDataLoaded = useRef(false); // track if full dataset has been fetched
   const [isFullScreen, setIsFullScreen] = useState(false);
   const fullScreenRef = useRef<HTMLDivElement>(null);
 
@@ -629,6 +630,15 @@ export default function Home() {
     if (isNaN(qtyNum) || qtyNum <= 0) { showAlert("Please enter a valid quantity.", "warning"); return; }
     if (qtyNum > reqNum) { showAlert(`Quantity cannot exceed Required Qty (${requireQty}).`, "warning"); return; }
     setColumnUpdating(true);
+    const originalData = [...data];
+    // Optimistic UI update for Debit Note (S) or Reverse Entry (T) column
+    const colKey = column === "S" ? "Debit Note Qty" : "Reverse Entry Qty";
+    const newData = data.map(r => r["Store RKD Number"] === rkdNumber ? { ...r, [colKey]: qty } : r);
+    setData(newData);
+    setIsDebitNoteOpen(false);
+    setIsReverseEntryOpen(false);
+    setDnSelectedRKD(null); setDnQty("");
+    setReSelectedRKD(null); setReQty("");
     try {
       const res = await fetch("/api/sheets", {
         method: "POST",
@@ -637,28 +647,26 @@ export default function Home() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
-      setIsDebitNoteOpen(false);
-      setIsReverseEntryOpen(false);
-      setDnSelectedRKD(null); setDnQty("");
-      setReSelectedRKD(null); setReQty("");
       setModalTitle("Saved! ✅");
       setModalMsg(`${column === "S" ? "Debit Note" : "Reverse Entry"} Qty updated for ${rkdNumber}.`);
       setModalData(null); setIsModalOpen(true);
       setTimeout(() => setIsModalOpen(false), 2500);
-      fetchData(true);
+      // No fetchData here — optimistic update already reflects change
     } catch (err: any) {
       showAlert("Update Failed: " + err.message, "error");
+      setData(originalData); // rollback on error
     } finally {
       setColumnUpdating(false);
     }
   };
 
-  const fetchData = async (silent = false) => {
+  const fetchData = async (silent = false, fullMode = false) => {
     if (!silent) setLoading(true);
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 25000);
-      const res = await fetch(`/api/sheets?t=${Date.now()}`, { signal: controller.signal, cache: 'no-store' });
+      const modeParam = fullMode ? '&mode=full' : '';
+      const res = await fetch(`/api/sheets?t=${Date.now()}${modeParam}`, { signal: controller.signal, cache: 'no-store' });
       clearTimeout(timer);
       const json = await res.json();
 
@@ -671,6 +679,7 @@ export default function Home() {
         setLastUpdated(new Date().toLocaleTimeString("en-IN"));
         setApiError(null);
         hasLoadedOnce.current = true;
+        if (fullMode || json.isFullData) fullDataLoaded.current = true;
       } else {
         // success:false — only clear data if we never loaded before AND no error yet
         console.error("[fetchData] API success=false:", json.error);
@@ -936,6 +945,24 @@ export default function Home() {
       setUpdatingRowId(null);
     }
   };
+
+  // Fetch full data when date filter changes (if not already fetched)
+  const prevDateFilter = useRef<string | null>(null);
+  useEffect(() => {
+    const filterVal = selDateFilter?.value || null;
+    // On the very first render, skip (initial load already fetched)
+    if (prevDateFilter.current === null) {
+      prevDateFilter.current = filterVal;
+      return;
+    }
+    // If filter changed and we don't have full data yet, fetch it
+    if (prevDateFilter.current !== filterVal && !fullDataLoaded.current) {
+      prevDateFilter.current = filterVal;
+      fetchData(true, true); // silent + full mode
+    } else {
+      prevDateFilter.current = filterVal;
+    }
+  }, [selDateFilter]);
 
   useEffect(() => {
     let timeoutId: any;
@@ -1360,7 +1387,7 @@ export default function Home() {
                 style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, border: '1px dashed #cbd5e1' }}
                 onClick={() => {
                   setSearchTerm("");
-                  setSelDateFilter(dateOptions[4]); // Reset to 3 months default
+                  setSelDateFilter(dateOptions[3]); // Reset to Last 30 Days default
                   setSelRKDNum(null); setSelPerson(null); setSelItem(null);
                   setSelDept(null); setSelMachine(null); setSelMachineID(null);
                   setStatusFilter(null);

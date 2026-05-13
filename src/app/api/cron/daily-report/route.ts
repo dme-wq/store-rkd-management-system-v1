@@ -27,15 +27,18 @@ const getClients = () => {
 const STORE_SHEET_ID       = process.env.GOOGLE_SHEET_ID!;
 const WHATSAPP_LOG_SHEET_ID = process.env.WHATSAPP_LOG_SHEET_ID!;
 const PO_DRIVE_FOLDER_ID   = process.env.PO_DRIVE_FOLDER_ID!;
+const PO_RESPONSES_SHEET_ID = process.env.PO_RESPONSES_SHEET_ID!;
+const INWARD_SHEET_ID      = "1mOM0OdePjpGzFet9LKn3_yvAcJBxIMY_4dHb8t0AzOc";
 
 const MAYTAPI_PRODUCT_ID = process.env.MAYTAPI_PRODUCT_ID!;
 const MAYTAPI_TOKEN      = process.env.MAYTAPI_TOKEN!;
 const MAYTAPI_PHONE_ID   = process.env.MAYTAPI_PHONE_ID!;
 
-async function sendWhatsAppMedia(to: string, message: string, mediaUrl: string) {
+// Send WhatsApp text message (PDF link included in text)
+async function sendWhatsAppText(to: string, message: string) {
   try {
     const url = `https://api.maytapi.com/api/${MAYTAPI_PRODUCT_ID}/${MAYTAPI_PHONE_ID}/sendMessage`;
-    console.log(`[WhatsApp Cron] Sending media to ${to}...`);
+    console.log(`[WhatsApp Cron] Sending text to ${to}...`);
     
     const res = await fetch(url, {
       method: "POST",
@@ -45,9 +48,8 @@ async function sendWhatsAppMedia(to: string, message: string, mediaUrl: string) 
       },
       body: JSON.stringify({ 
         to_number: to, 
-        type: "media", 
-        message: mediaUrl,
-        text: message
+        type: "text", 
+        message: message
       })
     });
 
@@ -60,18 +62,41 @@ async function sendWhatsAppMedia(to: string, message: string, mediaUrl: string) 
   }
 }
 
-async function sendWhatsAppText(to: string, message: string) {
-  try {
-    const url = `https://api.maytapi.com/api/${MAYTAPI_PRODUCT_ID}/${MAYTAPI_PHONE_ID}/sendMessage`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-maytapi-key": MAYTAPI_TOKEN },
-      body: JSON.stringify({ to_number: to, type: "text", message: message })
-    });
-    return await res.json();
-  } catch (e) {
-    return { success: false, error: String(e) };
+// English month names for PDF (jsPDF helvetica can't render Hindi)
+const MONTHS_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const monthMap: Record<string, number> = {
+  "जनवरी": 0, "फरवरी": 1, "मार्च": 2, "अप्रैल": 3, "मई": 4, "मयी": 4, "जून": 5,
+  "जुलाई": 6, "अगस्त": 7, "सितंबर": 8, "अक्टूबर": 9, "नवंबर": 10, "दिसंबर": 11,
+  "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
+  "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11
+};
+
+function parseDate(dateStr: string): Date {
+  if (!dateStr || typeof dateStr !== 'string') return new Date(0);
+  let d = new Date(dateStr);
+  if (!isNaN(d.getTime())) return d;
+  const parts = dateStr.split(/[^\w\u0900-\u097F]+/).filter(Boolean);
+  if (parts.length >= 3) {
+    const day = parseInt(parts[0], 10);
+    const mStr = parts[1].toLowerCase();
+    const year = parseInt(parts[2], 10);
+    let month = monthMap[mStr];
+    if (month === undefined) {
+      const key = Object.keys(monthMap).find(k => mStr.includes(k));
+      if (key) month = monthMap[key];
+    }
+    if (month !== undefined) return new Date(year, month, day);
   }
+  return new Date(0);
+}
+
+// Format a raw timestamp string to "DD-Mon-YYYY" for PDF (English only)
+function formatDateForPDF(dateStr: string): string {
+  if (!dateStr || dateStr === "-") return "-";
+  const d = parseDate(dateStr);
+  if (d.getTime() === 0) return dateStr.slice(0, 12); // fallback: trim long strings
+  return `${d.getDate().toString().padStart(2, '0')}-${MONTHS_EN[d.getMonth()]}-${d.getFullYear()}`;
 }
 
 export async function GET(req: Request) {
@@ -79,47 +104,35 @@ export async function GET(req: Request) {
     console.log("[CRON] Starting Daily Pending Report...");
     const { sheets, drive } = getClients();
 
-    // 1. Fetch StoreDataEntry
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: STORE_SHEET_ID,
-      range: "StoreDataEntry!A:T",
-    });
+    // 1. Fetch StoreDataEntry + ApprovalDataBase in parallel
+    const [storeRes, approvalRes] = await Promise.all([
+      sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: "StoreDataEntry!A:T",
+      }),
+      sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: "approvalDataBase!A:F",
+      }).catch(() => ({ data: { values: [] } })),
+    ]);
 
-    const rows = res.data.values || [];
+    const rows = storeRes.data.values || [];
     if (rows.length < 7) {
       return NextResponse.json({ success: true, message: "No data found." });
     }
 
-    const headers = rows[5]; // Row 6 is header
     const dataRows = rows.slice(6);
 
-    const monthMap: Record<string, number> = {
-      "जनवरी": 0, "फरवरी": 1, "मार्च": 2, "अप्रैल": 3, "मई": 4, "मयी": 4, "जून": 5,
-      "जुलाई": 6, "अगस्त": 7, "सितंबर": 8, "अक्टूबर": 9, "नवंबर": 10, "दिसंबर": 11,
-      "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
-      "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11
-    };
+    // IST "today" reference
+    const nowIST = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
+    const todayDateStr = `${nowIST.getUTCFullYear()}-${(nowIST.getUTCMonth()+1).toString().padStart(2,'0')}-${nowIST.getUTCDate().toString().padStart(2,'0')}`;
+    const todayObj = new Date(todayDateStr);
 
-    function parseDate(dateStr: string): Date {
-      if (!dateStr || typeof dateStr !== 'string') return new Date(0);
-      let d = new Date(dateStr);
-      if (!isNaN(d.getTime())) return d;
-      const parts = dateStr.split(/[^\w\u0900-\u097F]+/).filter(Boolean);
-      if (parts.length >= 3) {
-        const day = parseInt(parts[0], 10);
-        const mStr = parts[1].toLowerCase();
-        const year = parseInt(parts[2], 10);
-        let month = monthMap[mStr];
-        if (month === undefined) {
-          const key = Object.keys(monthMap).find(k => mStr.includes(k));
-          if (key) month = monthMap[key];
-        }
-        if (month !== undefined) return new Date(year, month, day);
-      }
-      return new Date(0);
-    }
+    const isSameDay = (d: Date) =>
+      d.getFullYear() === todayObj.getFullYear() &&
+      d.getMonth() === todayObj.getMonth() &&
+      d.getDate() === todayObj.getDate();
 
-    const todayObj = new Date();
     let todayIndent = 0;
     let todayIssue = 0;
 
@@ -127,10 +140,7 @@ export async function GET(req: Request) {
       const status = String(r[8] || "").trim(); // Column I is Status
       const tsDate = parseDate(r[2]);
       
-      if (tsDate.getTime() > 0 && 
-          tsDate.getDate() === todayObj.getDate() && 
-          tsDate.getMonth() === todayObj.getMonth() && 
-          tsDate.getFullYear() === todayObj.getFullYear()) {
+      if (tsDate.getTime() > 0 && isSameDay(tsDate)) {
         todayIndent++;
         if (status === "Requirement Closed") {
           todayIssue++;
@@ -140,16 +150,61 @@ export async function GET(req: Request) {
       return status === "Requirement Open";
     });
 
-    // We no longer strictly block if there are 0 pending indents because we might still want to report Today's stats.
-    // However, if there's no data at all, we could skip. Let's just generate it anyway to keep them updated!
     if (pendingIndents.length === 0 && todayIndent === 0) {
       console.log("[CRON] No pending indents and no activity today.");
       return NextResponse.json({ success: true, message: "No activity." });
     }
 
+    // 2. Count today's Approvals, Orders (PO), Inward
+    let todayApprovals = 0;
+    let todayOrders = 0;
+    let todayInward = 0;
+
+    // Count approvals from approvalDataBase (col A = timestamp, col E = "Yes"/"No")
+    const approvalRows = (approvalRes as any).data?.values || [];
+    approvalRows.slice(1).forEach((r: any) => {
+      const d = parseDate(r[0] || "");
+      if (d.getTime() > 0 && isSameDay(d) && (r[4] || "").trim() === "Yes") {
+        todayApprovals++;
+      }
+    });
+
+    // Count PO orders from PO RESPONSES (col F = PODate = index 3 from C)
+    // and Inward from Inward sheet (col L = InwardTimestamp = index 6 from F)
+    try {
+      const [poRes, inwardRes] = await Promise.all([
+        PO_RESPONSES_SHEET_ID
+          ? sheets.spreadsheets.values.get({
+              spreadsheetId: PO_RESPONSES_SHEET_ID,
+              range: "RESPONSES!C:T",
+            }).catch(() => ({ data: { values: [] } }))
+          : Promise.resolve({ data: { values: [] } }),
+        sheets.spreadsheets.values.get({
+          spreadsheetId: INWARD_SHEET_ID,
+          range: "Gate & Inward_Entry!F2:L",
+        }).catch(() => ({ data: { values: [] } })),
+      ]);
+
+      const poRows = (poRes as any).data?.values || [];
+      poRows.slice(1).forEach((r: any) => {
+        // col3 = F = PODate
+        const d = parseDate(r[3] || "");
+        if (d.getTime() > 0 && isSameDay(d)) todayOrders++;
+      });
+
+      const inwardRows = (inwardRes as any).data?.values || [];
+      inwardRows.forEach((r: any) => {
+        // col6 = L = InwardTimestamp
+        const d = parseDate(r[6] || "");
+        if (d.getTime() > 0 && isSameDay(d)) todayInward++;
+      });
+    } catch (e) {
+      console.warn("[CRON] Could not fetch PO/Inward counts:", e);
+    }
+
     console.log(`[CRON] Found ${pendingIndents.length} pending indents. Generating PDF...`);
 
-    // 2. Generate PDF using jsPDF
+    // 3. Generate PDF using jsPDF
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const W = doc.internal.pageSize.getWidth();
 
@@ -159,13 +214,18 @@ export async function GET(req: Request) {
     doc.setFontSize(16); doc.setFont("helvetica","bold"); doc.setTextColor(30, 41, 59);
     doc.text("PENDING REQUIREMENT REPORT", W/2, 12, { align: "center" });
     
-    const today = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "short" });
+    // Use English locale for the generated date to avoid Hindi chars in PDF
+    const todayEnglish = new Date().toLocaleString("en-US", {
+      timeZone: "Asia/Kolkata",
+      weekday: "long", day: "numeric", month: "long", year: "numeric",
+      hour: "numeric", minute: "2-digit", hour12: true
+    });
     doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(80, 80, 80);
-    doc.text(`Generated: ${today}`, W/2, 18, { align: "center" });
+    doc.text(`Generated: ${todayEnglish}`, W/2, 18, { align: "center" });
     
-    // Add Scorecard Summary to PDF Header ONLY in evening
+    // Add summary line
     const currentUTCHour = new Date().getUTCHours();
-    const isEvening = currentUTCHour >= 10; // 10:00 UTC = 3:30 PM IST (so evening cron at 1:00 PM UTC / 6:30 PM IST will be true)
+    const isEvening = currentUTCHour >= 10; // 10:00 UTC = 3:30 PM IST
 
     if (isEvening) {
       doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(37, 99, 235);
@@ -175,16 +235,16 @@ export async function GET(req: Request) {
       doc.text(`Total Pending Items: ${pendingIndents.length}`, W/2, 23, { align: "center" });
     }
 
-    // Table data
+    // Table data — use formatDateForPDF for the date column to avoid Hindi chars
     const tableBody = pendingIndents.map((r, i) => [
       String(i + 1),
-      r[1] || "-", // RKD Number
-      r[2] || "-", // Timestamp
-      r[4] || "-", // Item Name
+      r[1] || "-",                  // RKD Number
+      formatDateForPDF(r[2] || ""), // Date — formatted as DD-Mon-YYYY
+      r[4] || "-",                  // Item Name
       `${r[5] || "0"} ${r[6] || ""}`, // Require Qty + Units
-      r[3] || "-", // Person
-      r[9] || "-", // Department
-      r[10] || "-" // Machine Name
+      r[3] || "-",                  // Person
+      r[9] || "-",                  // Department
+      r[10] || "-"                  // Machine Name
     ]);
 
     autoTable(doc, {
@@ -197,18 +257,19 @@ export async function GET(req: Request) {
       columnStyles: {
         0: { halign: "center", cellWidth: 12 },
         1: { halign: "center", cellWidth: 35 },
-        2: { halign: "center", cellWidth: 35 },
-        4: { halign: "center", cellWidth: 20 }
+        2: { halign: "center", cellWidth: 28 },
+        4: { halign: "center", cellWidth: 22 }
       }
     });
 
     const pdfBase64 = doc.output("datauristring").split(",")[1];
     const pdfBuffer = Buffer.from(pdfBase64, "base64");
 
-    // 3. Upload to Google Drive
+    // 4. Upload to Google Drive
     console.log("[CRON] Uploading PDF to Google Drive...");
     const fileName = `Pending_Report_${new Date().toISOString().split("T")[0]}.pdf`;
     
+    let pdfFileId = "";
     let pdfUrl = "";
     if (!PO_DRIVE_FOLDER_ID) {
       throw new Error("PO_DRIVE_FOLDER_ID not set.");
@@ -227,17 +288,21 @@ export async function GET(req: Request) {
       supportsAllDrives: true,
     });
 
+    pdfFileId = fileRes.data.id!;
+
     // Make it publicly viewable
     await drive.permissions.create({
-      fileId: fileRes.data.id!,
+      fileId: pdfFileId,
       requestBody: { role: "reader", type: "anyone" },
       supportsAllDrives: true,
     });
 
-    pdfUrl = `https://drive.google.com/file/d/${fileRes.data.id}/view?usp=drivesdk`;
+    // Use direct download URL so WhatsApp/Maytapi gets actual PDF bytes, not HTML redirect
+    const pdfDownloadUrl = `https://drive.google.com/uc?export=download&id=${pdfFileId}`;
+    pdfUrl = `https://drive.google.com/file/d/${pdfFileId}/view?usp=drivesdk`;
     console.log(`[CRON] PDF uploaded successfully: ${pdfUrl}`);
 
-    // 4. Fetch DoerWhatsapp numbers
+    // 5. Fetch DoerWhatsapp numbers
     console.log("[CRON] Fetching Doer contacts...");
     const doerRes = await sheets.spreadsheets.values.get({
       spreadsheetId: WHATSAPP_LOG_SHEET_ID,
@@ -251,10 +316,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, message: "PDF generated but no Doers found to notify.", pdfUrl });
     }
 
-    // 5. Send WhatsApp message
-    const msgText = isEvening 
-      ? `🔔 *Daily Store Report (Evening)* 🔔\n\n📊 *Today's Scorecard:*\n🔹 Today's Indent: *${todayIndent}*\n✅ Today's Issue: *${todayIssue}*\n\n📋 *Total Pending Items:* *${pendingIndents.length}*\n\nPlease find the attached PDF report for all open requirements.\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`
-      : `🔔 *Daily Store Report (Morning)* 🔔\n\n📋 *Total Pending Items:* *${pendingIndents.length}*\n\nPlease find the attached PDF report for all open requirements.\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`;
+    // 6. Build WhatsApp message text
+    // Issue 5: "Scorecard" → "Report", add Approval/Order/Inward counts
+    // PDF is sent as a clickable link in the text message (not as media attachment)
+    // This avoids the HTML-file-received bug when Maytapi tries to serve a Drive redirect URL
+    const msgText = isEvening
+      ? `🔔 *Daily Store Report (Evening)* 🔔\n\n📊 *Today's Report:*\n🔹 Indent: *${todayIndent}*\n✅ Issue: *${todayIssue}*\n✔️ Approval: *${todayApprovals}*\n📄 Order Raised: *${todayOrders}*\n📦 Inward: *${todayInward}*\n\n📋 *Total Pending Items:* *${pendingIndents.length}*\n\n📎 *Pending Report PDF:*\n${pdfDownloadUrl}\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`
+      : `🔔 *Daily Store Report (Morning)* 🔔\n\n📋 *Total Pending Items:* *${pendingIndents.length}*\n\n📎 *Pending Report PDF:*\n${pdfDownloadUrl}\n\n*Action Required:*\nhttps://store-rkd-management-system-v1.vercel.app/`;
 
     let sentCount = 0;
     for (const doer of doerContacts) {
@@ -264,8 +332,8 @@ export async function GET(req: Request) {
       
       console.log(`[CRON] Sending to ${doer[0]} (${doerPhone})...`);
       
-      // Maytapi takes 'message' as URL and 'text' as caption for type 'media'
-      const waRes = await sendWhatsAppMedia(doerPhone, msgText, pdfUrl);
+      // Send as text with PDF download link embedded — avoids HTML redirect issue
+      const waRes = await sendWhatsAppText(doerPhone, msgText);
       if (waRes.success !== false) sentCount++;
     }
 
