@@ -29,6 +29,23 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const action = url.searchParams.get("action");
 
+  // ── action=meta: Fetch units and vendors for Master Add forms ──────────
+  if (action === "meta") {
+    try {
+      const sheets = getSheetsClient();
+      const res = await sheets.spreadsheets.values.batchGet({
+        spreadsheetId: MISC_SHEET_ID,
+        ranges: ["Data!D2:D", "Vendor List!B2:B"],
+      });
+      const ranges = res.data.valueRanges || [];
+      const units = Array.from(new Set((ranges[0]?.values || []).map((r: any) => (r[0] || "").trim()).filter(Boolean)));
+      const vendors = Array.from(new Set((ranges[1]?.values || []).map((r: any) => (r[0] || "").trim()).filter(Boolean)));
+      return NextResponse.json({ success: true, units, vendors });
+    } catch (e: any) {
+      return NextResponse.json({ success: false, error: e.message });
+    }
+  }
+
   // ── action=list: Fast last-3-months data for Master View ──────────────────
   if (action === "list") {
     try {
@@ -219,6 +236,44 @@ export async function POST(req: Request) {
     const body = await req.json();
     const sheets = getSheetsClient();
     
+    // ── action=master-add: Handle Master Sidebar additions ──────────────────
+    if (body.action === "master-add") {
+      const { type, payload } = body;
+      let range = "";
+      if (type === "item") range = "Data!A:K";
+      else if (type === "vendor") range = "Vendor List!A:H";
+      else if (type === "department") range = "Department!A:A";
+      else if (type === "machineName") range = "Machine Name!A:A";
+      else if (type === "machineId") range = "Machine ID!A:A";
+      else if (type === "person") range = "Person List!A:A";
+      else return NextResponse.json({ success: false, error: "Invalid type" });
+
+      if (type === "vendor") {
+        const vendorRes = await sheets.spreadsheets.values.get({
+          spreadsheetId: MISC_SHEET_ID,
+          range: "Vendor List!A:A"
+        });
+        const existingRows = vendorRes.data.values || [];
+        let nextSno = 1;
+        if (existingRows.length > 1) {
+          const lastSno = parseInt(existingRows[existingRows.length - 1][0], 10);
+          if (!isNaN(lastSno)) nextSno = lastSno + 1;
+        }
+        payload.forEach((row: any[], i: number) => {
+          row[0] = nextSno + i;
+        });
+      }
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: MISC_SHEET_ID,
+        range: range,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: payload }
+      });
+      return NextResponse.json({ success: true });
+    }
+
     // Generate IST Timestamp & Year Prefix
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;

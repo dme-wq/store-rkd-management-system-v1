@@ -429,3 +429,215 @@
 .toast_error { background: #d32f2f; }
 .toast_success { background: var(--appsheet-green); }
 .toast_warning { background: #f57c00; }
+
+/* ── Sidebar & Master Modal ── */
+.sidebarToggle {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--appsheet-green);
+  color: #fff;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  padding: 12px 8px;
+  cursor: pointer;
+  z-index: 500;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Outfit', sans-serif;
+  transition: right 0.3s;
+}
+
+.sidebarToggle:hover {
+  background: var(--appsheet-dark-green);
+}
+
+.sidebarToggle.hidden {
+  right: -50px;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -320px;
+  width: 320px;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.1);
+  z-index: 600;
+  transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(0,0,0,0.05);
+}
+
+.sidebar.open {
+  right: 0;
+}
+
+.sidebarHeader {
+  padding: 20px;
+  border-bottom: 1px solid var(--table-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebarTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.sidebarBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.sidebarBtn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  text-align: left;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
+}
+
+.sidebarBtn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sidebarBtn svg {
+  color: var(--appsheet-green);
+}
+
+.masterModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s;
+}
+
+.masterModal {
+  background: #fff;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.masterModal.large {
+  max-width: 90%;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modalHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--table-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+}
+
+.modalTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modalBody {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modalFooter {
+  padding: 16px 20px;
+  border-top: 1px solid var(--table-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+}
+
+/* Add Item Form table style */
+.itemTableWrap {
+  overflow-x: auto;
+}
+.itemTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+.itemTable th, .itemTable td {
+  padding: 8px;
+  border: 1px solid var(--table-border);
+  font-size: 0.85rem;
+}
+.itemTable th {
+  background: #f8fafc;
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.itemTable input, .itemTable select {
+  width: 100%;
+  min-width: 80px;
+  padding: 6px;
+  border: 1px solid var(--table-border);
+  border-radius: 4px;
+  font-family: 'Outfit', sans-serif;
+  outline: none;
+}
+.itemTable input:focus, .itemTable select:focus {
+  border-color: var(--appsheet-green);
+}
+.addRowBtn {
+  background: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  color: var(--blue-action);
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 8px;
+  width: 100%;
+  font-family: 'Outfit', sans-serif;
+}
+.addRowBtn:hover {
+  background: #e2e8f0;
+}
