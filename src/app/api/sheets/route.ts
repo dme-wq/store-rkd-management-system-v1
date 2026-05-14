@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const maxDuration = 30; // Extend to 30s on Vercel
+export const maxDuration = 60; // 60s on Vercel Pro — gives headroom for multi-step flows
 
 let cachedSheets: any = null;
 
@@ -440,9 +440,13 @@ export async function POST(req: Request) {
           const longLink = `${appUrl}/approve/${rkdNumber}?qty=${approvedQty}&rate=${encodeURIComponent(finalRate)}&vendor=${encodeURIComponent(finalVendorName)}`;
           
           // Shorten URL using is.gd (free, no API key, links never expire)
+          // Hard 4-second timeout so a slow is.gd never kills the whole request
           let approvalLink = longLink;
           try {
-            const isgdRes = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`);
+            const isgdController = new AbortController();
+            const isgdTimer = setTimeout(() => isgdController.abort(), 4000);
+            const isgdRes = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`, { signal: isgdController.signal });
+            clearTimeout(isgdTimer);
             const isgdData = await isgdRes.json();
             if (isgdData.shorturl) approvalLink = isgdData.shorturl;
           } catch (e) {
@@ -451,7 +455,8 @@ export async function POST(req: Request) {
 
           const totalPrice = (parseFloat(approvedQty) * parseFloat(finalRate || "0")).toFixed(2);
 
-          for (const contact of contacts) {
+          // Send all WhatsApp messages in PARALLEL — don't await them one-by-one
+          await Promise.all(contacts.map(async (contact: any) => {
             const contactName = contact[0] || "Sir/Ma'am";
             let phone = String(contact[1]).replace(/\D/g, "");
             if (phone.length === 10) phone = "91" + phone;
@@ -477,8 +482,8 @@ ${approvalLink}
 ⏰ ${formattedDate}
 🤖 _Store Miscellaneous System_`;
 
-            await sendWhatsApp(phone, personalizedMessage);
-          }
+            return sendWhatsApp(phone, personalizedMessage);
+          }));
 
           // Log to WhatsappData with "Pending" status
           const rowRes = await sheets.spreadsheets.values.get({
@@ -511,8 +516,7 @@ ${approvalLink}
       }
       return NextResponse.json({ success: true, message: "Action Completed" });
     } else if (action === "INSTANT_APPROVE") {
-      // Instant Approval: Update Q (Approval Require?) to No and R (Approved Qty) to Require Qty
-      // Fetch full row to get Vendor, Rate, and Require Qty
+      // INSTANT_APPROVE: Fetch row data, then run update + approvalDataBase append in PARALLEL
       const fullRowRes = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,
         range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
@@ -522,37 +526,37 @@ ${approvalLink}
       const vendorVal = rowData[13] || "";  // N is index 13
       const rateVal = rowData[14] || "";    // O is index 14
 
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { 
-          values: [["No", requireQty]] 
-        }
-      });
-      
-      // Save to approvalDataBase
       const d = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
       const cleanTimestamp = `${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()} ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`;
-      
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: STORE_SHEET_ID,
-        range: "approvalDataBase!A:F",
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [[cleanTimestamp, rkdNumber, vendorVal, rateVal, "No", requireQty]]
-        }
-      });
+
+      // Run StoreDataEntry update + approvalDataBase append SIMULTANEOUSLY (not sequentially)
+      await Promise.all([
+        sheets.spreadsheets.values.update({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [["No", requireQty]] }
+        }),
+        sheets.spreadsheets.values.append({
+          spreadsheetId: STORE_SHEET_ID,
+          range: "approvalDataBase!A:F",
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [[cleanTimestamp, rkdNumber, vendorVal, rateVal, "No", requireQty]]
+          }
+        })
+      ]);
 
       return NextResponse.json({ success: true, message: "Instant Approval Completed" });
     } else if (action === "WHATSAPP_UPDATE") {
-      // OWNER SIDE: Owner clicked the link and decided. NOW we update StoreDataEntry.
+      // OWNER SIDE: Owner clicked Approve/Reject.
+      // STRATEGY: Do the critical StoreDataEntry update FIRST, return success immediately,
+      // then run secondary tasks (log update, approvalDB, doer WhatsApp) in the background.
       const { ownerStatus, approvedQty: finalQty, rate: finalOwnRate, vendor: finalVendor } = body;
       
       console.log(`Owner decision: ${ownerStatus} for RKD: ${rkdNumber}`);
 
-      // 1. Update ONLY Q (Approval Require?) and R (Approved Qty) in StoreDataEntry
-      //    Vendor and Rate in N and O are set from the Miscellaneous list already — don't overwrite
+      // CRITICAL: Update StoreDataEntry Q+R first — this is what the frontend shows
       await sheets.spreadsheets.values.update({
         spreadsheetId: STORE_SHEET_ID,
         range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
@@ -562,66 +566,64 @@ ${approvalLink}
         }
       });
 
-      // 2. Update WhatsappData log — set column H to owner's decision
-      const logRes = await sheets.spreadsheets.values.get({
-        spreadsheetId: WHATSAPP_LOG_SHEET_ID,
-        range: "WhatsappData!B:B",
-      });
-      const logList = logRes.data.values || [];
-      const logIdx = logList.findIndex((r: any) => r[0] === rkdNumber);
-      if (logIdx !== -1) {
-        const logRowNum = logIdx + 1;
-        await sheets.spreadsheets.values.update({
+      // Run all secondary tasks in PARALLEL (non-blocking for the response)
+      const d2 = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+      const cleanTimestamp2 = `${d2.getUTCMonth()+1}/${d2.getUTCDate()}/${d2.getUTCFullYear()} ${d2.getUTCHours().toString().padStart(2,'0')}:${d2.getUTCMinutes().toString().padStart(2,'0')}:${d2.getUTCSeconds().toString().padStart(2,'0')}`;
+
+      // Fire secondary tasks without waiting (they don't affect the user response)
+      Promise.all([
+        // Task A: Update WhatsappData log column H
+        sheets.spreadsheets.values.get({
           spreadsheetId: WHATSAPP_LOG_SHEET_ID,
-          range: `WhatsappData!H${logRowNum}`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values: [[ownerStatus === "Yes" ? "Approved" : "Rejected"]] }
-        });
-      }
-
-      // 3. Save to approvalDataBase if Approved
-      if (ownerStatus === "Yes") {
-        const fullRowRes = await sheets.spreadsheets.values.get({
-          spreadsheetId: STORE_SHEET_ID,
-          range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
-        });
-        const rowData = fullRowRes.data.values?.[0] || [];
-        
-        // Format timestamp to match existing approvalDataBase format: M/D/YYYY HH:MM:SS
-        const d = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
-        const cleanTimestamp = `${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()} ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`;
-        
-        // Match approvalDataBase columns: Timestamp, Store RKD Number, Vendor Name, Rate, Approval Require?, Approved Qty
-        const timestampVal = cleanTimestamp;
-        const vendorVal = rowData[13] || finalVendor || "";
-        const rateVal = rowData[14] || finalOwnRate || "";
-        
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: STORE_SHEET_ID,
-          range: "approvalDataBase!A:F",
-          valueInputOption: "USER_ENTERED",
-          requestBody: {
-            values: [[timestampVal, rkdNumber, vendorVal, rateVal, ownerStatus, finalQty || approvedQty || ""]]
+          range: "WhatsappData!B:B",
+        }).then((logRes: any) => {
+          const logList = logRes.data.values || [];
+          const logIdx = logList.findIndex((r: any) => r[0] === rkdNumber);
+          if (logIdx !== -1) {
+            return sheets.spreadsheets.values.update({
+              spreadsheetId: WHATSAPP_LOG_SHEET_ID,
+              range: `WhatsappData!H${logIdx + 1}`,
+              valueInputOption: "USER_ENTERED",
+              requestBody: { values: [[ownerStatus === "Yes" ? "Approved" : "Rejected"]] }
+            });
           }
-        });
-      }
+        }).catch((e: any) => console.error("[BG] WhatsappData log update failed:", e.message)),
 
-      // 4. Notify Doer via WhatsApp (DoerWhatsapp tab)
-      try {
-        const doerRes = await sheets.spreadsheets.values.get({
+        // Task B: Save to approvalDataBase + notify doer (only if Approved)
+        ownerStatus === "Yes"
+          ? sheets.spreadsheets.values.get({
+              spreadsheetId: STORE_SHEET_ID,
+              range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
+            }).then(async (fullRowRes: any) => {
+              const rowData2 = fullRowRes.data.values?.[0] || [];
+              const vendorVal2 = rowData2[13] || finalVendor || "";
+              const rateVal2 = rowData2[14] || finalOwnRate || "";
+              return sheets.spreadsheets.values.append({
+                spreadsheetId: STORE_SHEET_ID,
+                range: "approvalDataBase!A:F",
+                valueInputOption: "USER_ENTERED",
+                requestBody: {
+                  values: [[cleanTimestamp2, rkdNumber, vendorVal2, rateVal2, ownerStatus, finalQty || approvedQty || ""]]
+                }
+              });
+            }).catch((e: any) => console.error("[BG] approvalDataBase append failed:", e.message))
+          : Promise.resolve(),
+
+        // Task C: Notify Doer via WhatsApp
+        sheets.spreadsheets.values.get({
           spreadsheetId: WHATSAPP_LOG_SHEET_ID,
           range: "DoerWhatsapp!A:B",
-        });
-        const doerRows = doerRes.data.values || [];
-        const doerContacts = doerRows.slice(1).filter((r: any) => r[1]); // Skip header, need phone
+        }).then(async (doerRes: any) => {
+          const doerRows = doerRes.data.values || [];
+          const doerContacts = doerRows.slice(1).filter((r: any) => r[1]);
+          if (doerContacts.length === 0) return;
 
-        if (doerContacts.length > 0) {
           const isApproved = ownerStatus === "Yes";
           const statusEmoji = isApproved ? "✅" : "❌";
           const statusText  = isApproved ? "APPROVED" : "REJECTED";
           const statusColor = isApproved ? "🟢" : "🔴";
 
-          for (const doer of doerContacts) {
+          return Promise.all(doerContacts.map((doer: any) => {
             const doerName = doer[0] || "Team";
             let doerPhone = String(doer[1]).replace(/\D/g, "");
             if (doerPhone.length === 10) doerPhone = "91" + doerPhone;
@@ -646,13 +648,10 @@ ${isApproved
 ⏰ ${formattedDate}
 🤖 _Store Miscellaneous System_`;
 
-            await sendWhatsApp(doerPhone, doerMessage);
-          }
-        }
-      } catch (doerErr: any) {
-        // Non-blocking — log but don't fail the whole request
-        console.error("Doer WhatsApp notification failed:", doerErr.message);
-      }
+            return sendWhatsApp(doerPhone, doerMessage);
+          }));
+        }).catch((e: any) => console.error("[BG] Doer WhatsApp failed:", e.message))
+      ]).catch((e: any) => console.error("[BG] Secondary tasks error:", e.message));
     } else if (action === "UPDATE_COLUMN") {
       // Debit Note (S) or Reverse Entry (T) update
       const { column, value } = body;
@@ -667,25 +666,25 @@ ${isApproved
       });
     } else {
       // Default: ISSUE action
-      // Update H (Issue Qty) and I (Status) in StoreDataEntry
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!H${rowNumber}:I${rowNumber}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [[issueQty, status]]
-        }
-      });
-
-      // Append to IssueDataBase
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: STORE_SHEET_ID,
-        range: "IssueDataBase!A:E",
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [[formattedDate, rkdNumber, issueQty, rate, itemName]]
-        }
-      });
+      // Run StoreDataEntry update + IssueDataBase append in PARALLEL — they are independent
+      await Promise.all([
+        sheets.spreadsheets.values.update({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!H${rowNumber}:I${rowNumber}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [[issueQty, status]]
+          }
+        }),
+        sheets.spreadsheets.values.append({
+          spreadsheetId: STORE_SHEET_ID,
+          range: "IssueDataBase!A:E",
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [[formattedDate, rkdNumber, issueQty, rate, itemName]]
+          }
+        })
+      ]);
     }
 
     return NextResponse.json({ success: true });
