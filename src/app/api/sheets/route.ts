@@ -686,7 +686,20 @@ ${isApproved
       });
     } else {
       // Default: ISSUE action
-      // Run StoreDataEntry update + IssueDataBase append in PARALLEL — they are independent
+      
+      // Fetch full row to get details for IMS Issue tab
+      const rowDataRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
+      });
+      const rowValues = rowDataRes.data.values?.[0] || [];
+      const personFilling = rowValues[3] || "";
+      const requireQty = rowValues[5] || "";
+      const units = rowValues[6] || "";
+      const machineName = rowValues[10] || "";
+      const machineId = rowValues[11] || "";
+
+      // Run StoreDataEntry update + IssueDataBase append + IMS Issue append in PARALLEL
       await Promise.all([
         sheets.spreadsheets.values.update({
           spreadsheetId: STORE_SHEET_ID,
@@ -702,6 +715,15 @@ ${isApproved
           valueInputOption: "USER_ENTERED",
           requestBody: {
             values: [[formattedDate, rkdNumber, issueQty, rate, itemName]]
+          }
+        }),
+        // Add to IMS sheet's "Issue" tab
+        sheets.spreadsheets.values.append({
+          spreadsheetId: IMS_SHEET_ID,
+          range: "Issue!A:I",
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [[formattedDate, rkdNumber, personFilling, itemName, requireQty, units, issueQty, machineName, machineId]]
           }
         })
       ]);
