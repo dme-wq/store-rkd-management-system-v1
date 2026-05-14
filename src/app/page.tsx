@@ -95,6 +95,7 @@ const dateOptions = [
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
   { value: "7days", label: "Last 7 Days" },
+  { value: "14days", label: "Last 14 Days" },
   { value: "30days", label: "Last 30 Days" },
   { value: "3months", label: "Last 3 Months" },
   { value: "custom", label: "Custom Range" },
@@ -629,7 +630,7 @@ export default function Home() {
   const [apiError, setApiError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selDateFilter, setSelDateFilter] = useState<any>(dateOptions[3]); // Last 30 Days default
+  const [selDateFilter, setSelDateFilter] = useState<any>(dateOptions[3]); // Last 14 Days default
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
@@ -1108,13 +1109,13 @@ export default function Home() {
       try {
         await fetchData(true);
       } finally {
-        // Wait 20 seconds AFTER the request completes before starting the next one
-        timeoutId = setTimeout(poll, 20000);
+        // Wait 30 seconds AFTER the request completes before starting the next one
+        timeoutId = setTimeout(poll, 30000);
       }
     };
 
     fetchData().then(() => {
-      timeoutId = setTimeout(poll, 20000);
+      timeoutId = setTimeout(poll, 30000);
     });
 
     return () => {
@@ -1129,6 +1130,7 @@ export default function Home() {
     if (selDateFilter?.value === "today") { start = startOfDay(today); end = endOfDay(today); }
     else if (selDateFilter?.value === "yesterday") { start = startOfDay(subDays(today, 1)); end = endOfDay(subDays(today, 1)); }
     else if (selDateFilter?.value === "7days") { start = startOfDay(subDays(today, 7)); end = endOfDay(today); }
+    else if (selDateFilter?.value === "14days") { start = startOfDay(subDays(today, 14)); end = endOfDay(today); }
     else if (selDateFilter?.value === "30days") { start = startOfDay(subDays(today, 30)); end = endOfDay(today); }
     else if (selDateFilter?.value === "3months") { start = startOfDay(subMonths(today, 3)); end = endOfDay(today); }
     else if (selDateFilter?.value === "custom" && customStart && customEnd) {

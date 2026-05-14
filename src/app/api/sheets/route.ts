@@ -245,8 +245,8 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const isFullMode = url.searchParams.get("mode") === "full";
-  // Initial load fetches only last 500 rows (fast). Full mode fetches 3000.
-  const FETCH_LIMIT = isFullMode ? 3000 : 500;
+  // Initial load fetches only last 350 rows (fast, ~14 days). Full mode fetches 3000.
+  const FETCH_LIMIT = isFullMode ? 3000 : 350;
 
   const now = Date.now();
   const sheets = getSheetsClient();
