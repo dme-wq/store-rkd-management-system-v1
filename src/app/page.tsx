@@ -378,7 +378,7 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
 }
 
 // Manual Approval Modal Component
-function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap }: any) {
+function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap, isRefreshing, onRefresh }: any) {
   const [vendor, setVendor] = useState("");
   const [rate, setRate] = useState("");
   const [status, setStatus] = useState("No");
@@ -418,12 +418,22 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
 
         {/* READ-ONLY */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel} style={{ color: '#9ca3af' }}>🔒 Vendor Name <span style={{ fontSize: '0.75rem' }}>(Auto-filled)</span></label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label className={styles.formLabel} style={{ color: '#9ca3af', marginBottom: 0 }}>🔒 Vendor Name <span style={{ fontSize: '0.75rem' }}>(Auto-filled)</span></label>
+            <button onClick={onRefresh} disabled={isRefreshing} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+              {isRefreshing ? <Loader2 size={12} className={styles.btnSpin} /> : <span>🔄</span>} Refresh
+            </button>
+          </div>
           <input type="text" className={styles.formInput} value={vendor} readOnly style={readonlyStyle} />
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.formLabel} style={{ color: '#9ca3af' }}>🔒 Rate <span style={{ fontSize: '0.75rem' }}>(Auto-filled)</span></label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label className={styles.formLabel} style={{ color: '#9ca3af', marginBottom: 0 }}>🔒 Rate <span style={{ fontSize: '0.75rem' }}>(Auto-filled)</span></label>
+            <button onClick={onRefresh} disabled={isRefreshing} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+              {isRefreshing ? <Loader2 size={12} className={styles.btnSpin} /> : <span>🔄</span>} Refresh
+            </button>
+          </div>
           <input type="text" className={styles.formInput} value={rate} readOnly style={readonlyStyle} />
         </div>
 
@@ -493,7 +503,7 @@ function InstantApprovalModal({ isOpen, onClose, row, onSubmit, updating, iaVend
         {/* Refreshable Fields */}
         <div className={styles.formGroup} style={{ marginTop: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <label className={styles.formLabel} style={{ marginBottom: 0 }}>Vendor Name</label>
+            <label className={styles.formLabel} style={{ color: '#9ca3af', marginBottom: 0 }}>🔒 Vendor Name <span style={{ fontSize: '0.75rem' }}>(Auto-filled)</span></label>
             <button onClick={onRefresh} disabled={isRefreshing} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
               {isRefreshing ? <Loader2 size={12} className={styles.btnSpin} /> : <span>🔄</span>} Refresh
             </button>
@@ -502,14 +512,14 @@ function InstantApprovalModal({ isOpen, onClose, row, onSubmit, updating, iaVend
             type="text"
             className={styles.formInput}
             value={iaVendor}
-            onChange={(e) => setIaVendor(e.target.value)}
-            style={{ background: '#f8fafc' }}
+            readOnly
+            style={{ background: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed', borderColor: '#e5e7eb', borderStyle: 'dashed' }}
           />
         </div>
 
         <div className={styles.formGroup}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <label className={styles.formLabel} style={{ marginBottom: 0 }}>Rate (₹)</label>
+            <label className={styles.formLabel} style={{ color: '#9ca3af', marginBottom: 0 }}>🔒 Rate (₹) <span style={{ fontSize: '0.75rem' }}>(Auto-filled)</span></label>
             <button onClick={onRefresh} disabled={isRefreshing} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
               {isRefreshing ? <Loader2 size={12} className={styles.btnSpin} /> : <span>🔄</span>} Refresh
             </button>
@@ -518,8 +528,8 @@ function InstantApprovalModal({ isOpen, onClose, row, onSubmit, updating, iaVend
             type="text"
             className={styles.formInput}
             value={iaRate}
-            onChange={(e) => setIaRate(e.target.value)}
-            style={{ background: '#f8fafc' }}
+            readOnly
+            style={{ background: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed', borderColor: '#e5e7eb', borderStyle: 'dashed' }}
           />
         </div>
 
@@ -1515,8 +1525,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Smart Filters — Row 1: Search + Date + Custom Range */}
-            <div className={styles.filterRow}>
+            {/* Smart Filters — Unified Row */}
+            <div className={styles.filterRow} style={{ flexWrap: 'wrap' }}>
               <div className={styles.searchBox}>
                 <Search className={styles.searchIcon} size={14} />
                 <input
@@ -1558,10 +1568,7 @@ export default function Home() {
                   <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className={styles.dateInput} />
                 </div>
               )}
-            </div>
 
-            {/* Smart Filters — Row 2: Dependent Dropdowns */}
-            <div className={styles.filterRow}>
               <Select instanceId="rkd-filter" options={rkdOptions} value={selRKDNum} onChange={v => { setSelRKDNum(v); setSelPerson(null); setSelItem(null); setSelDept(null); setSelMachine(null); setSelMachineID(null); }} styles={ss} placeholder="All RKD Numbers" isClearable className={styles.selectWrap} />
               <Select instanceId="person-filter" options={personOptions} value={selPerson} onChange={v => { setSelPerson(v); setSelItem(null); setSelDept(null); setSelMachine(null); setSelMachineID(null); }} styles={ss} placeholder="All Persons" isClearable className={styles.selectWrap} />
               <Select instanceId="item-filter" options={itemOptions} value={selItem} onChange={v => { setSelItem(v); setSelDept(null); setSelMachine(null); setSelMachineID(null); }} styles={ss} placeholder="All Items" isClearable className={styles.selectWrap} />
@@ -1823,6 +1830,8 @@ export default function Home() {
         onSubmit={handleManualApprovalSubmit}
         updating={updatingRowId !== null && manualRow && updatingRowId === manualRow._id}
         miscMap={miscMap}
+        isRefreshing={isIaRefreshing}
+        onRefresh={handleIaRefresh}
       />
 
       {/* Instant Approval Modal */}
