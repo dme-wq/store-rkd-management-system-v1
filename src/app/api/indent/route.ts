@@ -67,7 +67,7 @@ export async function GET(req: Request) {
       if (endRow >= startRow) {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: STORE_SHEET_ID,
-          range: `StoreDataEntry!A${startRow}:P${endRow}`,
+          range: `StoreDataEntry!A${startRow}:R${endRow}`,
         });
         rows = res.data.values || [];
       }
@@ -76,7 +76,8 @@ export async function GET(req: Request) {
         "#", "Store RKD Number", "Timestamp", "Person Filling Name",
         "Item Name", "Require Qty", "Units", "Issue Qty",
         "Status", "Department", "Machine Name", "Machine ID",
-        "Breakdown/Civil Complain Number", "Vendor Name", "Price", "Stock in Store"
+        "Breakdown/Civil Complain Number", "Vendor Name", "Price", "Stock in Store",
+        "Approval Require?", "Approved Quantity"
       ];
 
       const data = rows

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Select from "react-select";
-import { Search, Plus, Filter, CheckSquare, X, RefreshCw, Share2, Settings, ChevronRight, Package, Users, Building, Cpu, UserCircle, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, CheckSquare, X, RefreshCw, Share2, Settings, ChevronRight, Package, Users, Building, Cpu, UserCircle, Trash2, Pencil } from "lucide-react";
 import styles from "./indent.module.css";
 
 // ── Toast System ──
@@ -39,6 +39,8 @@ export default function IndentMasterDetail() {
   // UI State
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+  const [editRow, setEditRow] = useState<any>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Master Sidebar State
@@ -199,6 +201,58 @@ export default function IndentMasterDetail() {
     });
   };
 
+  const handleEditSave = async () => {
+    if (!form.personFillingName || !form.department || !form.itemName || !form.requireQty) {
+      showToast("warning", "Please fill all required (*) fields.");
+      return;
+    }
+
+    setSubmitting(true);
+    showToast("info", "Updating indent...");
+
+    const payload = {
+      action: "EDIT_INDENT",
+      rkdNumber: editRow["Store RKD Number"],
+      personFillingName: form.personFillingName, 
+      department: form.department,
+      machineName: form.machineName, 
+      machineId: form.machineId,
+      itemName: form.itemName, 
+      requireQty: form.requireQty,
+      units: itemData.units
+    };
+
+    try {
+      const res = await fetch("/api/sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("success", `✅ Indent Updated!`);
+        setIsEditFormOpen(false);
+        // Optimistically update masterData
+        setMasterData(prev => prev.map(r => r._id === editRow._id ? {
+          ...r,
+          "Person Filling Name": form.personFillingName,
+          "Item Name": form.itemName,
+          "Require Qty": form.requireQty,
+          "Department": form.department,
+          "Machine Name": form.machineName,
+          "Machine ID": form.machineId,
+          "Units": itemData.units || r["Units"]
+        } : r));
+      } else {
+        showToast("error", data.error || "Update failed. Please retry.");
+      }
+    } catch (e) {
+      showToast("error", "Network error. Please retry.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const adjQty = (delta: number) => {
     const current = parseFloat(form.requireQty || "0");
     const next = Math.max(0, current + delta);
@@ -337,7 +391,35 @@ export default function IndentMasterDetail() {
                 <td>{row["Department"]}</td>
                 <td>{row["Machine Name"]}</td>
                 <td>{row["Machine ID"]}</td>
-                <td className={styles.chevron}>›</td>
+                <td style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end', height: '100%', minHeight: '52px' }}>
+                  {(() => {
+                    const approvalReq = String(row["Approval Require?"] || "").trim().toLowerCase();
+                    const isEditable = String(row["Status"] || "").trim() === "Requirement Open" && approvalReq !== "yes" && approvalReq !== "no";
+                    
+                    return (
+                      <button
+                        className={styles.iconBtn}
+                        disabled={!isEditable}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditRow(row);
+                          setF("personFillingName", row["Person Filling Name"] || "");
+                          setF("itemName", row["Item Name"] || "");
+                          setF("requireQty", row["Require Qty"] || "");
+                          setF("department", row["Department"] || "");
+                          setF("machineName", row["Machine Name"] || "");
+                          setF("machineId", row["Machine ID"] || "");
+                          setIsEditFormOpen(true);
+                        }}
+                        style={{ opacity: isEditable ? 1 : 0.4, cursor: isEditable ? 'pointer' : 'not-allowed', padding: '4px', border: 'none', background: 'transparent' }}
+                        title={isEditable ? "Edit Indent" : "Edit disabled"}
+                      >
+                        <Pencil size={18} color={isEditable ? "#3b82f6" : "#94a3b8"} />
+                      </button>
+                    );
+                  })()}
+                  <span className={styles.chevron}>›</span>
+                </td>
               </tr>
             ))}
             {filteredData.length === 0 && (
@@ -370,6 +452,104 @@ export default function IndentMasterDetail() {
 
             <div className={styles.drawerBody}>
               
+              <div className={styles.formField}>
+                <label className={styles.label}>Person Filing Name <span className={styles.req}>*</span></label>
+                <Select
+                  options={toOpts(options.persons)}
+                  styles={selStyle} isClearable
+                  placeholder="Add or search"
+                  value={form.personFillingName ? { value: form.personFillingName, label: form.personFillingName } : null}
+                  onChange={(o: any) => setF("personFillingName", o?.value || "")}
+                />
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.label}>Item Name <span className={styles.req}>*</span></label>
+                <Select
+                  options={toOpts(options.items)}
+                  styles={selStyle} isClearable isSearchable
+                  placeholder="Add or search"
+                  value={form.itemName ? { value: form.itemName, label: form.itemName } : null}
+                  onChange={(o: any) => setF("itemName", o?.value || "")}
+                />
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.label}>Require Qty <span className={styles.req}>*</span></label>
+                <div className={styles.qtyWrapper}>
+                  <input 
+                    type="number" 
+                    className={styles.qtyInput} 
+                    value={form.requireQty} 
+                    onChange={e => setF("requireQty", e.target.value)} 
+                    placeholder="0.00" 
+                  />
+                  <button className={styles.qtyBtn} onClick={() => adjQty(-1)}>−</button>
+                  <button className={styles.qtyBtn} onClick={() => adjQty(1)}>+</button>
+                </div>
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.label}>Department <span className={styles.req}>*</span></label>
+                <Select
+                  options={toOpts(options.departments)}
+                  styles={selStyle} isClearable
+                  placeholder="Add or search"
+                  value={form.department ? { value: form.department, label: form.department } : null}
+                  onChange={(o: any) => setF("department", o?.value || "")}
+                />
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.label}>Machine Name</label>
+                <Select
+                  options={toOpts(options.machineNames)}
+                  styles={selStyle} isClearable
+                  placeholder="Add or search"
+                  value={form.machineName ? { value: form.machineName, label: form.machineName } : null}
+                  onChange={(o: any) => setF("machineName", o?.value || "")}
+                />
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.label}>Machine ID</label>
+                <Select
+                  options={toOpts(options.machineIDs)}
+                  styles={selStyle} isClearable
+                  placeholder="Add or search"
+                  value={form.machineId ? { value: form.machineId, label: form.machineId } : null}
+                  onChange={(o: any) => setF("machineId", o?.value || "")}
+                />
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Drawer Form ── */}
+      {isEditFormOpen && editRow && (
+        <div className={styles.drawerOverlay} onClick={() => setIsEditFormOpen(false)}>
+          <div className={styles.drawerContent} onClick={e => e.stopPropagation()}>
+            <div className={styles.drawerHeader}>
+              <div className={styles.drawerTitleBox}>
+                <button className={styles.drawerClose} onClick={() => setIsEditFormOpen(false)}><X size={20}/></button>
+                <h3 className={styles.drawerTitle}>Edit Indent</h3>
+              </div>
+              <div className={styles.drawerActions}>
+                <button className={styles.btnCancel} onClick={() => setIsEditFormOpen(false)}>Cancel</button>
+                <button className={styles.btnSave} onClick={handleEditSave} disabled={submitting}>
+                  {submitting ? "Updating..." : "Update"}
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.drawerBody}>
+              <div className={styles.formField}>
+                <label className={styles.label}>RKD Number</label>
+                <input className={styles.qtyInput} style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }} type="text" value={editRow["Store RKD Number"]} readOnly disabled />
+              </div>
+
               <div className={styles.formField}>
                 <label className={styles.label}>Person Filing Name <span className={styles.req}>*</span></label>
                 <Select

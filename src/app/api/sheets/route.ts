@@ -672,6 +672,46 @@ ${isApproved
           }));
         }).catch((e: any) => console.error("[BG] Doer WhatsApp failed:", e.message))
       ]).catch((e: any) => console.error("[BG] Secondary tasks error:", e.message));
+    } else if (action === "EDIT_INDENT") {
+      const { personFillingName, department, machineName, machineId, itemName, requireQty, units } = body;
+      
+      const updatePromises: Promise<any>[] = [];
+      
+      // Update D, E, F (Person, Item, Require Qty)
+      updatePromises.push(
+        sheets.spreadsheets.values.update({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!D${rowNumber}:F${rowNumber}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [[personFillingName, itemName, requireQty]] }
+        })
+      );
+      
+      // Update J, K, L (Department, Machine Name, Machine ID)
+      updatePromises.push(
+        sheets.spreadsheets.values.update({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!J${rowNumber}:L${rowNumber}`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [[department, machineName, machineId]] }
+        })
+      );
+
+      // If units provided, update G (Units)
+      if (units) {
+        updatePromises.push(
+          sheets.spreadsheets.values.update({
+            spreadsheetId: STORE_SHEET_ID,
+            range: `StoreDataEntry!G${rowNumber}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values: [[units]] }
+          })
+        );
+      }
+
+      await Promise.all(updatePromises);
+      return NextResponse.json({ success: true, message: "Indent updated successfully" });
+
     } else if (action === "UPDATE_COLUMN") {
       // Debit Note (S) or Reverse Entry (T) update
       const { column, value } = body;
