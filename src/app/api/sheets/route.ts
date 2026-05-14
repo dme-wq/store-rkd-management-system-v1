@@ -527,15 +527,16 @@ ${approvalLink}
         range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
       });
       const rowData = fullRowRes.data.values?.[0] || [];
+      const { vendorName, rate } = body;
       const requireQty = rowData[5] || "0"; // F is index 5
-      const vendorVal = rowData[13] || "";  // N is index 13
-      const rateVal = rowData[14] || "";    // O is index 14
+      const vendorVal = vendorName !== undefined ? vendorName : (rowData[13] || "");  // N is index 13
+      const rateVal = rate !== undefined ? rate : (rowData[14] || "");    // O is index 14
 
       const d = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
       const cleanTimestamp = `${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()} ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`;
 
       // Run StoreDataEntry update + approvalDataBase append SIMULTANEOUSLY (not sequentially)
-      await Promise.all([
+      const updatePromises: Promise<any>[] = [
         sheets.spreadsheets.values.update({
           spreadsheetId: STORE_SHEET_ID,
           range: `StoreDataEntry!Q${rowNumber}:R${rowNumber}`,
@@ -550,7 +551,21 @@ ${approvalLink}
             values: [[cleanTimestamp, rkdNumber, vendorVal, rateVal, "No", requireQty]]
           }
         })
-      ]);
+      ];
+
+      // If UI sent an explicitly updated vendor/rate, also update N and O
+      if (vendorName !== undefined && rate !== undefined) {
+        updatePromises.push(
+          sheets.spreadsheets.values.update({
+            spreadsheetId: STORE_SHEET_ID,
+            range: `StoreDataEntry!N${rowNumber}:O${rowNumber}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values: [[vendorName, rate]] }
+          })
+        );
+      }
+
+      await Promise.all(updatePromises);
 
       return NextResponse.json({ success: true, message: "Instant Approval Completed" });
     } else if (action === "WHATSAPP_UPDATE") {

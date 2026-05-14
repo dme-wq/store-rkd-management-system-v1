@@ -464,6 +464,78 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
   );
 }
 
+// Instant Approval Detailed Modal Component
+function InstantApprovalModal({ isOpen, onClose, row, onSubmit, updating, iaVendor, setIaVendor, iaRate, setIaRate, isRefreshing, onRefresh }: any) {
+  if (!isOpen || !row) return null;
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <div className={styles.modalIconBox} style={{ background: '#dcfce7', color: '#16a34a' }}>
+            <CheckCircle size={32} />
+          </div>
+        </div>
+        <h3 className={styles.modalTitle}>Instant Approval ⚡</h3>
+        <p className={styles.modalMessage}>Review details before instant approval.</p>
+
+        <div className={styles.formInfoBox}>
+          <div className={styles.modalInfoItem}><span className={styles.modalLabel}>RKD:</span> <span className={styles.modalValue}>{row["Store RKD Number"]}</span></div>
+          <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span> <span className={styles.modalValue}>{row["Item Name"]}</span></div>
+          <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span> <span className={styles.modalValue}>{row["Person Filling Name"]}</span></div>
+          <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Dept:</span> <span className={styles.modalValue}>{row["Department"]}</span></div>
+          <div className={styles.modalInfoItem} style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px' }}>
+            <span className={styles.modalLabel}>Required:</span> <span className={styles.modalValue}>{row["Require Qty"]} {row["Units"]}</span>
+          </div>
+        </div>
+
+        {/* Refreshable Fields */}
+        <div className={styles.formGroup} style={{ marginTop: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label className={styles.formLabel} style={{ marginBottom: 0 }}>Vendor Name</label>
+            <button onClick={onRefresh} disabled={isRefreshing} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+              {isRefreshing ? <Loader2 size={12} className={styles.btnSpin} /> : <span>🔄</span>} Refresh
+            </button>
+          </div>
+          <input
+            type="text"
+            className={styles.formInput}
+            value={iaVendor}
+            onChange={(e) => setIaVendor(e.target.value)}
+            style={{ background: '#f8fafc' }}
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label className={styles.formLabel} style={{ marginBottom: 0 }}>Rate (₹)</label>
+            <button onClick={onRefresh} disabled={isRefreshing} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+              {isRefreshing ? <Loader2 size={12} className={styles.btnSpin} /> : <span>🔄</span>} Refresh
+            </button>
+          </div>
+          <input
+            type="text"
+            className={styles.formInput}
+            value={iaRate}
+            onChange={(e) => setIaRate(e.target.value)}
+            style={{ background: '#f8fafc' }}
+          />
+        </div>
+
+        <button
+          className={styles.dribbbleBtnPrimary}
+          style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, #16a34a, #15803d)' }}
+          onClick={onSubmit}
+          disabled={updating || isRefreshing}
+        >
+          {updating ? <Loader2 className={styles.btnSpin} size={18} /> : <span>✅</span>}
+          <span>Approve & Update</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Smart Live Status — MULTI-STEP stacked logic ─────────────────────────────
 // Returns an array of status steps, all relevant ones shown stacked top-to-bottom.
 // Each step = { label, emoji, color, bg, border }
@@ -618,6 +690,13 @@ export default function Home() {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isManualApprovalModalOpen, setIsManualApprovalModalOpen] = useState(false);
   const [manualRow, setManualRow] = useState<any>(null);
+
+  // Instant Approval Modal State
+  const [isInstantApproveModalOpen, setIsInstantApproveModalOpen] = useState(false);
+  const [instantApproveRow, setInstantApproveRow] = useState<any>(null);
+  const [iaVendor, setIaVendor] = useState("");
+  const [iaRate, setIaRate] = useState("");
+  const [isIaRefreshing, setIsIaRefreshing] = useState(false);
 
   // Debit Note / Reverse Entry Modal State
   const [isDebitNoteOpen, setIsDebitNoteOpen] = useState(false);
@@ -879,20 +958,29 @@ export default function Home() {
     }
   };
 
-  const handleInstantApproval = async (row: any) => {
+  const handleInstantApproval = (row: any) => {
+    setInstantApproveRow(row);
+    // Pre-fill with existing row values from StoreDataEntry
+    setIaVendor(row["Vendor Name"] || "");
+    setIaRate(row["Price"] || "");
+    setIsInstantApproveModalOpen(true);
+  };
+
+  const submitInstantApproval = async () => {
+    if (!instantApproveRow) return;
+    const row = instantApproveRow;
     const rowId = row._id;
     const rkdNumber = row["Store RKD Number"];
-    const itemName = (row["Item Name"] || "").trim().toLowerCase();
-    const misc = miscMap[itemName] || { vendor: "-", rate: "0" };
     const reqQty = row["Require Qty"];
 
     setUpdatingRowId(rowId);
     const originalData = [...data];
     const newData = data.map(r => {
-      if (r._id === rowId) return { ...r, "Approval Require?": "No", "Approved Quantity": reqQty };
+      if (r._id === rowId) return { ...r, "Approval Require?": "No", "Approved Quantity": reqQty, "Vendor Name": iaVendor, "Price": iaRate };
       return r;
     });
     setData(newData);
+    setIsInstantApproveModalOpen(false);
 
     try {
       const res = await fetch("/api/sheets", {
@@ -902,7 +990,9 @@ export default function Home() {
           action: "INSTANT_APPROVE",
           rkdNumber,
           itemName: row["Item Name"],
-          approvedQty: reqQty
+          approvedQty: reqQty,
+          vendorName: iaVendor,
+          rate: iaRate
         })
       });
       const json = await safeResJson(res);
@@ -919,6 +1009,32 @@ export default function Home() {
       setData(originalData);
     } finally {
       setUpdatingRowId(null);
+      setInstantApproveRow(null);
+    }
+  };
+
+  const handleIaRefresh = async () => {
+    if (!instantApproveRow) return;
+    setIsIaRefreshing(true);
+    try {
+      await fetchData(true, false); // silent refresh
+      // Fetch data updates miscMap globally, but we can also just fetch it manually if needed.
+      // However, after fetchData completes, miscMap is updated in state.
+      // Because state update might be async, let's just make a quick direct call or wait for miscMap.
+      const res = await fetch("/api/sheets?mode=full");
+      const json = await safeResJson(res);
+      if (json.success && json.miscMap) {
+        const itemName = (instantApproveRow["Item Name"] || "").trim().toLowerCase();
+        const freshMisc = json.miscMap[itemName] || { vendor: "", rate: "" };
+        setIaVendor(freshMisc.vendor || "");
+        setIaRate(freshMisc.rate || "");
+        showAlert("Master Data Refreshed! ✨", "success");
+      }
+    } catch (e) {
+      console.error(e);
+      showAlert("Failed to refresh master data", "error");
+    } finally {
+      setIsIaRefreshing(false);
     }
   };
 
@@ -1491,6 +1607,8 @@ export default function Home() {
                       <th>Department</th>
                       <th>Machine Name</th>
                       <th>Machine ID</th>
+                      <th>Vendor Name</th>
+                      <th>Rate (₹)</th>
                       <th>Stock in Store</th>
                       <th>Status</th>
                       <th>Live Status</th>
@@ -1528,6 +1646,10 @@ export default function Home() {
                           <td>{row["Department"] || "-"}</td>
                           <td>{row["Machine Name"] || "-"}</td>
                           <td className={styles.colMuted}>{row["Machine ID"] || "-"}</td>
+                          <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row["Vendor Name"]}>
+                            {row["Vendor Name"] || "-"}
+                          </td>
+                          <td className={styles.colMuted}>{row["Price"] || "-"}</td>
                           <td>
                             <span className={`${styles.pillStock} ${isUnknown ? styles.stockUnknown : isLow ? styles.stockDanger : styles.stockSafe}`}>
                               {isUnknown ? "No Stock" : imsStock}
@@ -1695,6 +1817,21 @@ export default function Home() {
         onSubmit={handleManualApprovalSubmit}
         updating={updatingRowId !== null && manualRow && updatingRowId === manualRow._id}
         miscMap={miscMap}
+      />
+
+      {/* Instant Approval Modal */}
+      <InstantApprovalModal
+        isOpen={isInstantApproveModalOpen}
+        onClose={() => setIsInstantApproveModalOpen(false)}
+        row={instantApproveRow}
+        onSubmit={submitInstantApproval}
+        updating={updatingRowId !== null && instantApproveRow && updatingRowId === instantApproveRow._id}
+        iaVendor={iaVendor}
+        setIaVendor={setIaVendor}
+        iaRate={iaRate}
+        setIaRate={setIaRate}
+        isRefreshing={isIaRefreshing}
+        onRefresh={handleIaRefresh}
       />
 
       {/* ─── Debit Note Modal ─── */}
