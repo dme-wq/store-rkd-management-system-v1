@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText, BarChart3, Download } from "lucide-react";
+import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText, BarChart3, Download, RefreshCw } from "lucide-react";
 import Select from "react-select";
 import { subDays, subMonths, isWithinInterval, startOfDay, endOfDay, isSameDay, isSameMonth } from "date-fns";
 
@@ -1417,6 +1417,10 @@ export default function Home() {
                     <span>Last Sync: {lastUpdated || "Never"}</span>
                     <a href="/api/debug-sheet" target="_blank" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Run Diagnostics</a>
                   </div>
+                  <button onClick={() => fetchData(false, false)} className={styles.dribbbleBtnSecondary} style={{ padding: '6px 12px', marginTop: '6px', fontSize: '0.8rem', gap: '4px' }}>
+                    <RefreshCw size={14} className={loading ? styles.btnSpin : ""} />
+                    <span>Sync Now</span>
+                  </button>
                 </div>
 
                 {/* 4 Action Buttons */}
