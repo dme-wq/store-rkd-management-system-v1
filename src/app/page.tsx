@@ -573,6 +573,10 @@ export default function Home() {
   const currentYear = new Date().getFullYear().toString();
   const [updatingRowId, setUpdatingRowId] = useState<number | null>(null);
 
+  // Track row IDs that were just written locally — protect them from stale poll overwrites
+  const recentlyWrittenIds = useRef<Set<number>>(new Set());
+  const postWriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Alert Modal State (replaces browser alert())
   const [alertModal, setAlertModal] = useState<{ open: boolean; msg: string; type: AlertType }>({ open: false, msg: "", type: "error" });
   const showAlert = (msg: string, type: AlertType = "error") => setAlertModal({ open: true, msg, type });
@@ -651,7 +655,7 @@ export default function Home() {
       setModalMsg(`${column === "S" ? "Debit Note" : "Reverse Entry"} Qty updated for ${rkdNumber}.`);
       setModalData(null); setIsModalOpen(true);
       setTimeout(() => setIsModalOpen(false), 2500);
-      // No fetchData here — optimistic update already reflects change
+      refreshAfterWrite(); // confirm from server after 1.5s
     } catch (err: any) {
       showAlert("Update Failed: " + err.message, "error");
       setData(originalData); // rollback on error
@@ -728,6 +732,19 @@ export default function Home() {
     }
   };
 
+  // Triggers a silent server fetch 1.5s after any successful write.
+  // This confirms the real Sheets state so the optimistic update is validated
+  // and any stale server-cache is bypassed (cache was already cleared by the POST).
+  const refreshAfterWrite = useCallback((rowId?: number) => {
+    if (postWriteTimerRef.current) clearTimeout(postWriteTimerRef.current);
+    if (rowId !== undefined) recentlyWrittenIds.current.add(rowId);
+    postWriteTimerRef.current = setTimeout(async () => {
+      await fetchData(true); // silent, no loading spinner
+      if (rowId !== undefined) recentlyWrittenIds.current.delete(rowId);
+    }, 1500);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleDirectIssue = async (row: any) => {
     const rowId = row._id;
     const rkdNumber = row["Store RKD Number"];
@@ -756,7 +773,7 @@ export default function Home() {
       return;
     }
 
-    // Optimistic Update
+    // Optimistic Update — immediately show the new state
     setUpdatingRowId(rowId);
     const originalData = [...data];
     const newData = data.map(r => {
@@ -781,6 +798,8 @@ export default function Home() {
       });
       const json = await safeResJson(res);
       if (!json.success) throw new Error(json.error || "Update failed");
+      // Fetch fresh server state 1.5s later to confirm the write
+      refreshAfterWrite(rowId);
     } catch (err: any) {
       showAlert("Failed to update: " + err.message, "error");
       setData(originalData); // Rollback
@@ -851,6 +870,7 @@ export default function Home() {
       });
       const json = await safeResJson(res);
       if (!json.success) throw new Error(json.error || "Update failed");
+      refreshAfterWrite(rowId);
     } catch (err: any) {
       showAlert("Failed to update: " + err.message, "error");
       setData(originalData);
@@ -887,6 +907,7 @@ export default function Home() {
       });
       const json = await safeResJson(res);
       if (!json.success) throw new Error(json.error || "Update failed");
+      refreshAfterWrite(rowId);
 
       setModalTitle("Instant Approval! ✅");
       setModalMsg(`Approval status set to "No" and Approved Quantity set to "${reqQty}" for ${rkdNumber}.`);
@@ -933,6 +954,7 @@ export default function Home() {
       });
       const json = await safeResJson(res);
       if (!json.success) throw new Error(json.error || "Update failed");
+      refreshAfterWrite(rowId);
       setModalTitle("Approved Successfully! ✅");
       setModalMsg(`Manual Approval for "${manualRow["Item Name"]}" has been logged.`);
       setModalData(null);
@@ -999,9 +1021,11 @@ export default function Home() {
     return data.filter(row => {
       if (start && end) {
         const d = parseCustomDate(row["Timestamp"]);
-        // If date is invalid, DON'T hide it from "Last 30 Days" etc., let user see it!
-        // But if it IS valid, it must be within the interval.
-        if (d.getTime() > 0 && !isWithinInterval(d, { start, end })) return false;
+        // FIX: If timestamp can't be parsed (d === epoch 0), treat the entry as
+        // "too old" — exclude it from any time-bounded filter. This prevents
+        // entries with Hindi month timestamps that fail parsing from leaking into
+        // "Last 30 Days" / "Today" views and making the table look unfiltered.
+        if (d.getTime() === 0 || !isWithinInterval(d, { start, end })) return false;
       }
       if (searchTerm) {
         return Object.values(row).some(v => String(v).toLowerCase().includes(searchTerm.toLowerCase()));

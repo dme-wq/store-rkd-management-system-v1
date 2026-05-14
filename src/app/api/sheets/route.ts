@@ -363,6 +363,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { rkdNumber, issueQty, status, itemName, rate, action, vendorName, approvedQty } = body;
     console.log(`Processing ${action || 'ISSUE'} for RKD: ${rkdNumber}`);
+
+    // ── CRITICAL: Bust the GET cache immediately on any write ──────────────
+    // Without this, the 3-second server cache would serve stale data to the
+    // next polling GET, overwriting the client's optimistic update with old state.
+    cachedApiResponse = null;
     
     if (!rkdNumber) throw new Error("Missing rkdNumber");
 
