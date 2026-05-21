@@ -368,7 +368,39 @@ export async function POST(req: Request) {
     // Without this, the 3-second server cache would serve stale data to the
     // next polling GET, overwriting the client's optimistic update with old state.
     cachedApiResponse = null;
-    
+    // ── EDIT ITEM MASTER DATA ──
+    if (action === "EDIT_ITEM_MASTER") {
+      const { itemName, updatedFields } = body;
+      const sheets = getSheetsClient();
+      
+      const searchRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: MISC_SHEET_ID,
+        range: "Data!B:B",
+      });
+      const namesList = searchRes.data.values || [];
+      const rowIndex = namesList.findIndex((row: any) => (row[0] || "").toLowerCase().trim() === itemName.toLowerCase().trim());
+      
+      if (rowIndex === -1) throw new Error(`Item ${itemName} not found in Master Data.`);
+      const rowNumber = rowIndex + 1; // 1-indexed
+
+      // B=1, C=2 (opening stock - skip), D=Unit, E=Price, F=Party, G=MinQty, H=Safety, I=GST, J=Rack
+      const { unit, price, vendor, minQty, safetyFactor, gst, rackNo } = updatedFields;
+      
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: MISC_SHEET_ID,
+        range: `Data!D${rowNumber}:J${rowNumber}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [[unit, price, vendor, minQty, safetyFactor, gst, rackNo]]
+        }
+      });
+      
+      if (cachedMiscMap && cachedMiscMap[itemName.toLowerCase()]) {
+         cachedMiscMap[itemName.toLowerCase()] = { vendor, rate: price };
+      }
+      return NextResponse.json({ success: true, message: "Item Master Data Updated" });
+    }
+
     if (!rkdNumber) throw new Error("Missing rkdNumber");
 
     const sheets = getSheetsClient();
