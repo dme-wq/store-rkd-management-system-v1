@@ -1614,6 +1614,21 @@ export default function Home() {
 
   return (
     <div className={styles.pageContainer}>
+      <style>{`
+        @keyframes geminiGradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes geminiPulse {
+          0% { height: 4px; }
+          100% { height: 16px; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       {isNavigating && (
         <div className={styles.navigatingOverlay}>
           <div className={styles.navSpinner}></div>
@@ -1764,32 +1779,112 @@ export default function Home() {
             {/* Smart Filters — Unified Row */}
             <div className={styles.filterRow} style={{ flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: '350px' }}>
-                <div className={styles.searchBox} style={{ flex: 1, borderColor: isListening ? '#8b5cf6' : '#e2e8f0', boxShadow: isListening ? '0 0 0 2px rgba(139, 92, 246, 0.2)' : 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center' }}>
-                  {isListening ? (
-                     <div style={{ paddingLeft: 12, paddingRight: 4, display: 'flex', alignItems: 'center' }}>
-                       <div className={styles.liveDot} style={{ background: '#ef4444', marginRight: 8 }}></div>
-                     </div>
-                  ) : (
-                     <button onClick={startListening} style={{ background: 'transparent', border: 'none', cursor: 'pointer', paddingLeft: 12, paddingRight: 4, display: 'flex', alignItems: 'center' }} title="Voice Command">
-                       <span style={{ fontSize: '1.1rem' }}>🎙️</span>
-                     </button>
+                
+                {/* ── GEMINI VOICE ASSIST BAR ── */}
+                <div style={{ 
+                  flex: 1, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  position: 'relative',
+                  background: '#ffffff',
+                  borderRadius: '24px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                  padding: '2px',
+                  // Gemini animated border gradient when listening or parsing
+                  backgroundClip: 'padding-box',
+                }}>
+                  {/* Animated Gradient Border Layer */}
+                  {(isListening || isAiParsing) && (
+                    <div style={{
+                      position: 'absolute',
+                      top: -2, left: -2, right: -2, bottom: -2,
+                      background: 'linear-gradient(90deg, #4285f4, #9b72cb, #d96570, #f4b400, #4285f4)',
+                      backgroundSize: '200% 100%',
+                      borderRadius: '24px',
+                      zIndex: -1,
+                      animation: 'geminiGradient 2s linear infinite'
+                    }}></div>
                   )}
-                  <input
-                    type="text"
-                    placeholder="Ask AI to close or cancel indents... (e.g. 'close last 5')"
-                    className={styles.searchInput}
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    onKeyDown={(e) => { if(e.key === 'Enter') processAiCommand(); }}
-                    style={{ paddingLeft: 8, flex: 1 }}
-                  />
-                  {isAiParsing ? (
-                    <Loader2 className={styles.btnSpin} size={16} style={{ margin: '0 12px', color: '#8b5cf6' }} />
-                  ) : (
-                    <button onClick={processAiCommand} style={{ background: 'transparent', border: 'none', cursor: 'pointer', paddingRight: 12, display: 'flex', alignItems: 'center' }} title="Send to AI">
-                       <span style={{ fontSize: '1.2rem' }}>✨</span>
+
+                  <div style={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    background: '#ffffff', 
+                    borderRadius: '22px', 
+                    padding: '4px 12px 4px 8px' 
+                  }}>
+                    <button 
+                      onClick={isListening ? undefined : startListening} 
+                      style={{ 
+                        background: 'transparent', 
+                        border: 'none', 
+                        cursor: isListening ? 'default' : 'pointer', 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        transition: 'all 0.3s ease',
+                        background: isListening ? 'rgba(66, 133, 244, 0.1)' : 'transparent'
+                      }} 
+                      title="Gemini Voice Command"
+                    >
+                      {isListening ? (
+                        /* Gemini Animated Listening Waveform Equivalent */
+                        <div style={{ display: 'flex', gap: '3px', alignItems: 'center', height: '16px' }}>
+                          <div style={{ width: '4px', background: '#4285f4', borderRadius: '4px', animation: 'geminiPulse 1s ease-in-out infinite alternate', height: '8px' }}></div>
+                          <div style={{ width: '4px', background: '#ea4335', borderRadius: '4px', animation: 'geminiPulse 1s ease-in-out infinite alternate 0.2s', height: '16px' }}></div>
+                          <div style={{ width: '4px', background: '#fbbc05', borderRadius: '4px', animation: 'geminiPulse 1s ease-in-out infinite alternate 0.4s', height: '10px' }}></div>
+                          <div style={{ width: '4px', background: '#34a853', borderRadius: '4px', animation: 'geminiPulse 1s ease-in-out infinite alternate 0.6s', height: '12px' }}></div>
+                        </div>
+                      ) : (
+                        /* Gemini Sparkle SVG */
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M19.3 18.2C18.6 18.7 18 19.3 17.5 20L16.4 21.6C16.2 21.9 15.8 21.9 15.6 21.6L14.5 20C14 19.3 13.4 18.7 12.7 18.2L11.1 17.1C10.8 16.9 10.8 16.5 11.1 16.3L12.7 15.2C13.4 14.7 14 14.1 14.5 13.4L15.6 11.8C15.8 11.5 16.2 11.5 16.4 11.8L17.5 13.4C18 14.1 18.6 14.7 19.3 15.2L20.9 16.3C21.2 16.5 21.2 16.9 20.9 17.1L19.3 18.2ZM11.4 10.7C10.2 11.6 9 12.6 8.2 13.9L6.5 16.6C6.1 17.2 5.2 17.2 4.8 16.6L3.1 13.9C2.3 12.6 1.1 11.6 -0.1 10.7L-2.8 8.8C-3.4 8.4 -3.4 7.6 -2.8 7.2L-0.1 5.3C1.1 4.4 2.3 3.4 3.1 2.1L4.8 -0.6C5.2 -1.2 6.1 -1.2 6.5 -0.6L8.2 2.1C9 3.4 10.2 4.4 11.4 5.3L14.1 7.2C14.7 7.6 14.7 8.4 14.1 8.8L11.4 10.7Z" fill="url(#geminiGradientFill)"/>
+                          <defs>
+                            <linearGradient id="geminiGradientFill" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                              <stop stopColor="#4285f4"/>
+                              <stop offset="0.33" stopColor="#9b72cb"/>
+                              <stop offset="0.66" stopColor="#d96570"/>
+                              <stop offset="1" stopColor="#f4b400"/>
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                      )}
                     </button>
-                  )}
+                    
+                    <input
+                      type="text"
+                      placeholder={isListening ? "Listening to your request..." : "Ask Gemini to manage your inventory..."}
+                      className={styles.searchInput}
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyDown={(e) => { if(e.key === 'Enter') processAiCommand(); }}
+                      style={{ 
+                        paddingLeft: 8, 
+                        flex: 1, 
+                        border: 'none', 
+                        boxShadow: 'none', 
+                        outline: 'none', 
+                        background: 'transparent',
+                        fontSize: '0.9rem',
+                        color: '#1f2937'
+                      }}
+                    />
+                    
+                    {isAiParsing ? (
+                      <Loader2 className={styles.btnSpin} size={20} style={{ color: '#4285f4', animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <button onClick={() => processAiCommand()} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Send to Gemini">
+                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: aiPrompt.trim() ? '#4285f4' : '#cbd5e1', transition: 'color 0.2s' }}>
+                           <line x1="22" y1="2" x2="11" y2="13"></line>
+                           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                         </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className={styles.searchBox}>
@@ -2339,68 +2434,98 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── AI Agent Interface Modal ── */}
+      {/* ── AI Agent Interface Modal (Gemini Theme) ── */}
       {aiReviewOpen && aiPayload && (
         <div className={styles.modalOverlay} onClick={() => setAiReviewOpen(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalIconBox} style={{ background: '#fdf4ff', color: '#d946ef' }}>
-                🤖
-              </div>
-              <div>
-                <h3 className={styles.modalTitle}>AI Supply Chain Analyst</h3>
-                <p className={styles.modalSubtitle}>
-                  Query: <strong style={{ color: '#1e293b' }}>"{aiPayload.originalText}"</strong>
-                </p>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ 
+            maxWidth: '900px', 
+            width: '90%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            maxHeight: '90vh',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.95) 100%)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.5)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 20px rgba(66, 133, 244, 0.1)',
+            overflow: 'hidden'
+          }}>
+            {/* Top Gemini Gradient Line */}
+            <div style={{ height: '4px', width: '100%', background: 'linear-gradient(90deg, #4285f4, #9b72cb, #d96570, #f4b400)', position: 'absolute', top: 0, left: 0 }}></div>
+
+            <div className={styles.modalHeader} style={{ borderBottom: 'none', paddingBottom: '0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19.3 18.2C18.6 18.7 18 19.3 17.5 20L16.4 21.6C16.2 21.9 15.8 21.9 15.6 21.6L14.5 20C14 19.3 13.4 18.7 12.7 18.2L11.1 17.1C10.8 16.9 10.8 16.5 11.1 16.3L12.7 15.2C13.4 14.7 14 14.1 14.5 13.4L15.6 11.8C15.8 11.5 16.2 11.5 16.4 11.8L17.5 13.4C18 14.1 18.6 14.7 19.3 15.2L20.9 16.3C21.2 16.5 21.2 16.9 20.9 17.1L19.3 18.2ZM11.4 10.7C10.2 11.6 9 12.6 8.2 13.9L6.5 16.6C6.1 17.2 5.2 17.2 4.8 16.6L3.1 13.9C2.3 12.6 1.1 11.6 -0.1 10.7L-2.8 8.8C-3.4 8.4 -3.4 7.6 -2.8 7.2L-0.1 5.3C1.1 4.4 2.3 3.4 3.1 2.1L4.8 -0.6C5.2 -1.2 6.1 -1.2 6.5 -0.6L8.2 2.1C9 3.4 10.2 4.4 11.4 5.3L14.1 7.2C14.7 7.6 14.7 8.4 14.1 8.8L11.4 10.7Z" fill="url(#geminiGradientModal)"/>
+                  <defs>
+                    <linearGradient id="geminiGradientModal" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#4285f4"/>
+                      <stop offset="0.33" stopColor="#9b72cb"/>
+                      <stop offset="0.66" stopColor="#d96570"/>
+                      <stop offset="1" stopColor="#f4b400"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600, background: 'linear-gradient(90deg, #1e293b, #334155)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>Gemini Store Analyst</h3>
+                </div>
               </div>
               <button className={styles.modalCloseBtn} onClick={() => setAiReviewOpen(false)}>×</button>
             </div>
 
-            {/* AI Analysis Section */}
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #8b5cf6', marginBottom: '20px', fontSize: '0.9rem', color: '#334155', lineHeight: 1.5 }}>
-              <strong style={{ display: 'block', marginBottom: '8px', color: '#1e293b' }}>Analysis:</strong>
+            {/* User Prompt Bubble */}
+            <div style={{ alignSelf: 'flex-end', background: '#f1f5f9', padding: '10px 16px', borderRadius: '20px 20px 0 20px', margin: '16px 0', maxWidth: '80%', fontSize: '0.9rem', color: '#1e293b' }}>
+              {aiPayload.originalText}
+            </div>
+
+            {/* AI Analysis Bubble */}
+            <div style={{ alignSelf: 'flex-start', background: 'transparent', padding: '0 0 16px 8px', maxWidth: '100%', fontSize: '0.95rem', color: '#334155', lineHeight: 1.6, animation: 'fadeIn 0.5s ease' }}>
               {aiPayload.analysis}
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '20px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(226, 232, 240, 0.6)', borderRadius: '12px', marginBottom: '20px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead style={{ background: '#f8fafc', position: 'sticky', top: 0, zIndex: 1 }}>
+                <thead style={{ background: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)', position: 'sticky', top: 0, zIndex: 1 }}>
                   <tr>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>RKD Number</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Item Name</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Status</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Req Qty</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>RKD Number</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Item Name</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Req Qty</th>
                     {aiPayload.intent === "ACTION" && (
                       <>
-                        <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>Action</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Exclude</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Action</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Exclude</th>
                       </>
                     )}
                   </tr>
                 </thead>
                 <tbody>
                   {aiPayload.targets.map(row => (
-                    <tr key={row["Store RKD Number"]} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '8px 12px' }}>{row["Store RKD Number"]}</td>
-                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>{row["Item Name"]}</td>
-                      <td style={{ padding: '8px 12px' }}>{row["Status"]}</td>
-                      <td style={{ padding: '8px 12px', color: '#8b5cf6', fontWeight: 700 }}>{row["Require Qty"]} {row["Units"]}</td>
+                    <tr key={row["Store RKD Number"]} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s', ':hover': { background: '#f8fafc' } } as any}>
+                      <td style={{ padding: '12px 16px', color: '#475569' }}>{row["Store RKD Number"]}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1e293b' }}>{row["Item Name"]}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                         <span style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>{row["Status"]}</span>
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#6366f1', fontWeight: 700 }}>{row["Require Qty"]} <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 400 }}>{row["Units"]}</span></td>
                       {aiPayload.intent === "ACTION" && (
                         <>
-                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                             <span style={{ 
-                              padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700,
-                              background: row._aiProposedAction === "CLOSE" ? '#dcfce7' : row._aiProposedAction === "CANCEL" ? '#fee2e2' : '#f1f5f9',
-                              color: row._aiProposedAction === "CLOSE" ? '#166534' : row._aiProposedAction === "CANCEL" ? '#991b1b' : '#475569'
+                              padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700,
+                              background: row._aiProposedAction === "CLOSE" ? 'rgba(34, 197, 94, 0.1)' : row._aiProposedAction === "CANCEL" ? 'rgba(239, 68, 68, 0.1)' : '#f1f5f9',
+                              color: row._aiProposedAction === "CLOSE" ? '#16a34a' : row._aiProposedAction === "CANCEL" ? '#dc2626' : '#475569',
+                              border: row._aiProposedAction === "CLOSE" ? '1px solid rgba(34, 197, 94, 0.2)' : row._aiProposedAction === "CANCEL" ? '1px solid rgba(239, 68, 68, 0.2)' : 'none'
                             }}>
                               {row._aiProposedAction}
                             </span>
                           </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                             <button 
                               onClick={() => setAiPayload({ ...aiPayload, targets: aiPayload.targets.filter(r => r["Store RKD Number"] !== row["Store RKD Number"]) })}
-                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '1.2rem' }}
+                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.2rem', transition: 'color 0.2s', padding: '4px' }}
                               title="Do not process this row"
+                              onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                              onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
                             >
                               🗑️
                             </button>
@@ -2411,24 +2536,45 @@ export default function Home() {
                   ))}
                   {aiPayload.targets.length === 0 && (
                     <tr>
-                      <td colSpan={aiPayload.intent === "ACTION" ? 6 : 4} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>No specific records attached or all items removed.</td>
+                      <td colSpan={aiPayload.intent === "ACTION" ? 6 : 4} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '8px' }}>👻</div>
+                        No records match the current filters or all items were removed.
+                      </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: 'auto' }}>
-              <button className={styles.btnCancel} onClick={() => setAiReviewOpen(false)}>
-                {aiPayload.intent === "VIEW" ? "Close Report" : "Cancel"}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(226, 232, 240, 0.5)' }}>
+              <button 
+                onClick={() => setAiReviewOpen(false)}
+                style={{ background: 'transparent', border: '1px solid #cbd5e1', padding: '10px 20px', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                {aiPayload.intent === "VIEW" ? "Done" : "Cancel"}
               </button>
               {aiPayload.intent === "ACTION" && (
                 <button 
-                  className={styles.dribbbleBtnPrimary} 
                   disabled={aiPayload.targets.length === 0} 
                   onClick={executeAiBulkAction}
+                  style={{ 
+                    background: aiPayload.targets.length === 0 ? '#cbd5e1' : 'linear-gradient(90deg, #4285f4, #9b72cb, #d96570)', 
+                    border: 'none', 
+                    padding: '10px 24px', 
+                    borderRadius: '8px', 
+                    color: '#fff', 
+                    fontWeight: 600, 
+                    cursor: aiPayload.targets.length === 0 ? 'not-allowed' : 'pointer',
+                    boxShadow: aiPayload.targets.length === 0 ? 'none' : '0 4px 12px rgba(155, 114, 203, 0.3)',
+                    transition: 'all 0.2s',
+                    opacity: aiPayload.targets.length === 0 ? 0.7 : 1
+                  }}
+                  onMouseEnter={(e) => { if (aiPayload.targets.length > 0) e.currentTarget.style.boxShadow = '0 6px 16px rgba(155, 114, 203, 0.4)'; }}
+                  onMouseLeave={(e) => { if (aiPayload.targets.length > 0) e.currentTarget.style.boxShadow = '0 4px 12px rgba(155, 114, 203, 0.3)'; }}
                 >
-                  Execute Actions ({aiPayload.targets.length} entries)
+                  Execute Actions ({aiPayload.targets.length})
                 </button>
               )}
             </div>
