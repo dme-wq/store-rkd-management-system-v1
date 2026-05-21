@@ -879,11 +879,19 @@ export default function Home() {
         return !isNaN(d.getTime()) && d >= dateCutoffFrom && d <= dateCutoffTo;
       });
 
-      const compressedIndents = activeIndents.map(r =>
-        `${stripRKD(r["Store RKD Number"])}|${r["Item Name"]}|${r["Require Qty"]}|${abbrevStatus(r["Status"])}|${r["Person Filling Name"]}|${r["Timestamp"]}`
-      );
+      const isActionQuery = /(close|cancel|band|karo|kardo|bund|band kar)/i.test(p);
 
-      // Only send PO/Inward if the question is about them, else skip to save tokens
+      // For ACTION queries: include IssueQty + StockInStore so AI validates before suggesting CLOSE
+      const compressedIndents = activeIndents.map(r => {
+        const stockVal = stockMap[r["Item Name"]] ?? 0;
+        if (isActionQuery) {
+          // Full context: RKD|Item|RequireQty|IssueQty|Stock|Status|Person|Timestamp
+          return `${stripRKD(r["Store RKD Number"])}|${r["Item Name"]}|Req:${r["Require Qty"]}|Issued:${r["Issue Qty"] || 0}|Stock:${stockVal}|${abbrevStatus(r["Status"])}|${r["Person Filling Name"]}|${r["Timestamp"]}`;
+        }
+        // VIEW queries: lighter format
+        return `${stripRKD(r["Store RKD Number"])}|${r["Item Name"]}|${r["Require Qty"]}|${abbrevStatus(r["Status"])}|${r["Person Filling Name"]}|${r["Timestamp"]}`;
+      });
+
       const needsPO = /(po|purchase order|order|vendor)/i.test(p);
       const needsInward = /(inward|received|aaya|stock main)/i.test(p);
 
@@ -895,9 +903,16 @@ export default function Home() {
         .filter(([, v]) => { const d = parseIndentDate((v as any).poDate || ''); return !isNaN(d.getTime()) && d >= dateCutoffFrom && d <= dateCutoffTo; })
         .map(([k, v]) => `${stripRKD(k)}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`) : [];
 
+      // Always include stock for ACTION queries so AI can validate CLOSE eligibility
+      const activeItemSet = new Set(activeIndents.map(r => r["Item Name"]));
+      const compressedStock = (isActionQuery || needsInward) ? Object.entries(stockMap)
+        .filter(([k]) => activeItemSet.has(k))
+        .map(([k, v]) => `${k}|${v}`) : [];
+
       const contextData = {
         window: detectedWindow,
         indents: compressedIndents,
+        ...(compressedStock.length > 0 && { stockLevels: compressedStock }),
         ...(needsInward && { inwardHistory: compressedInwards }),
         ...(needsPO && { poHistory: compressedPos }),
       };
@@ -920,13 +935,18 @@ export default function Home() {
         return;
       }
 
-      // Map targets back to real rows from the dataset
+      // Map targets back to real rows — handle both short (32485) and full (RKD_S_2026_32485) formats
       const enrichedTargets = (targets || []).map((t: any) => {
-        const row = data.find(r => r["Store RKD Number"] === t.rkdNumber);
+        const rkdNum = t.rkdNumber || "";
+        const row = data.find(r => 
+          r["Store RKD Number"] === rkdNum ||                          // exact full match
+          r["Store RKD Number"]?.endsWith(`_${rkdNum}`) ||            // suffix match: 32485
+          r["Store RKD Number"]?.replace(/^RKD_S_\d{4}_/, '') === rkdNum.replace(/^RKD_S_\d{4}_/, '') // normalize both
+        );
         return row ? { ...row, _aiProposedAction: t.proposedAction, _aiReason: t.reason } : null;
       }).filter(Boolean);
 
-      setAiPayload({ intent, analysis, targets: enrichedTargets, originalText: finalPrompt });
+      setAiPayload({ intent, analysis, targets: enrichedTargets, originalText: finalPrompt, suggestedFilters: resData.result.suggestedFilters });
       setAiReviewOpen(true);
       setAiPrompt("");
 
@@ -939,13 +959,43 @@ export default function Home() {
 
   const executeAiBulkAction = async () => {
     if (!aiPayload || aiPayload.targets.length === 0 || aiPayload.intent !== "ACTION") return;
+
+    // ── HARD BUSINESS RULE ENFORCEMENT (before any API call) ──
+    const blocked: string[] = [];
+    const validTargets = aiPayload.targets.filter(t => {
+      // Rule 1: Cannot act on already-Closed or already-Cancelled records
+      if (t["Status"] !== "Requirement Open") {
+        blocked.push(`${t["Item Name"]} (${t["Status"]} — already processed)`);
+        return false;
+      }
+      // Rule 2: Cannot CLOSE if stock is 0 AND issue qty is 0
+      if (t._aiProposedAction === "CLOSE") {
+        const stock = Number(stockMap[t["Item Name"]] ?? 0);
+        const issued = Number(t["Issue Qty"] ?? 0);
+        if (stock === 0 && issued === 0) {
+          blocked.push(`${t["Item Name"]} (Stock: 0, Issued: 0 — cannot close without issue)`);
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (blocked.length > 0) {
+      showAlert(`⚠️ Blocked ${blocked.length} record(s) due to business rules:\n• ${blocked.join('\n• ')}`, "warning");
+    }
+    if (validTargets.length === 0) {
+      showAlert("No valid records to process after applying business rules.", "warning");
+      return;
+    }
+
     setAiReviewOpen(false);
     
     // Filter only those that actually have an action
-    const actionTargets = aiPayload.targets.filter(t => t._aiProposedAction === "CLOSE" || t._aiProposedAction === "CANCEL");
+    const actionTargets = validTargets.filter(t => t._aiProposedAction === "CLOSE" || t._aiProposedAction === "CANCEL");
     if (actionTargets.length === 0) {
       showAlert("No actionable records to process.", "warning");
       return;
+
     }
 
     setAiExecutionProgress({ current: 0, total: actionTargets.length, active: true });
