@@ -802,11 +802,7 @@ export default function Home() {
         .map((res: any) => res[0].transcript)
         .join('');
       setAiPrompt(transcript);
-      if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
-      // Auto-trigger 1.5 seconds after speech is recognized
-      aiTimeoutRef.current = setTimeout(() => {
-        processAiCommand(transcript);
-      }, 1500);
+      // Voice fills the box \u2014 user reviews and clicks Send manually
     };
     recognition.onerror = (e: any) => {
       setIsListening(false);
