@@ -570,17 +570,17 @@ function getLiveStatus(
   const imsStock    = imsStockStr !== undefined ? parseFloat(imsStockStr) || 0 : NaN;
 
   // Step 1: Always show base state first
-  steps.push({ label: "Indent Done", emoji: "📋", color: "#94a3b8", bg: "rgba(148,163,184,0.1)", border: "rgba(148,163,184,0.25)" });
+  steps.push({ label: "Indent Done", emoji: "📋", color: "#ffffff", bg: "rgba(148,163,184,0.3)", border: "rgba(255,255,255,0.4)" });
 
   // Step 2: Stock status (if open and not yet issued)
   if (status === "Requirement Open" && issueQty === 0) {
     if (!isNaN(imsStock)) {
       if (imsStock <= 0) {
-        steps.push({ label: "Out of Stock", emoji: "🔴", color: "#ef4444", bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.45)" });
+        steps.push({ label: "Out of Stock", emoji: "🔴", color: "#ffffff", bg: "rgba(239,68,68,0.4)", border: "rgba(255,255,255,0.4)" });
       } else if (imsStock < reqQty) {
-        steps.push({ label: "Low Stock", emoji: "⚠️", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.35)" });
+        steps.push({ label: "Low Stock", emoji: "⚠️", color: "#ffffff", bg: "rgba(245,158,11,0.4)", border: "rgba(255,255,255,0.4)" });
       } else {
-        steps.push({ label: "Stock Available", emoji: "🟢", color: "#4ade80", bg: "rgba(74,222,128,0.12)", border: "rgba(74,222,128,0.3)" });
+        steps.push({ label: "Stock Available", emoji: "🟢", color: "#ffffff", bg: "rgba(74,222,128,0.3)", border: "rgba(255,255,255,0.4)" });
       }
     }
   }
@@ -588,41 +588,41 @@ function getLiveStatus(
   // Step 3: Approval flow
   if (approvalReq === "yes" || approvalReq === "हाँ") {
     if (approvedQty > 0) {
-      steps.push({ label: "Approval Done", emoji: "✅", color: "#a78bfa", bg: "rgba(167,139,250,0.15)", border: "rgba(167,139,250,0.4)" });
+      steps.push({ label: "Approval Done", emoji: "✅", color: "#ffffff", bg: "rgba(167,139,250,0.4)", border: "rgba(255,255,255,0.4)" });
     } else {
-      steps.push({ label: "Approval Pending", emoji: "⏳", color: "#f97316", bg: "rgba(249,115,22,0.15)", border: "rgba(249,115,22,0.4)" });
+      steps.push({ label: "Approval Pending", emoji: "⏳", color: "#ffffff", bg: "rgba(249,115,22,0.4)", border: "rgba(255,255,255,0.4)" });
     }
   } else if (approvalReq === "no" || approvalReq === "नहीं") {
-    steps.push({ label: "Approval Done", emoji: "✅", color: "#a78bfa", bg: "rgba(167,139,250,0.15)", border: "rgba(167,139,250,0.4)" });
+    steps.push({ label: "Approval Done", emoji: "✅", color: "#ffffff", bg: "rgba(167,139,250,0.4)", border: "rgba(255,255,255,0.4)" });
   } else if (approvalReq === "pending" || approvalReq === "pending owner approval") {
-    steps.push({ label: "Approval Pending", emoji: "⏳", color: "#f97316", bg: "rgba(249,115,22,0.15)", border: "rgba(249,115,22,0.4)" });
+    steps.push({ label: "Approval Pending", emoji: "⏳", color: "#ffffff", bg: "rgba(249,115,22,0.4)", border: "rgba(255,255,255,0.4)" });
   }
 
   // Step 4: PO Created (from poMap lookup)
   const poInfo = poMap[rkdNumber];
   if (poInfo && poInfo.poNumber) {
-    steps.push({ label: `Order Raised`, emoji: "📄", color: "#38bdf8", bg: "rgba(56,189,248,0.12)", border: "rgba(56,189,248,0.35)" });
+    steps.push({ label: `Order Raised`, emoji: "📄", color: "#ffffff", bg: "rgba(56,189,248,0.3)", border: "rgba(255,255,255,0.4)" });
   }
 
   // Step 5: Inward Done (from inwardMap lookup)
   const inwardInfo = inwardMap[rkdNumber];
   if (inwardInfo && inwardInfo.inwardQty) {
-    steps.push({ label: `Inward Done (${inwardInfo.inwardQty})`, emoji: "📦", color: "#34d399", bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.35)" });
+    steps.push({ label: `Inward Done (${inwardInfo.inwardQty})`, emoji: "📦", color: "#ffffff", bg: "rgba(52,211,153,0.3)", border: "rgba(255,255,255,0.4)" });
   }
 
   // Step 6: Issue status
   if (issueQty > 0 && issueQty >= reqQty) {
-    steps.push({ label: "Issued ✓", emoji: "✅", color: "#10b981", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.4)" });
+    steps.push({ label: "Issued ✓", emoji: "✅", color: "#ffffff", bg: "rgba(16,185,129,0.4)", border: "rgba(255,255,255,0.4)" });
   } else if (issueQty > 0 && issueQty < reqQty) {
-    steps.push({ label: `Partial (${issueQty}/${reqQty})`, emoji: "🔄", color: "#60a5fa", bg: "rgba(96,165,250,0.12)", border: "rgba(96,165,250,0.35)" });
+    steps.push({ label: `Partial (${issueQty}/${reqQty})`, emoji: "🔄", color: "#ffffff", bg: "rgba(96,165,250,0.3)", border: "rgba(255,255,255,0.4)" });
   }
 
   // Step 7: Final state overrides everything
   if (status === "Requirement Closed") {
-    return [{ label: "Indent Closed", emoji: "✅", color: "#22c55e", bg: "rgba(34,197,94,0.15)", border: "rgba(34,197,94,0.35)" }];
+    return [{ label: "Indent Closed", emoji: "✅", color: "#ffffff", bg: "rgba(34,197,94,0.4)", border: "rgba(255,255,255,0.4)" }];
   }
   if (status === "Requirement Cancelled") {
-    return [{ label: "Cancelled", emoji: "🚫", color: "#94a3b8", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.3)" }];
+    return [{ label: "Cancelled", emoji: "🚫", color: "#ffffff", bg: "rgba(148,163,184,0.3)", border: "rgba(255,255,255,0.4)" }];
   }
 
   return steps;

@@ -874,7 +874,7 @@
 .dataTable th:nth-child(12) { width: 100px; } /* Stock */
 .dataTable th:nth-child(13) { width: 125px; } /* Status */
 .dataTable th:nth-child(14) { width: 160px; } /* Live Status */
-.dataTable th:nth-child(15) { width: 70px;  } /* Action */
+.dataTable th:nth-child(15) { width: 140px;  } /* Action */
 
 .dataTable th {
   background: #334155; /* Dark Slate Grey */
