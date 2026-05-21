@@ -820,23 +820,28 @@ export default function Home() {
     setIsAiParsing(true);
     try {
       // Compress dataset into pipe-delimited strings to achieve maximum token efficiency
-      // Cap at 1000 indents (approx 6 months of data) to prevent Vercel 1MB payload limits (413 Request Entity Too Large)
-      const compressedIndents = data.slice(0, 1000).map(r => 
+      // Cap at 500 indents (approx 2 months of data) to prevent hitting 1M Token limit
+      const activeIndents = data.slice(0, 500);
+      const compressedIndents = activeIndents.map(r => 
         `${r["Store RKD Number"]}|${r["Item Name"]}|${r["Require Qty"]}|${r["Status"]}|${r["Person Filling Name"]}|${r["Timestamp"]}`
       );
 
-      const compressedStock = Object.entries(stockMap).map(([k, v]) => `${k}|${v}`);
+      const activeItemSet = new Set(activeIndents.map(r => r["Item Name"]));
+
+      const compressedStock = Object.entries(stockMap)
+        .filter(([k, v]) => Number(v) <= 5 || activeItemSet.has(k))
+        .map(([k, v]) => `${k}|${v}`);
       
-      const compressedInwards = Object.entries(inwardMap).map(([k, v]) => 
-        `${k}|${(v as any).inwardQty}|${(v as any).inwardDate}`
-      );
+      // Grab only the last 1000 POs/Inwards (most recent) to prevent 1M Token Context Window Limit
+      const compressedInwards = Object.entries(inwardMap)
+        .slice(-1000)
+        .map(([k, v]) => `${k}|${(v as any).inwardQty}|${(v as any).inwardDate}`);
       
-      const compressedPos = Object.entries(poMap).map(([k, v]) => 
-        `${k}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`
-      );
+      const compressedPos = Object.entries(poMap)
+        .slice(-1000)
+        .map(([k, v]) => `${k}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`);
 
       const contextData = {
-        format: "RKD|Item|Qty|Status|User|Date",
         indents: compressedIndents,
         stockLevels: compressedStock,
         inwardHistory: compressedInwards,
