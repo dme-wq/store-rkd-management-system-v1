@@ -1801,7 +1801,7 @@ export default function Home() {
 
             {/* Smart Filters — Unified Row */}
             <div className={styles.filterRow} style={{ flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: '350px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: (isListening || aiPrompt.length > 0) ? '100%' : '350px', transition: 'min-width 0.3s ease' }}>
                 
                 {/* ── GEMINI VOICE ASSIST BAR ── */}
                 <div style={{ 
@@ -1881,7 +1881,11 @@ export default function Home() {
                       placeholder={isListening ? "Listening to your request..." : "Ask Gemini to manage your inventory..."}
                       className={styles.searchInput}
                       value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onChange={(e) => {
+                        setAiPrompt(e.target.value);
+                        e.target.style.height = '38px';
+                        e.target.style.height = Math.max(38, e.target.scrollHeight) + 'px';
+                      }}
                       onKeyDown={(e) => { 
                         if(e.key === 'Enter' && !e.shiftKey) { 
                           e.preventDefault(); 
@@ -1898,9 +1902,11 @@ export default function Home() {
                         fontSize: '0.95rem',
                         fontWeight: 500,
                         resize: 'none',
-                        height: (isListening || aiPrompt.length > 50) ? '80px' : '38px',
-                        paddingTop: (isListening || aiPrompt.length > 50) ? '8px' : '8px',
-                        transition: 'height 0.2s ease',
+                        minHeight: '38px',
+                        height: aiPrompt.length === 0 && !isListening ? '38px' : 'auto',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        overflow: 'hidden',
                         lineHeight: '1.4'
                       }}
                     />
