@@ -1963,14 +1963,37 @@ export default function Home() {
                       }}
                     />
                     
+                    {/* Send Button — always visible, outside the floating textarea layer */}
                     {isAiParsing ? (
-                      <Loader2 className={styles.btnSpin} size={20} style={{ color: '#4285f4', animation: 'spin 1s linear infinite' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 300, position: 'relative' }}>
+                        <Loader2 size={20} style={{ color: '#4285f4', animation: 'spin 1s linear infinite' }} />
+                      </div>
                     ) : (
-                      <button onClick={() => processAiCommand()} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Send to Gemini">
-                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: aiPrompt.trim() ? '#4285f4' : '#cbd5e1', transition: 'color 0.2s' }}>
-                           <line x1="22" y1="2" x2="11" y2="13"></line>
-                           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                         </svg>
+                      <button 
+                        onClick={() => processAiCommand()} 
+                        disabled={!aiPrompt.trim()}
+                        style={{ 
+                          background: aiPrompt.trim() ? 'linear-gradient(135deg, #4285f4, #9b72cb)' : '#f1f5f9',
+                          border: 'none', 
+                          cursor: aiPrompt.trim() ? 'pointer' : 'default', 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          transition: 'all 0.2s',
+                          zIndex: 300,
+                          position: 'relative',
+                          boxShadow: aiPrompt.trim() ? '0 2px 8px rgba(66,133,244,0.4)' : 'none'
+                        }} 
+                        title="Send to Gemini"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={aiPrompt.trim() ? '#fff' : '#cbd5e1'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="22" y1="2" x2="11" y2="13"></line>
+                          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
                       </button>
                     )}
                   </div>
@@ -2738,8 +2761,24 @@ export default function Home() {
         </div>
       )}
 
+      {/* ✨ AI Processing "Please Wait" Overlay */}
+      {isAiParsing && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 99998, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', padding: '40px 48px', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,0.2)', maxWidth: '340px', width: '90%' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '24px' }}>
+              {['#4285f4', '#ea4335', '#fbbc05', '#34a853'].map((c, i) => (
+                <div key={c} style={{ width: '14px', height: '14px', borderRadius: '50%', background: c, animation: 'geminiPulse 1s ease-in-out infinite alternate', animationDelay: `${i * 0.2}s` }} />
+              ))}
+            </div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1e293b', margin: '0 0 8px' }}>Gemini is Analyzing...</h3>
+            <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>Processing your command against the last 60 days of store data.</p>
+          </div>
+        </div>
+      )}
+
       {/* ── AI Background Execution Overlay ── */}
       {aiExecutionProgress.active && (
+
          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.8)', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
             <Loader2 className={styles.btnSpin} size={48} style={{ color: '#8b5cf6', marginBottom: 16 }} />
             <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>AI Executing Action</h2>
