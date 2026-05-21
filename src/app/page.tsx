@@ -817,50 +817,55 @@ export default function Home() {
     if (!finalPrompt.trim()) return;
     setIsAiParsing(true);
     try {
-      // --- 60-Day Date-Based Filter (more precise than row count) ---
-      const now = new Date();
-      const cutoff60Days = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-
+      // ── Hindi month name parser ──
+      const hindiMonths: Record<string, string> = {
+        'जनवरी': '01', 'फरवरी': '02', 'मार्च': '03', 'अप्रैल': '04',
+        'मई': '05', 'जून': '06', 'जुलाई': '07', 'अगस्त': '08',
+        'सितंबर': '09', 'अक्टूबर': '10', 'नवंबर': '11', 'दिसंबर': '12'
+      };
       const parseIndentDate = (ts: string): Date => {
-        // Hindi month names → month number mapping
-        const hindiMonths: Record<string, string> = {
-          'जनवरी': '01', 'फरवरी': '02', 'मार्च': '03', 'अप्रैल': '04',
-          'मई': '05', 'जून': '06', 'जुलाई': '07', 'अगस्त': '08',
-          'सितंबर': '09', 'अक्टूबर': '10', 'नवंबर': '11', 'दिसंबर': '12'
-        };
         try {
-          // Normalize: replace Hindi month with numeric month
           let normalized = ts;
           for (const [hindi, num] of Object.entries(hindiMonths)) {
-            if (normalized.includes(hindi)) {
-              normalized = normalized.replace(hindi, num);
-              break;
-            }
+            if (normalized.includes(hindi)) { normalized = normalized.replace(hindi, num); break; }
           }
-          // Now try parsing: "21-05-2026 10:25" or "21-May-2026 10:25"
-          const datePart = normalized.split(' ')[0]; // "21-05-2026"
-          const parts = datePart.split('-');
+          const parts = normalized.split(' ')[0].split('-');
           if (parts.length === 3) {
-            // Try DD-MM-YYYY (numeric)
-            const asISO = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-            const d1 = new Date(asISO);
+            const d1 = new Date(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
             if (!isNaN(d1.getTime())) return d1;
-            // Try DD-MMM-YYYY (English short month e.g. "May")
             const d2 = new Date(`${parts[1]} ${parts[0]}, ${parts[2]}`);
             if (!isNaN(d2.getTime())) return d2;
           }
         } catch { }
-        return new Date(ts); // last resort
+        return new Date(ts);
       };
 
+      // ── SMART PRE-FILTER: detect date intent from prompt to minimize tokens sent ──
+      const now = new Date();
+      const istNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      const todayStart = new Date(istNow.getFullYear(), istNow.getMonth(), istNow.getDate());
+      const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+      const yesterdayEnd = new Date(todayStart.getTime() - 1);
 
-      const activeIndents = data.filter(r => {
-        const ts = r["Timestamp"] || "";
-        const d = parseIndentDate(ts);
-        return !isNaN(d.getTime()) && d >= cutoff60Days;
-      });
+      const p = finalPrompt.toLowerCase();
+      let dateCutoffFrom: Date;
+      let dateCutoffTo: Date = new Date(8640000000000000); // far future
+      let detectedWindow = 'Last 60 Days';
 
-      // Ultra-compact pipe format: strip "RKD_S_2026_" prefix to save tokens
+      if (/(aaj|आज|today|abhi|अभी)/i.test(p)) {
+        dateCutoffFrom = todayStart; detectedWindow = 'Today';
+      } else if (/(kal\b|कल|yesterday)/i.test(p)) {
+        dateCutoffFrom = yesterdayStart; dateCutoffTo = yesterdayEnd; detectedWindow = 'Yesterday';
+      } else if (/(7 din|7 day|last week|pichle 7|सात दिन)/i.test(p)) {
+        dateCutoffFrom = new Date(now.getTime() - 7 * 86400000); detectedWindow = 'Last 7 Days';
+      } else if (/(14 din|14 day|pichle 14)/i.test(p)) {
+        dateCutoffFrom = new Date(now.getTime() - 14 * 86400000); detectedWindow = 'Last 14 Days';
+      } else if (/(30 din|30 day|mahine|month|महीना)/i.test(p)) {
+        dateCutoffFrom = new Date(now.getTime() - 30 * 86400000); detectedWindow = 'Last 30 Days';
+      } else {
+        dateCutoffFrom = new Date(now.getTime() - 60 * 86400000); detectedWindow = 'Last 60 Days';
+      }
+
       const stripRKD = (s: string) => s?.replace(/^RKD_S_\d{4}_/, '') ?? s;
       const abbrevStatus = (s: string) => {
         if (s === 'Requirement Open') return 'Open';
@@ -869,36 +874,32 @@ export default function Home() {
         return s;
       };
 
+      const activeIndents = data.filter(r => {
+        const d = parseIndentDate(r["Timestamp"] || "");
+        return !isNaN(d.getTime()) && d >= dateCutoffFrom && d <= dateCutoffTo;
+      });
+
       const compressedIndents = activeIndents.map(r =>
         `${stripRKD(r["Store RKD Number"])}|${r["Item Name"]}|${r["Require Qty"]}|${abbrevStatus(r["Status"])}|${r["Person Filling Name"]}|${r["Timestamp"]}`
       );
 
-      const activeItemSet = new Set(activeIndents.map(r => r["Item Name"]));
+      // Only send PO/Inward if the question is about them, else skip to save tokens
+      const needsPO = /(po|purchase order|order|vendor)/i.test(p);
+      const needsInward = /(inward|received|aaya|stock main)/i.test(p);
 
-      const compressedStock = Object.entries(stockMap)
-        .filter(([k, v]) => Number(v) <= 5 || activeItemSet.has(k))
-        .map(([k, v]) => `${k}|${v}`);
+      const compressedInwards = needsInward ? Object.entries(inwardMap)
+        .filter(([, v]) => { const d = parseIndentDate((v as any).inwardDate || ''); return !isNaN(d.getTime()) && d >= dateCutoffFrom && d <= dateCutoffTo; })
+        .map(([k, v]) => `${stripRKD(k)}|${(v as any).inwardQty}|${(v as any).inwardDate}`) : [];
 
-      // Last 60 days of PO/Inward history only
-      const compressedInwards = Object.entries(inwardMap)
-        .filter(([, v]) => {
-          const d = parseIndentDate((v as any).inwardDate || '');
-          return !isNaN(d.getTime()) && d >= cutoff60Days;
-        })
-        .map(([k, v]) => `${stripRKD(k)}|${(v as any).inwardQty}|${(v as any).inwardDate}`);
-
-      const compressedPos = Object.entries(poMap)
-        .filter(([, v]) => {
-          const d = parseIndentDate((v as any).poDate || '');
-          return !isNaN(d.getTime()) && d >= cutoff60Days;
-        })
-        .map(([k, v]) => `${stripRKD(k)}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`);
+      const compressedPos = needsPO ? Object.entries(poMap)
+        .filter(([, v]) => { const d = parseIndentDate((v as any).poDate || ''); return !isNaN(d.getTime()) && d >= dateCutoffFrom && d <= dateCutoffTo; })
+        .map(([k, v]) => `${stripRKD(k)}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`) : [];
 
       const contextData = {
-        indents: compressedIndents,          // last 60 days
-        stockLevels: compressedStock,        // low-stock + active items
-        inwardHistory: compressedInwards,    // last 60 days
-        poHistory: compressedPos             // last 60 days
+        window: detectedWindow,
+        indents: compressedIndents,
+        ...(needsInward && { inwardHistory: compressedInwards }),
+        ...(needsPO && { poHistory: compressedPos }),
       };
       
       const res = await fetch("/api/ai", {
@@ -2662,6 +2663,8 @@ export default function Home() {
               </div>
             )}
 
+            {/* For ACTION queries only: show the review table */}
+            {aiPayload.intent === "ACTION" && aiPayload.targets.length > 0 && (
             <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(226, 232, 240, 0.6)', borderRadius: '12px', marginBottom: '20px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead style={{ background: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)', position: 'sticky', top: 0, zIndex: 1 }}>
@@ -2669,62 +2672,32 @@ export default function Home() {
                     <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>RKD Number</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Item Name</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Status</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Req Qty</th>
-                    {aiPayload.intent === "ACTION" && (
-                      <>
-                        <th style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Action</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Exclude</th>
-                      </>
-                    )}
+                    <th style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Action</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Exclude</th>
                   </tr>
                 </thead>
                 <tbody>
                   {aiPayload.targets.map(row => (
-                    <tr key={row["Store RKD Number"]} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s', ':hover': { background: '#f8fafc' } } as any}>
-                      <td style={{ padding: '12px 16px', color: '#475569' }}>{row["Store RKD Number"]}</td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1e293b' }}>{row["Item Name"]}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                         <span style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>{row["Status"]}</span>
+                    <tr key={row["Store RKD Number"]} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '10px 16px', color: '#475569', fontSize: '0.8rem' }}>{row["Store RKD Number"]}</td>
+                      <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1e293b' }}>{row["Item Name"]}</td>
+                      <td style={{ padding: '10px 16px' }}>
+                        <span style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>{row["Status"]}</span>
                       </td>
-                      <td style={{ padding: '12px 16px', color: '#6366f1', fontWeight: 700 }}>{row["Require Qty"]} <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 400 }}>{row["Units"]}</span></td>
-                      {aiPayload.intent === "ACTION" && (
-                        <>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                            <span style={{ 
-                              padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700,
-                              background: row._aiProposedAction === "CLOSE" ? 'rgba(34, 197, 94, 0.1)' : row._aiProposedAction === "CANCEL" ? 'rgba(239, 68, 68, 0.1)' : '#f1f5f9',
-                              color: row._aiProposedAction === "CLOSE" ? '#16a34a' : row._aiProposedAction === "CANCEL" ? '#dc2626' : '#475569',
-                              border: row._aiProposedAction === "CLOSE" ? '1px solid rgba(34, 197, 94, 0.2)' : row._aiProposedAction === "CANCEL" ? '1px solid rgba(239, 68, 68, 0.2)' : 'none'
-                            }}>
-                              {row._aiProposedAction}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <button 
-                              onClick={() => setAiPayload({ ...aiPayload, targets: aiPayload.targets.filter(r => r["Store RKD Number"] !== row["Store RKD Number"]) })}
-                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.2rem', transition: 'color 0.2s', padding: '4px' }}
-                              title="Do not process this row"
-                              onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
-                            >
-                              🗑️
-                            </button>
-                          </td>
-                        </>
-                      )}
+                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                        <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, background: row._aiProposedAction === "CLOSE" ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: row._aiProposedAction === "CLOSE" ? '#16a34a' : '#dc2626' }}>
+                          {row._aiProposedAction}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                        <button onClick={() => setAiPayload({ ...aiPayload, targets: aiPayload.targets.filter(r => r["Store RKD Number"] !== row["Store RKD Number"]) })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.1rem' }} title="Remove">🗑️</button>
+                      </td>
                     </tr>
                   ))}
-                  {aiPayload.targets.length === 0 && (
-                    <tr>
-                      <td colSpan={aiPayload.intent === "ACTION" ? 6 : 4} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
-                        <div style={{ fontSize: '2rem', marginBottom: '8px' }}>👻</div>
-                        No records match the current filters or all items were removed.
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
+            )}
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(226, 232, 240, 0.5)' }}>
               <button 
@@ -2741,18 +2714,11 @@ export default function Home() {
                   onClick={executeAiBulkAction}
                   style={{ 
                     background: aiPayload.targets.length === 0 ? '#cbd5e1' : 'linear-gradient(90deg, #4285f4, #9b72cb, #d96570)', 
-                    border: 'none', 
-                    padding: '10px 24px', 
-                    borderRadius: '8px', 
-                    color: '#fff', 
-                    fontWeight: 600, 
+                    border: 'none', padding: '10px 24px', borderRadius: '8px', color: '#fff', fontWeight: 600, 
                     cursor: aiPayload.targets.length === 0 ? 'not-allowed' : 'pointer',
                     boxShadow: aiPayload.targets.length === 0 ? 'none' : '0 4px 12px rgba(155, 114, 203, 0.3)',
-                    transition: 'all 0.2s',
-                    opacity: aiPayload.targets.length === 0 ? 0.7 : 1
+                    transition: 'all 0.2s', opacity: aiPayload.targets.length === 0 ? 0.7 : 1
                   }}
-                  onMouseEnter={(e) => { if (aiPayload.targets.length > 0) e.currentTarget.style.boxShadow = '0 6px 16px rgba(155, 114, 203, 0.4)'; }}
-                  onMouseLeave={(e) => { if (aiPayload.targets.length > 0) e.currentTarget.style.boxShadow = '0 4px 12px rgba(155, 114, 203, 0.3)'; }}
                 >
                   Execute Actions ({aiPayload.targets.length})
                 </button>

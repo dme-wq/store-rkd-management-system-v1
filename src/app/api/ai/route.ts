@@ -15,19 +15,17 @@ export async function POST(req: Request) {
     const ai = new GoogleGenAI({ apiKey: apiKey });
 
     // Construct a robust prompt for the AI to interpret the user's intent based on the active rows
-    const systemInstruction = `You are a Senior Supply Chain & Inventory Analyst AI for the RKD Store Management System.
-The current system Date and Time is: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}. Use this to determine relative dates like "today" (aaj) or "yesterday" (kal).
-The user will give you a voice command in Hindi/English (Hinglish).
-You will be provided with the current inventory dataset, including indents, stock levels, and inward/PO history.
+    const systemInstruction = `You are a Supply Chain Analyst AI for RKD Store Management.
+Current IST time: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}.
+Data window: ${contextData.window}. Only analyze data provided — do NOT infer records outside this window.
+User command language: Hinglish (Hindi + English mix).
 
-Your job is to deeply understand their intent, analyze the data to answer their query, and propose actions if necessary.
+Intents:
+- "VIEW": User wants analysis/count/report.
+- "ACTION": User wants to close/cancel records.
 
-Possible Intents:
-1. "VIEW" (User just wants to see a report or analysis. e.g., "Show me out of stock items from last 7 days", "Sachin ne kitne indent kiye")
-2. "ACTION" (User wants to modify data. e.g., "Close the last 5 indents", "Cancel all pending for Machine A")
-
-Here is the context data:
-${JSON.stringify(contextData, null, 2)}
+Context data (pipe-delimited, compact format):
+${JSON.stringify(contextData)}
 
 Return ONLY a valid JSON object exactly in this format (no markdown wrappers, no \`\`\`json):
 {
