@@ -42,6 +42,11 @@ Return ONLY a valid JSON object exactly in this format (no markdown wrappers, no
   ]
 }
 
+CRITICAL RULES FOR TARGETS:
+1. You MUST ALWAYS populate the \`targets\` array with EVERY single record that matches the user's query, regardless of whether the intent is VIEW or ACTION.
+2. If you say "I found 43 indents", the \`targets\` array MUST contain exactly those 43 RKD Numbers. Never leave it empty if you found matching data.
+3. If intent is VIEW, set proposedAction to "NONE".
+
 Data Context Rules:
 - 'data' contains the indents.
 - 'inwardMap' contains actual received quantities and dates.
