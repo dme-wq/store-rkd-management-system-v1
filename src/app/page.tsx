@@ -2522,9 +2522,9 @@ export default function Home() {
                   <button 
                     onClick={() => {
                       const f = aiPayload.suggestedFilters;
-                      if (f?.dateFilter && f.dateFilter !== "null") setDateFilter(f.dateFilter);
+                      if (f?.dateFilter && f.dateFilter !== "null") setSelDateFilter({ label: f.dateFilter, value: f.dateFilter });
                       if (f?.statusFilter && f.statusFilter !== "null") setStatusFilter(f.statusFilter);
-                      if (f?.personFilter && f.personFilter !== "null") setPersonFilter(f.personFilter);
+                      if (f?.personFilter && f.personFilter !== "null") setSelPerson({ label: f.personFilter, value: f.personFilter });
                       setAiReviewOpen(false);
                     }}
                     style={{
