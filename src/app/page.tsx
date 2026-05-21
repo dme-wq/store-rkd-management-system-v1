@@ -789,7 +789,7 @@ export default function Home() {
       return;
     }
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN'; // Indian English natively handles Hinglish extremely well and fast
+    recognition.lang = 'hi-IN'; // Hindi model correctly handles Hinglish (kal, kitne, indent, close, cancel)
     recognition.continuous = false;
     recognition.interimResults = true; // Real-time feedback
 
