@@ -1817,7 +1817,6 @@ export default function Home() {
                     <button 
                       onClick={isListening ? undefined : startListening} 
                       style={{ 
-                        background: 'transparent', 
                         border: 'none', 
                         cursor: isListening ? 'default' : 'pointer', 
                         display: 'flex', 
