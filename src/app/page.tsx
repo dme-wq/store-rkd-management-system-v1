@@ -819,8 +819,9 @@ export default function Home() {
     if (!finalPrompt.trim()) return;
     setIsAiParsing(true);
     try {
-      // Compress dataset into pipe-delimited strings to achieve maximum token efficiency (100% full DB analysis)
-      const compressedIndents = data.map(r => 
+      // Compress dataset into pipe-delimited strings to achieve maximum token efficiency
+      // Cap at 1000 indents (approx 6 months of data) to prevent Vercel 1MB payload limits (413 Request Entity Too Large)
+      const compressedIndents = data.slice(0, 1000).map(r => 
         `${r["Store RKD Number"]}|${r["Item Name"]}|${r["Require Qty"]}|${r["Status"]}|${r["Person Filling Name"]}|${r["Timestamp"]}`
       );
 
