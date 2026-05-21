@@ -1813,7 +1813,7 @@ export default function Home() {
                   borderRadius: '24px',
                   boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
                   padding: '2px',
-                  // Gemini animated border gradient when listening or parsing
+                  height: '44px',  // Fixed height — prevents layout jumping
                   backgroundClip: 'padding-box',
                 }}>
                   {/* Animated Gradient Border Layer */}
@@ -1835,7 +1835,9 @@ export default function Home() {
                     alignItems: 'center', 
                     background: '#ffffff', 
                     borderRadius: '22px', 
-                    padding: '4px 12px 4px 8px' 
+                    padding: '4px 12px 4px 8px',
+                    height: '40px',  // Fixed inner height
+                    position: 'relative'
                   }}>
                     <button 
                       onClick={isListening ? undefined : startListening} 
@@ -1883,9 +1885,9 @@ export default function Home() {
                       value={aiPrompt}
                       onChange={(e) => {
                         setAiPrompt(e.target.value);
-                        // Only expand if content genuinely wraps to a new line (> 42px = 1 line)
-                        e.target.style.height = '38px';
-                        if (e.target.scrollHeight > 42) {
+                        // Reset then grow only if content wraps > 1 line
+                        e.target.style.height = '30px';
+                        if (e.target.scrollHeight > 36) {
                           e.target.style.height = e.target.scrollHeight + 'px';
                         }
                       }}
@@ -1899,17 +1901,28 @@ export default function Home() {
                         paddingLeft: 8, 
                         flex: 1, 
                         border: 'none', 
-                        background: 'transparent',
+                        background: 'white',
                         outline: 'none',
                         color: '#1e293b',
                         fontSize: '0.95rem',
                         fontWeight: 500,
                         resize: 'none',
-                        height: '38px',
-                        paddingTop: '8px',
-                        paddingBottom: '8px',
+                        height: '30px',
+                        paddingTop: '4px',
+                        paddingBottom: '4px',
                         overflow: 'hidden',
-                        lineHeight: '1.4'
+                        lineHeight: '1.4',
+                        // When expanded beyond 1 line, float above layout so it doesn't push table down
+                        position: aiPrompt.length > 0 && (typeof window !== 'undefined') ? 'absolute' : 'relative',
+                        top: aiPrompt.length > 0 ? 0 : 'auto',
+                        left: aiPrompt.length > 0 ? 48 : 'auto',
+                        right: aiPrompt.length > 0 ? 12 : 'auto',
+                        zIndex: aiPrompt.length > 0 ? 200 : 'auto',
+                        borderRadius: aiPrompt.length > 0 ? '8px' : '0',
+                        boxShadow: aiPrompt.length > 0 ? '0 4px 20px rgba(0,0,0,0.15)' : 'none',
+                        padding: aiPrompt.length > 0 ? '8px 12px' : '4px 4px 4px 8px',
+                        minHeight: '30px',
+                        maxHeight: '200px',
                       }}
                     />
                     
