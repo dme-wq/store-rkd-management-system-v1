@@ -93,9 +93,19 @@ export async function GET(req: Request) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+      // Fetch already processed RKDs from PO RESPONSES
+      const poRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: PO_RESPONSES_SHEET_ID,
+        range: "RESPONSES!T:T",
+      });
+      const poRkdSet = new Set<string>((poRes.data.values || []).map((r: any) => (r[0] || "").trim()));
+
       const vendorSet = new Set<string>();
       rows.forEach((row: any) => {
         if (!isDataRow(row)) return;
+        const rkdNumber   = (row[1] || "").trim();
+        if (poRkdSet.has(rkdNumber)) return; // Exclude already processed items
+
         const timestampStr = String(row[2] || "").trim(); // C=2: Timestamp
         const entryDate = parseDate(timestampStr);
         if (entryDate < thirtyDaysAgo) return; // Only last 30 days
@@ -146,9 +156,19 @@ export async function GET(req: Request) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+      // Fetch already processed RKDs from PO RESPONSES
+      const poRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: PO_RESPONSES_SHEET_ID,
+        range: "RESPONSES!T:T",
+      });
+      const poRkdSet = new Set<string>((poRes.data.values || []).map((r: any) => (r[0] || "").trim()));
+
       const items = rows
         .filter((row: any) => {
           if (!isDataRow(row)) return false;
+          const rkdNumber = (row[1] || "").trim();
+          if (poRkdSet.has(rkdNumber)) return false; // Exclude already processed items
+
           const timestampStr = String(row[2] || "").trim(); // C=2: Timestamp
           const entryDate = parseDate(timestampStr);
           if (entryDate < thirtyDaysAgo) return false;
@@ -298,7 +318,8 @@ export async function POST(req: Request) {
 
     const CONSIGNEE = "RKD Furnishings Pvt Ltd., Plot No. 238-239, Sector-29, Part-II, HUDA, Panipat-132103, Haryana";
     const now = new Date();
-    const timestamp = now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    const d = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+    const timestamp = `${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()} ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`;
 
     // ── 1. Save PDF to Drive (fully non-blocking) ───────────────
     let pdfUrl = "";
@@ -448,7 +469,8 @@ export async function PUT(req: Request) {
 
     const CONSIGNEE = "RKD Furnishings Pvt Ltd., Plot No. 238-239, Sector-29, Part-II, HUDA, Panipat-132103, Haryana";
     const now = new Date();
-    const timestamp = now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    const d = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+    const timestamp = `${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()} ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`;
 
     // ── 1. Update PDF in Drive ───────────────
     let pdfUrl = existingPdfUrl || "";

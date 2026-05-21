@@ -674,6 +674,7 @@ export default function Home() {
   const [inwardMap, setInwardMap] = useState<Record<string, { inwardQty: string; inwardDate: string }>>({}); 
   const hasLoadedOnce = useRef(false); // track if we ever got real data
   const fullDataLoaded = useRef(false); // track if full dataset has been fetched
+  const isProcessingRef = useRef(false); // prevent double clicking
   const [isFullScreen, setIsFullScreen] = useState(false);
   const fullScreenRef = useRef<HTMLDivElement>(null);
 
@@ -836,6 +837,8 @@ export default function Home() {
   }, []);
 
   const handleDirectIssue = async (row: any) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     const rowId = row._id;
     const rkdNumber = row["Store RKD Number"];
     const requireQty = row["Require Qty"];
@@ -895,12 +898,15 @@ export default function Home() {
       setData(originalData); // Rollback
     } finally {
       setUpdatingRowId(null);
+      isProcessingRef.current = false;
     }
   };
 
   const handleManualSubmit = async (issueQty: string, status: string) => {
+    if (isProcessingRef.current) return;
     if (!manualRow) return;
 
+    isProcessingRef.current = true;
     const rowId = manualRow._id;
     const rkdNumber = manualRow["Store RKD Number"];
 
@@ -966,6 +972,7 @@ export default function Home() {
       setData(originalData);
     } finally {
       setUpdatingRowId(null);
+      isProcessingRef.current = false;
     }
   };
 
@@ -978,7 +985,9 @@ export default function Home() {
   };
 
   const submitInstantApproval = async () => {
+    if (isProcessingRef.current) return;
     if (!instantApproveRow) return;
+    isProcessingRef.current = true;
     const row = instantApproveRow;
     const rowId = row._id;
     const rkdNumber = row["Store RKD Number"];
@@ -1010,7 +1019,7 @@ export default function Home() {
       if (!json.success) throw new Error(json.error || "Update failed");
       refreshAfterWrite(rowId);
 
-      setModalTitle("Instant Approval! ✅");
+      setModalTitle("Instant Approval! \u2705");
       setModalMsg(`Approval status set to "No" and Approved Quantity set to "${reqQty}" for ${rkdNumber}.`);
       setModalData(null);
       setIsModalOpen(true);
@@ -1021,33 +1030,11 @@ export default function Home() {
     } finally {
       setUpdatingRowId(null);
       setInstantApproveRow(null);
+      isProcessingRef.current = false;
     }
   };
 
-  const handleIaRefresh = async () => {
-    if (!instantApproveRow) return;
-    setIsIaRefreshing(true);
-    try {
-      await fetchData(true, false); // silent refresh
-      // Fetch data updates miscMap globally, but we can also just fetch it manually if needed.
-      // However, after fetchData completes, miscMap is updated in state.
-      // Because state update might be async, let's just make a quick direct call or wait for miscMap.
-      const res = await fetch("/api/sheets?mode=full");
-      const json = await safeResJson(res);
-      if (json.success && json.miscMap) {
-        const itemName = (instantApproveRow["Item Name"] || "").trim().toLowerCase();
-        const freshMisc = json.miscMap[itemName] || { vendor: "", rate: "" };
-        setIaVendor(freshMisc.vendor || "");
-        setIaRate(freshMisc.rate || "");
-        showAlert("Master Data Refreshed! ✨", "success");
-      }
-    } catch (e) {
-      console.error(e);
-      showAlert("Failed to refresh master data", "error");
-    } finally {
-      setIsIaRefreshing(false);
-    }
-  };
+
 
   const handleManualApprovalSubmit = async (formData: any) => {
     if (!manualRow) return;
@@ -1092,6 +1079,45 @@ export default function Home() {
       setData(originalData);
     } finally {
       setUpdatingRowId(null);
+    }
+  };
+
+  const handleRowRefresh = async (row: any) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    setUpdatingRowId(row._id);
+    try {
+      const res = await fetch("/api/sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "REFRESH_VENDOR_RATE",
+          rkdNumber: row["Store RKD Number"]
+        })
+      });
+      const json = await safeResJson(res);
+      if (json.success) {
+        await fetchData(true, false);
+        const freshMiscRes = await fetch("/api/sheets?mode=full");
+        const freshJson = await safeResJson(freshMiscRes);
+        if (freshJson.success && freshJson.miscMap) {
+          if (instantApproveRow && row._id === instantApproveRow._id) {
+            const itemName = (instantApproveRow["Item Name"] || "").trim().toLowerCase();
+            const freshMisc = freshJson.miscMap[itemName] || { vendor: "", rate: "" };
+            setIaVendor(freshMisc.vendor || "");
+            setIaRate(freshMisc.rate || "");
+          }
+        }
+        showAlert(`Refreshed ${row["Item Name"]}`, "success");
+      } else {
+        showAlert(json.message || "Failed to refresh", "error");
+      }
+    } catch (e: any) {
+      console.error(e);
+      showAlert("Error refreshing item data", "error");
+    } finally {
+      setUpdatingRowId(null);
+      isProcessingRef.current = false;
     }
   };
 
@@ -1620,7 +1646,6 @@ export default function Home() {
                       <th>Department</th>
                       <th>Machine Name</th>
                       <th>Machine ID</th>
-                      <th>Vendor Name</th>
                       <th>Rate (₹)</th>
                       <th>Stock in Store</th>
                       <th>Status</th>
@@ -1659,9 +1684,6 @@ export default function Home() {
                           <td>{row["Department"] || "-"}</td>
                           <td>{row["Machine Name"] || "-"}</td>
                           <td className={styles.colMuted}>{row["Machine ID"] || "-"}</td>
-                          <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row["Vendor Name"]}>
-                            {row["Vendor Name"] || "-"}
-                          </td>
                           <td className={styles.colMuted}>{row["Price"] || "-"}</td>
                           <td>
                             <span className={`${styles.pillStock} ${isUnknown ? styles.stockUnknown : isLow ? styles.stockDanger : styles.stockSafe}`}>
@@ -1723,6 +1745,15 @@ export default function Home() {
                                         title="Manual Issue"
                                       >
                                         <Send size={14} fill="currentColor" />
+                                      </button>
+                                      <button
+                                        className={styles.manualIssueBtn}
+                                        style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', marginLeft: '4px' }}
+                                        onClick={() => handleRowRefresh(row)}
+                                        disabled={updatingRowId === row._id}
+                                        title="Refresh Vendor Rate"
+                                      >
+                                        <RefreshCw size={14} />
                                       </button>
                                     </div>
                                   </div>

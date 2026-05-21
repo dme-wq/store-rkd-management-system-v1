@@ -712,6 +712,39 @@ ${isApproved
       await Promise.all(updatePromises);
       return NextResponse.json({ success: true, message: "Indent updated successfully" });
 
+    } else if (action === "REFRESH_VENDOR_RATE") {
+      const rowDataRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
+      });
+      const rowValues = rowDataRes.data.values?.[0] || [];
+      const itemNameStr = (rowValues[4] || "").trim(); // E is index 4
+
+      const miscRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: MISC_SHEET_ID,
+        range: "Miscellaneous Vendor & Item List!A:F",
+      });
+      const miscRows = miscRes.data.values || [];
+      let latestVendor = "";
+      let latestRate = "";
+      for (const misc of miscRows.slice(1)) {
+        if ((misc[1] || "").trim().toLowerCase() === itemNameStr.toLowerCase()) {
+          latestVendor = (misc[5] || "").trim(); // Vendor Name
+          latestRate = (misc[4] || "").trim(); // Price
+          break;
+        }
+      }
+
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: STORE_SHEET_ID,
+        range: `StoreDataEntry!N${rowNumber}:O${rowNumber}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [[latestVendor, latestRate]] }
+      });
+      
+      cachedMiscMap[itemNameStr.toLowerCase()] = { vendor: latestVendor, rate: latestRate };
+      return NextResponse.json({ success: true, message: "Vendor Rate Refreshed" });
+
     } else if (action === "UPDATE_COLUMN") {
       // Debit Note (S) or Reverse Entry (T) update
       const { column, value } = body;
