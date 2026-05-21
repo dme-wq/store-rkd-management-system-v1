@@ -722,15 +722,15 @@ ${isApproved
 
       const miscRes = await sheets.spreadsheets.values.get({
         spreadsheetId: MISC_SHEET_ID,
-        range: "Miscellaneous Vendor & Item List!A:F",
+        range: "Data!B:E",
       });
       const miscRows = miscRes.data.values || [];
       let latestVendor = "";
       let latestRate = "";
       for (const misc of miscRows.slice(1)) {
-        if ((misc[1] || "").trim().toLowerCase() === itemNameStr.toLowerCase()) {
-          latestVendor = (misc[5] || "").trim(); // Vendor Name
-          latestRate = (misc[4] || "").trim(); // Price
+        if ((misc[0] || "").trim().toLowerCase() === itemNameStr.toLowerCase()) {
+          latestVendor = (misc[3] || "").trim(); // Vendor Name (E is index 3)
+          latestRate = (misc[2] || "").trim(); // Price (D is index 2)
           break;
         }
       }
@@ -742,7 +742,9 @@ ${isApproved
         requestBody: { values: [[latestVendor, latestRate]] }
       });
       
-      cachedMiscMap[itemNameStr.toLowerCase()] = { vendor: latestVendor, rate: latestRate };
+      if (cachedMiscMap) {
+        cachedMiscMap[itemNameStr.toLowerCase()] = { vendor: latestVendor, rate: latestRate };
+      }
       return NextResponse.json({ success: true, message: "Vendor Rate Refreshed" });
 
     } else if (action === "UPDATE_COLUMN") {
