@@ -48,10 +48,12 @@ CRITICAL RULES FOR TARGETS:
 3. If intent is VIEW, set proposedAction to "NONE".
 
 Data Context Rules:
-- 'data' contains the indents.
-- 'inwardMap' contains actual received quantities and dates.
-- 'stockMap' contains current live stock.
-- Use these maps to answer questions about 'out of stock' vs 'when it arrived'.
+- The data is provided as pipe-delimited compressed strings to save tokens.
+- 'indents' format: RKD|Item|Qty|Status|User|Date
+- 'stockLevels' format: Item|CurrentStock
+- 'inwardHistory' format: RKD|InwardQty|InwardDate
+- 'poHistory' format: RKD|PONumber|PODate|VendorName
+- Use these flat lists to search for patterns, count occurrences (e.g., how many POs today), and answer questions holistically across the ENTIRE dataset.
 `;
 
     const response = await ai.models.generateContent({

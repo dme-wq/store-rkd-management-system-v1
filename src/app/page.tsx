@@ -819,22 +819,27 @@ export default function Home() {
     if (!finalPrompt.trim()) return;
     setIsAiParsing(true);
     try {
-      // To ensure 100% accurate analysis over the ENTIRE dataset while keeping API credits ultra-low,
-      // we map the ENTIRE data array but strip away 90% of the text weight.
-      const allMappedIndents = data.map(r => ({
-        id: r["Store RKD Number"],
-        item: r["Item Name"],
-        qty: r["Require Qty"],
-        status: r["Status"],
-        user: r["Person Filling Name"],
-        date: r["Timestamp"]
-      }));
+      // Compress dataset into pipe-delimited strings to achieve maximum token efficiency (100% full DB analysis)
+      const compressedIndents = data.map(r => 
+        `${r["Store RKD Number"]}|${r["Item Name"]}|${r["Require Qty"]}|${r["Status"]}|${r["Person Filling Name"]}|${r["Timestamp"]}`
+      );
+
+      const compressedStock = Object.entries(stockMap).map(([k, v]) => `${k}|${v}`);
+      
+      const compressedInwards = Object.entries(inwardMap).map(([k, v]) => 
+        `${k}|${(v as any).inwardQty}|${(v as any).inwardDate}`
+      );
+      
+      const compressedPos = Object.entries(poMap).map(([k, v]) => 
+        `${k}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`
+      );
 
       const contextData = {
-        indents: allMappedIndents,
-        stockLevels: stockMap,
-        inwardHistory: inwardMap,
-        poHistory: poMap
+        format: "RKD|Item|Qty|Status|User|Date",
+        indents: compressedIndents,
+        stockLevels: compressedStock,
+        inwardHistory: compressedInwards,
+        poHistory: compressedPos
       };
       
       const res = await fetch("/api/ai", {
