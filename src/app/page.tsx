@@ -821,11 +821,42 @@ export default function Home() {
     if (!finalPrompt.trim()) return;
     setIsAiParsing(true);
     try {
-      // Compress dataset into pipe-delimited strings to achieve maximum token efficiency
-      // Cap at 500 indents (approx 2 months of data) to prevent hitting 1M Token limit
-      const activeIndents = data.slice(0, 500);
-      const compressedIndents = activeIndents.map(r => 
-        `${r["Store RKD Number"]}|${r["Item Name"]}|${r["Require Qty"]}|${r["Status"]}|${r["Person Filling Name"]}|${r["Timestamp"]}`
+      // --- 60-Day Date-Based Filter (more precise than row count) ---
+      const now = new Date();
+      const cutoff60Days = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+      const parseIndentDate = (ts: string): Date => {
+        // Format: "21-May-2026 10:15" or "21-05-2026 10:15"
+        try {
+          const parts = ts.split(' ')[0].split('-');
+          if (parts.length === 3) {
+            // Try DD-MMM-YYYY
+            const d = new Date(`${parts[1]} ${parts[0]}, ${parts[2]}`);
+            if (!isNaN(d.getTime())) return d;
+            // Try DD-MM-YYYY
+            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          }
+        } catch { }
+        return new Date(ts);
+      };
+
+      const activeIndents = data.filter(r => {
+        const ts = r["Timestamp"] || "";
+        const d = parseIndentDate(ts);
+        return !isNaN(d.getTime()) && d >= cutoff60Days;
+      });
+
+      // Ultra-compact pipe format: strip "RKD_S_2026_" prefix to save tokens
+      const stripRKD = (s: string) => s?.replace(/^RKD_S_\d{4}_/, '') ?? s;
+      const abbrevStatus = (s: string) => {
+        if (s === 'Requirement Open') return 'Open';
+        if (s === 'Requirement Closed') return 'Closed';
+        if (s === 'Requirement Cancelled') return 'Cancelled';
+        return s;
+      };
+
+      const compressedIndents = activeIndents.map(r =>
+        `${stripRKD(r["Store RKD Number"])}|${r["Item Name"]}|${r["Require Qty"]}|${abbrevStatus(r["Status"])}|${r["Person Filling Name"]}|${r["Timestamp"]}`
       );
 
       const activeItemSet = new Set(activeIndents.map(r => r["Item Name"]));
@@ -833,21 +864,27 @@ export default function Home() {
       const compressedStock = Object.entries(stockMap)
         .filter(([k, v]) => Number(v) <= 5 || activeItemSet.has(k))
         .map(([k, v]) => `${k}|${v}`);
-      
-      // Grab only the last 1000 POs/Inwards (most recent) to prevent 1M Token Context Window Limit
+
+      // Last 60 days of PO/Inward history only
       const compressedInwards = Object.entries(inwardMap)
-        .slice(-1000)
-        .map(([k, v]) => `${k}|${(v as any).inwardQty}|${(v as any).inwardDate}`);
-      
+        .filter(([, v]) => {
+          const d = parseIndentDate((v as any).inwardDate || '');
+          return !isNaN(d.getTime()) && d >= cutoff60Days;
+        })
+        .map(([k, v]) => `${stripRKD(k)}|${(v as any).inwardQty}|${(v as any).inwardDate}`);
+
       const compressedPos = Object.entries(poMap)
-        .slice(-1000)
-        .map(([k, v]) => `${k}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`);
+        .filter(([, v]) => {
+          const d = parseIndentDate((v as any).poDate || '');
+          return !isNaN(d.getTime()) && d >= cutoff60Days;
+        })
+        .map(([k, v]) => `${stripRKD(k)}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`);
 
       const contextData = {
-        indents: compressedIndents,
-        stockLevels: compressedStock,
-        inwardHistory: compressedInwards,
-        poHistory: compressedPos
+        indents: compressedIndents,          // last 60 days
+        stockLevels: compressedStock,        // low-stock + active items
+        inwardHistory: compressedInwards,    // last 60 days
+        poHistory: compressedPos             // last 60 days
       };
       
       const res = await fetch("/api/ai", {
@@ -2556,6 +2593,50 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* AI Scorecard Panel — shown when AI returns aggregate data */}
+            {(aiPayload as any).scorecard && (aiPayload as any).scorecard.total > 0 && (
+              <div style={{ marginBottom: '16px', animation: 'fadeIn 0.5s ease' }}>
+                {/* Stat Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '14px' }}>
+                  {[
+                    { label: 'Total', value: (aiPayload as any).scorecard.total, color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+                    { label: 'Open', value: (aiPayload as any).scorecard.open, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+                    { label: 'Closed', value: (aiPayload as any).scorecard.closed, color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
+                    { label: 'Cancelled', value: (aiPayload as any).scorecard.cancelled, color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+                  ].map(sc => (
+                    <div key={sc.label} style={{ background: sc.bg, border: `1px solid ${sc.color}33`, borderRadius: '10px', padding: '10px 14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: sc.color, lineHeight: 1 }}>{sc.value}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: 600 }}>{sc.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Top People & Items */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {(aiPayload as any).scorecard.byPerson && Object.keys((aiPayload as any).scorecard.byPerson).length > 0 && (
+                    <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Top Persons</div>
+                      {Object.entries((aiPayload as any).scorecard.byPerson).map(([name, count]: any) => (
+                        <div key={name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#334155', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
+                          <span>{name}</span><span style={{ fontWeight: 700, color: '#6366f1' }}>{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(aiPayload as any).scorecard.byItem && Object.keys((aiPayload as any).scorecard.byItem).length > 0 && (
+                    <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📦 Top Items</div>
+                      {Object.entries((aiPayload as any).scorecard.byItem).map(([item, count]: any) => (
+                        <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#334155', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '130px' }}>{item}</span>
+                          <span style={{ fontWeight: 700, color: '#6366f1' }}>{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(226, 232, 240, 0.6)', borderRadius: '12px', marginBottom: '20px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>

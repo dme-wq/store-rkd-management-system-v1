@@ -32,34 +32,45 @@ ${JSON.stringify(contextData, null, 2)}
 Return ONLY a valid JSON object exactly in this format (no markdown wrappers, no \`\`\`json):
 {
   "intent": "VIEW" | "ACTION" | "UNKNOWN",
-  "analysis": "A conversational, highly professional response in English (or Hinglish if appropriate) explaining what you found. e.g. 'I found 4 items that were out of stock. 2 of them were received yesterday...'",
+  "analysis": "Conversational summary in English/Hinglish. ALWAYS include total counts, date range, and key insights. e.g. 'Last 60 days mein 347 indents hue — 280 Closed, 62 Open, 5 Cancelled.'",
+  "scorecard": {
+    "total": 0,
+    "open": 0,
+    "closed": 0,
+    "cancelled": 0,
+    "byPerson": { "PersonName": 5 },
+    "byItem": { "ItemName": 3 }
+  },
   "suggestedFilters": {
     "dateFilter": "Today" | "Yesterday" | "Last 7 Days" | "Last 14 Days" | "Last 30 Days" | "This Month" | "Last Month" | "All Time" | null,
     "statusFilter": "Requirement Open" | "Requirement Closed" | "Requirement Cancelled" | "All Status" | null,
-    "personFilter": "Sachin Jain" | "Rajesh Sir" | ... or null
+    "personFilter": "exact person name from data" | null
   },
   "targets": [
     {
-      "rkdNumber": "RKD_S_2026_...",
+      "rkdNumber": "RKD_S_2026_32484",
       "proposedAction": "CLOSE" | "CANCEL" | "NONE",
-      "reason": "Brief reason why this record is included."
+      "reason": "Brief reason."
     }
   ]
 }
 
-CRITICAL RULES FOR TARGETS:
-1. You MUST ALWAYS populate the \`targets\` array with EVERY single record that matches the user's query, regardless of whether the intent is VIEW or ACTION.
-2. If you say "I found 43 indents", the \`targets\` array MUST contain exactly those 43 RKD Numbers. Never leave it empty if you found matching data.
-3. If intent is VIEW, set proposedAction to "NONE".
+CRITICAL RULES:
+1. ALWAYS compute and populate "scorecard" with accurate aggregate totals — mandatory for EVERY response.
+2. "scorecard.byPerson" and "scorecard.byItem" — list the top 5 only.
+3. For VIEW queries: if there are <= 100 matching records, also populate "targets". If > 100 records, ONLY populate scorecard (leave targets empty) to prevent token overflow.
+4. For ACTION queries: ALWAYS populate "targets" with the exact records to modify.
+5. When RKD numbers are short (e.g. "32484"), reconstruct the full ID as "RKD_S_2026_32484" in the targets array.
 
 Data Context Rules:
-- The data is provided as pipe-delimited compressed strings to save tokens.
-- 'indents' format: RKD|Item|Qty|Status|User|Date
-- 'stockLevels' format: Item|CurrentStock
-- 'inwardHistory' format: RKD|InwardQty|InwardDate
-- 'poHistory' format: RKD|PONumber|PODate|VendorName
-- Use these flat lists to search for patterns, count occurrences (e.g., how many POs today), and answer questions holistically across the ENTIRE dataset.
+- All data covers the LAST 60 DAYS only.
+- "indents" format: ShortRKD|Item|Qty|Status|User|Timestamp (Status values: Open/Closed/Cancelled)
+- "stockLevels" format: Item|CurrentStock
+- "inwardHistory" format: ShortRKD|InwardQty|InwardDate
+- "poHistory" format: ShortRKD|PONumber|PODate|VendorName
+- ShortRKD is the numeric suffix only (e.g. "32484"). Full RKD = "RKD_S_2026_32484".
 `;
+
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
