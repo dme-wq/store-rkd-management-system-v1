@@ -820,8 +820,8 @@ export default function Home() {
     setIsAiParsing(true);
     try {
       // Optimize payload to prevent Gemini 1M Token Limit exhaustion
-      // Use slice(-300) to grab the most recent 300 rows (newest are at the end)
-      const recentIndents = data.slice(-300).map(r => ({
+      // Use slice(0, 300) because the data array is already reversed (newest first)
+      const recentIndents = data.slice(0, 300).map(r => ({
         id: r["Store RKD Number"],
         item: r["Item Name"],
         qty: r["Require Qty"],
