@@ -16,6 +16,7 @@ export async function POST(req: Request) {
 
     // Construct a robust prompt for the AI to interpret the user's intent based on the active rows
     const systemInstruction = `You are a Senior Supply Chain & Inventory Analyst AI for the RKD Store Management System.
+The current system Date and Time is: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}. Use this to determine relative dates like "today" (aaj) or "yesterday" (kal).
 The user will give you a voice command in Hindi/English (Hinglish).
 You will be provided with the current inventory dataset, including indents, stock levels, and inward/PO history.
 
