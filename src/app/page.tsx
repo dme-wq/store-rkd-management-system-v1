@@ -1850,7 +1850,8 @@ export default function Home() {
                   borderRadius: '24px',
                   boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
                   padding: '2px',
-                  height: '44px',  // Fixed height — prevents layout jumping
+                  height: '44px',
+                  overflow: 'hidden',
                   backgroundClip: 'padding-box',
                 }}>
                   {/* Animated Gradient Border Layer */}
@@ -1872,9 +1873,8 @@ export default function Home() {
                     alignItems: 'center', 
                     background: '#ffffff', 
                     borderRadius: '22px', 
-                    padding: '4px 12px 4px 8px',
-                    height: '40px',  // Fixed inner height
-                    position: 'relative'
+                    padding: '4px 8px',
+                    gap: '4px'
                   }}>
                     <button 
                       onClick={isListening ? undefined : startListening} 
@@ -1935,31 +1935,18 @@ export default function Home() {
                         } 
                       }}
                       style={{ 
-                        paddingLeft: 8, 
-                        flex: 1, 
+                        flex: 1,
                         border: 'none', 
-                        background: 'white',
+                        background: 'transparent',
                         outline: 'none',
                         color: '#1e293b',
-                        fontSize: '0.95rem',
+                        fontSize: '0.9rem',
                         fontWeight: 500,
                         resize: 'none',
-                        height: '30px',
-                        paddingTop: '4px',
-                        paddingBottom: '4px',
+                        height: '28px',
                         overflow: 'hidden',
-                        lineHeight: '1.4',
-                        // When expanded beyond 1 line, float above layout so it doesn't push table down
-                        position: aiPrompt.length > 0 && (typeof window !== 'undefined') ? 'absolute' : 'relative',
-                        top: aiPrompt.length > 0 ? 0 : 'auto',
-                        left: aiPrompt.length > 0 ? 48 : 'auto',
-                        right: aiPrompt.length > 0 ? 12 : 'auto',
-                        zIndex: aiPrompt.length > 0 ? 200 : 'auto',
-                        borderRadius: aiPrompt.length > 0 ? '8px' : '0',
-                        boxShadow: aiPrompt.length > 0 ? '0 4px 20px rgba(0,0,0,0.15)' : 'none',
-                        padding: aiPrompt.length > 0 ? '8px 12px' : '4px 4px 4px 8px',
-                        minHeight: '30px',
-                        maxHeight: '200px',
+                        lineHeight: '1.5',
+                        padding: '2px 4px',
                       }}
                     />
                     
