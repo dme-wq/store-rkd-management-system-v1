@@ -826,19 +826,37 @@ export default function Home() {
       const cutoff60Days = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
       const parseIndentDate = (ts: string): Date => {
-        // Format: "21-May-2026 10:15" or "21-05-2026 10:15"
+        // Hindi month names → month number mapping
+        const hindiMonths: Record<string, string> = {
+          'जनवरी': '01', 'फरवरी': '02', 'मार्च': '03', 'अप्रैल': '04',
+          'मई': '05', 'जून': '06', 'जुलाई': '07', 'अगस्त': '08',
+          'सितंबर': '09', 'अक्टूबर': '10', 'नवंबर': '11', 'दिसंबर': '12'
+        };
         try {
-          const parts = ts.split(' ')[0].split('-');
+          // Normalize: replace Hindi month with numeric month
+          let normalized = ts;
+          for (const [hindi, num] of Object.entries(hindiMonths)) {
+            if (normalized.includes(hindi)) {
+              normalized = normalized.replace(hindi, num);
+              break;
+            }
+          }
+          // Now try parsing: "21-05-2026 10:25" or "21-May-2026 10:25"
+          const datePart = normalized.split(' ')[0]; // "21-05-2026"
+          const parts = datePart.split('-');
           if (parts.length === 3) {
-            // Try DD-MMM-YYYY
-            const d = new Date(`${parts[1]} ${parts[0]}, ${parts[2]}`);
-            if (!isNaN(d.getTime())) return d;
-            // Try DD-MM-YYYY
-            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+            // Try DD-MM-YYYY (numeric)
+            const asISO = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            const d1 = new Date(asISO);
+            if (!isNaN(d1.getTime())) return d1;
+            // Try DD-MMM-YYYY (English short month e.g. "May")
+            const d2 = new Date(`${parts[1]} ${parts[0]}, ${parts[2]}`);
+            if (!isNaN(d2.getTime())) return d2;
           }
         } catch { }
-        return new Date(ts);
+        return new Date(ts); // last resort
       };
+
 
       const activeIndents = data.filter(r => {
         const ts = r["Timestamp"] || "";
