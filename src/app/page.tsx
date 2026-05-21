@@ -708,7 +708,7 @@ export default function Home() {
   const [instantApproveRow, setInstantApproveRow] = useState<any>(null);
   const [iaVendor, setIaVendor] = useState("");
   const [iaRate, setIaRate] = useState("");
-  const [isIaRefreshing, setIsIaRefreshing] = useState(false);
+
 
   // Debit Note / Reverse Entry Modal State
   const [isDebitNoteOpen, setIsDebitNoteOpen] = useState(false);
@@ -1861,8 +1861,8 @@ export default function Home() {
         onSubmit={handleManualApprovalSubmit}
         updating={updatingRowId !== null && manualRow && updatingRowId === manualRow._id}
         miscMap={miscMap}
-        isRefreshing={isIaRefreshing}
-        onRefresh={handleIaRefresh}
+        isRefreshing={updatingRowId === manualRow?._id}
+        onRefresh={() => handleRowRefresh(manualRow)}
       />
 
       {/* Instant Approval Modal */}
@@ -1876,8 +1876,8 @@ export default function Home() {
         setIaVendor={setIaVendor}
         iaRate={iaRate}
         setIaRate={setIaRate}
-        isRefreshing={isIaRefreshing}
-        onRefresh={handleIaRefresh}
+        isRefreshing={updatingRowId === instantApproveRow?._id}
+        onRefresh={() => handleRowRefresh(instantApproveRow)}
       />
 
       {/* ─── Debit Note Modal ─── */}
