@@ -819,12 +819,32 @@ export default function Home() {
     if (!finalPrompt.trim()) return;
     setIsAiParsing(true);
     try {
-      // Send a rich holistic context
+      // Optimize payload to prevent Gemini 1M Token Limit exhaustion
+      const recentIndents = data.slice(0, 300).map(r => ({
+        id: r["Store RKD Number"],
+        item: r["Item Name"],
+        qty: r["Require Qty"],
+        status: r["Status"],
+        user: r["Person Filling Name"],
+        date: r["Timestamp"]
+      }));
+
+      // Only include stock/inward history for items that are low in stock (<= 5) OR present in recent indents
+      const recentItemSet = new Set(recentIndents.map(i => i.item));
+      const liteStockMap: Record<string, any> = {};
+      const liteInwardMap: Record<string, any> = {};
+
+      Object.entries(stockMap).forEach(([k, v]) => {
+        if (Number(v) <= 5 || recentItemSet.has(k)) {
+          liteStockMap[k] = v;
+          if (inwardMap[k]) liteInwardMap[k] = inwardMap[k];
+        }
+      });
+
       const contextData = {
-        indents: data.slice(0, 800), // Recent ~4 months
-        stockLevels: stockMap,
-        inwardHistory: inwardMap,
-        poHistory: poMap
+        indents: recentIndents,
+        stockLevels: liteStockMap,
+        inwardHistory: liteInwardMap
       };
       
       const res = await fetch("/api/ai", {
