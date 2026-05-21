@@ -1801,7 +1801,7 @@ export default function Home() {
 
             {/* Smart Filters — Unified Row */}
             <div className={styles.filterRow} style={{ flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: (isListening || aiPrompt.length > 0) ? '100%' : '350px', transition: 'min-width 0.3s ease' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: isListening ? '100%' : '350px', transition: 'min-width 0.3s ease' }}>
                 
                 {/* ── GEMINI VOICE ASSIST BAR ── */}
                 <div style={{ 
@@ -1883,8 +1883,11 @@ export default function Home() {
                       value={aiPrompt}
                       onChange={(e) => {
                         setAiPrompt(e.target.value);
+                        // Only expand if content genuinely wraps to a new line (> 42px = 1 line)
                         e.target.style.height = '38px';
-                        e.target.style.height = Math.max(38, e.target.scrollHeight) + 'px';
+                        if (e.target.scrollHeight > 42) {
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }
                       }}
                       onKeyDown={(e) => { 
                         if(e.key === 'Enter' && !e.shiftKey) { 
@@ -1902,8 +1905,7 @@ export default function Home() {
                         fontSize: '0.95rem',
                         fontWeight: 500,
                         resize: 'none',
-                        minHeight: '38px',
-                        height: aiPrompt.length === 0 && !isListening ? '38px' : 'auto',
+                        height: '38px',
                         paddingTop: '8px',
                         paddingBottom: '8px',
                         overflow: 'hidden',
