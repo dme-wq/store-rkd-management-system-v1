@@ -789,16 +789,18 @@ export default function Home() {
       return;
     }
     const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN'; // Works for Hinglish
+    recognition.lang = 'en-IN'; // Indian English natively handles Hinglish extremely well and fast
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true; // Real-time feedback
 
     recognition.onstart = () => {
       setIsListening(true);
       if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
     };
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
+      const transcript = Array.from(event.results)
+        .map((res: any) => res[0].transcript)
+        .join('');
       setAiPrompt(transcript);
       if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
       // Auto-trigger 1.5 seconds after speech is recognized
@@ -1875,22 +1877,31 @@ export default function Home() {
                       )}
                     </button>
                     
-                    <input
-                      type="text"
+                    <textarea
                       placeholder={isListening ? "Listening to your request..." : "Ask Gemini to manage your inventory..."}
                       className={styles.searchInput}
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
-                      onKeyDown={(e) => { if(e.key === 'Enter') processAiCommand(); }}
+                      onKeyDown={(e) => { 
+                        if(e.key === 'Enter' && !e.shiftKey) { 
+                          e.preventDefault(); 
+                          processAiCommand(); 
+                        } 
+                      }}
                       style={{ 
                         paddingLeft: 8, 
                         flex: 1, 
                         border: 'none', 
-                        boxShadow: 'none', 
-                        outline: 'none', 
                         background: 'transparent',
-                        fontSize: '0.9rem',
-                        color: '#1f2937'
+                        outline: 'none',
+                        color: '#1e293b',
+                        fontSize: '0.95rem',
+                        fontWeight: 500,
+                        resize: 'none',
+                        height: (isListening || aiPrompt.length > 50) ? '80px' : '38px',
+                        paddingTop: (isListening || aiPrompt.length > 50) ? '8px' : '8px',
+                        transition: 'height 0.2s ease',
+                        lineHeight: '1.4'
                       }}
                     />
                     
