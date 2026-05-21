@@ -778,7 +778,7 @@ export default function Home() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [aiReviewOpen, setAiReviewOpen] = useState(false);
-  const [aiPayload, setAiPayload] = useState<{ intent: string, analysis: string, targets: any[], originalText: string } | null>(null);
+  const [aiPayload, setAiPayload] = useState<{ intent: string, analysis: string, targets: any[], originalText: string, suggestedFilters?: any } | null>(null);
   const [aiExecutionProgress, setAiExecutionProgress] = useState<{ current: number, total: number, active: boolean }>({ current: 0, total: 0, active: false });
   const aiTimeoutRef = useRef<any>(null);
 
@@ -2500,6 +2500,29 @@ export default function Home() {
             {/* AI Analysis Bubble */}
             <div style={{ alignSelf: 'flex-start', background: 'transparent', padding: '0 0 16px 8px', maxWidth: '100%', fontSize: '0.95rem', color: '#334155', lineHeight: 1.6, animation: 'fadeIn 0.5s ease' }}>
               {aiPayload.analysis}
+              {aiPayload.suggestedFilters && Object.values(aiPayload.suggestedFilters).some(v => v !== null && v !== "") && (
+                <div style={{ marginTop: '12px' }}>
+                  <button 
+                    onClick={() => {
+                      const f = aiPayload.suggestedFilters;
+                      if (f?.dateFilter && f.dateFilter !== "null") setDateFilter(f.dateFilter);
+                      if (f?.statusFilter && f.statusFilter !== "null") setStatusFilter(f.statusFilter);
+                      if (f?.personFilter && f.personFilter !== "null") setPersonFilter(f.personFilter);
+                      setAiReviewOpen(false);
+                    }}
+                    style={{
+                      background: 'rgba(66, 133, 244, 0.1)', border: '1px solid rgba(66, 133, 244, 0.3)',
+                      color: '#4285f4', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem',
+                      fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                      gap: '6px', transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(66, 133, 244, 0.2)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(66, 133, 244, 0.1)'; }}
+                  >
+                    🎯 View Results in Main Table
+                  </button>
+                </div>
+              )}
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(226, 232, 240, 0.6)', borderRadius: '12px', marginBottom: '20px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>

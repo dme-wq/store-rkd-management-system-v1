@@ -33,6 +33,11 @@ Return ONLY a valid JSON object exactly in this format (no markdown wrappers, no
 {
   "intent": "VIEW" | "ACTION" | "UNKNOWN",
   "analysis": "A conversational, highly professional response in English (or Hinglish if appropriate) explaining what you found. e.g. 'I found 4 items that were out of stock. 2 of them were received yesterday...'",
+  "suggestedFilters": {
+    "dateFilter": "Today" | "Yesterday" | "Last 7 Days" | "Last 14 Days" | "Last 30 Days" | "This Month" | "Last Month" | "All Time" | null,
+    "statusFilter": "Requirement Open" | "Requirement Closed" | "Requirement Cancelled" | "All Status" | null,
+    "personFilter": "Sachin Jain" | "Rajesh Sir" | ... or null
+  },
   "targets": [
     {
       "rkdNumber": "RKD_S_2026_...",
