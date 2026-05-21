@@ -778,8 +778,9 @@ export default function Home() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [aiReviewOpen, setAiReviewOpen] = useState(false);
-  const [aiPayload, setAiPayload] = useState<{ action: string, targets: any[], originalText: string } | null>(null);
+  const [aiPayload, setAiPayload] = useState<{ intent: string, analysis: string, targets: any[], originalText: string } | null>(null);
   const [aiExecutionProgress, setAiExecutionProgress] = useState<{ current: number, total: number, active: boolean }>({ current: 0, total: 0, active: false });
+  const aiTimeoutRef = useRef<any>(null);
 
   const startListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -792,10 +793,18 @@ export default function Home() {
     recognition.continuous = false;
     recognition.interimResults = false;
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      setIsListening(true);
+      if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
+    };
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setAiPrompt(transcript);
+      if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
+      // Auto-trigger 1.5 seconds after speech is recognized
+      aiTimeoutRef.current = setTimeout(() => {
+        processAiCommand(transcript);
+      }, 1500);
     };
     recognition.onerror = (e: any) => {
       setIsListening(false);
@@ -805,17 +814,23 @@ export default function Home() {
     recognition.start();
   };
 
-  const processAiCommand = async () => {
-    if (!aiPrompt.trim()) return;
+  const processAiCommand = async (directPrompt?: string) => {
+    const finalPrompt = directPrompt || aiPrompt;
+    if (!finalPrompt.trim()) return;
     setIsAiParsing(true);
     try {
-      // Pass only Requirement Open records as context
-      const openIndents = data.filter(r => r["Status"] === "Requirement Open");
+      // Send a rich holistic context
+      const contextData = {
+        indents: data.slice(0, 800), // Recent ~4 months
+        stockLevels: stockMap,
+        inwardHistory: inwardMap,
+        poHistory: poMap
+      };
       
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: aiPrompt, contextData: openIndents })
+        body: JSON.stringify({ prompt: finalPrompt, contextData })
       });
       const resData = await res.json();
       
@@ -823,21 +838,20 @@ export default function Home() {
         throw new Error(resData.message || resData.error || "Unknown Error");
       }
 
-      const { action, targetRkdNumbers } = resData.result;
+      const { intent, analysis, targets } = resData.result;
       
-      if (!action || action === "UNKNOWN" || !targetRkdNumbers || targetRkdNumbers.length === 0) {
-        showAlert("AI could not understand the command or found no matching indents.", "warning");
+      if (!intent || intent === "UNKNOWN") {
+        showAlert("AI could not understand the command.", "warning");
         return;
       }
 
-      const targets = openIndents.filter(r => targetRkdNumbers.includes(r["Store RKD Number"]));
-      
-      if (targets.length === 0) {
-        showAlert("No matching open indents found for the command.", "warning");
-        return;
-      }
+      // Map targets back to real rows from the dataset
+      const enrichedTargets = (targets || []).map((t: any) => {
+        const row = data.find(r => r["Store RKD Number"] === t.rkdNumber);
+        return row ? { ...row, _aiProposedAction: t.proposedAction, _aiReason: t.reason } : null;
+      }).filter(Boolean);
 
-      setAiPayload({ action, targets, originalText: aiPrompt });
+      setAiPayload({ intent, analysis, targets: enrichedTargets, originalText: finalPrompt });
       setAiReviewOpen(true);
       setAiPrompt("");
 
@@ -849,32 +863,38 @@ export default function Home() {
   };
 
   const executeAiBulkAction = async () => {
-    if (!aiPayload || aiPayload.targets.length === 0) return;
+    if (!aiPayload || aiPayload.targets.length === 0 || aiPayload.intent !== "ACTION") return;
     setAiReviewOpen(false);
-    setAiExecutionProgress({ current: 0, total: aiPayload.targets.length, active: true });
+    
+    // Filter only those that actually have an action
+    const actionTargets = aiPayload.targets.filter(t => t._aiProposedAction === "CLOSE" || t._aiProposedAction === "CANCEL");
+    if (actionTargets.length === 0) {
+      showAlert("No actionable records to process.", "warning");
+      return;
+    }
+
+    setAiExecutionProgress({ current: 0, total: actionTargets.length, active: true });
     
     let successCount = 0;
-    for (let i = 0; i < aiPayload.targets.length; i++) {
-      const row = aiPayload.targets[i];
+    for (let i = 0; i < actionTargets.length; i++) {
+      const row = actionTargets[i];
       setAiExecutionProgress(p => ({ ...p, current: i + 1 }));
       
       try {
-        if (aiPayload.action === "CLOSE") {
-          // Equivalent to Manual Issue with full quantity
+        if (row._aiProposedAction === "CLOSE") {
           await fetch("/api/sheets", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               action: "ISSUE",
               rkdNumber: row["Store RKD Number"],
-              issueQty: row["Require Qty"], // Full quantity
+              issueQty: row["Require Qty"], 
               status: "Requirement Closed",
               itemName: row["Item Name"],
-              rate: "0" // Defaults fallback
+              rate: "0" 
             })
           });
-        } else if (aiPayload.action === "CANCEL") {
-          // Equivalent to cancelling
+        } else if (row._aiProposedAction === "CANCEL") {
           await fetch("/api/sheets", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -896,7 +916,7 @@ export default function Home() {
     
     setAiExecutionProgress({ current: 0, total: 0, active: false });
     setAiPayload(null);
-    showAlert(`Successfully processed ${successCount} / ${aiPayload.targets.length} entries.`, "success");
+    showAlert(`Successfully processed ${successCount} / ${actionTargets.length} entries.`, "success");
     fetchData(true);
   };
 
@@ -2319,38 +2339,43 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── AI Review Modal ── */}
+      {/* ── AI Agent Interface Modal ── */}
       {aiReviewOpen && aiPayload && (
         <div className={styles.modalOverlay} onClick={() => setAiReviewOpen(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%' }}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
             <div className={styles.modalHeader}>
               <div className={styles.modalIconBox} style={{ background: '#fdf4ff', color: '#d946ef' }}>
-                ✨
+                🤖
               </div>
               <div>
-                <h3 className={styles.modalTitle}>Review AI Action</h3>
+                <h3 className={styles.modalTitle}>AI Supply Chain Analyst</h3>
                 <p className={styles.modalSubtitle}>
-                  Command: <strong style={{ color: '#1e293b' }}>"{aiPayload.originalText}"</strong>
-                  <br />
-                  Action to perform: <strong style={{ color: aiPayload.action === "CLOSE" ? '#22c55e' : '#ef4444' }}>{aiPayload.action}</strong>
+                  Query: <strong style={{ color: '#1e293b' }}>"{aiPayload.originalText}"</strong>
                 </p>
               </div>
               <button className={styles.modalCloseBtn} onClick={() => setAiReviewOpen(false)}>×</button>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '12px' }}>
-              The AI selected the following {aiPayload.targets.length} entries. Remove any you don't want to process.
-            </p>
+            {/* AI Analysis Section */}
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #8b5cf6', marginBottom: '20px', fontSize: '0.9rem', color: '#334155', lineHeight: 1.5 }}>
+              <strong style={{ display: 'block', marginBottom: '8px', color: '#1e293b' }}>Analysis:</strong>
+              {aiPayload.analysis}
+            </div>
 
-            <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '20px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '20px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead style={{ background: '#f8fafc', position: 'sticky', top: 0, zIndex: 1 }}>
                   <tr>
                     <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>RKD Number</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Item Name</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Person</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Status</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Req Qty</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Remove</th>
+                    {aiPayload.intent === "ACTION" && (
+                      <>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>Action</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Exclude</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -2358,36 +2383,54 @@ export default function Home() {
                     <tr key={row["Store RKD Number"]} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '8px 12px' }}>{row["Store RKD Number"]}</td>
                       <td style={{ padding: '8px 12px', fontWeight: 600 }}>{row["Item Name"]}</td>
-                      <td style={{ padding: '8px 12px' }}>{row["Person Filling Name"]}</td>
-                      <td style={{ padding: '8px 12px', color: '#8b5cf6', fontWeight: 700 }}>{row["Require Qty"]}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                        <button 
-                          onClick={() => setAiPayload({ ...aiPayload, targets: aiPayload.targets.filter(r => r["Store RKD Number"] !== row["Store RKD Number"]) })}
-                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '1.2rem' }}
-                        >
-                          🗑️
-                        </button>
-                      </td>
+                      <td style={{ padding: '8px 12px' }}>{row["Status"]}</td>
+                      <td style={{ padding: '8px 12px', color: '#8b5cf6', fontWeight: 700 }}>{row["Require Qty"]} {row["Units"]}</td>
+                      {aiPayload.intent === "ACTION" && (
+                        <>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{ 
+                              padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700,
+                              background: row._aiProposedAction === "CLOSE" ? '#dcfce7' : row._aiProposedAction === "CANCEL" ? '#fee2e2' : '#f1f5f9',
+                              color: row._aiProposedAction === "CLOSE" ? '#166534' : row._aiProposedAction === "CANCEL" ? '#991b1b' : '#475569'
+                            }}>
+                              {row._aiProposedAction}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                            <button 
+                              onClick={() => setAiPayload({ ...aiPayload, targets: aiPayload.targets.filter(r => r["Store RKD Number"] !== row["Store RKD Number"]) })}
+                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '1.2rem' }}
+                              title="Do not process this row"
+                            >
+                              🗑️
+                            </button>
+                          </td>
+                        </>
+                      )}
                     </tr>
                   ))}
                   {aiPayload.targets.length === 0 && (
                     <tr>
-                      <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>All items removed. You can cancel.</td>
+                      <td colSpan={aiPayload.intent === "ACTION" ? 6 : 4} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>No specific records attached or all items removed.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button className={styles.btnCancel} onClick={() => setAiReviewOpen(false)}>Cancel</button>
-              <button 
-                className={styles.dribbbleBtnPrimary} 
-                disabled={aiPayload.targets.length === 0} 
-                onClick={executeAiBulkAction}
-              >
-                Execute {aiPayload.action} ({aiPayload.targets.length} entries)
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: 'auto' }}>
+              <button className={styles.btnCancel} onClick={() => setAiReviewOpen(false)}>
+                {aiPayload.intent === "VIEW" ? "Close Report" : "Cancel"}
               </button>
+              {aiPayload.intent === "ACTION" && (
+                <button 
+                  className={styles.dribbbleBtnPrimary} 
+                  disabled={aiPayload.targets.length === 0} 
+                  onClick={executeAiBulkAction}
+                >
+                  Execute Actions ({aiPayload.targets.length} entries)
+                </button>
+              )}
             </div>
           </div>
         </div>

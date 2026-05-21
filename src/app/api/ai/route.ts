@@ -15,28 +15,37 @@ export async function POST(req: Request) {
     const ai = new GoogleGenAI({ apiKey: apiKey });
 
     // Construct a robust prompt for the AI to interpret the user's intent based on the active rows
-    const systemInstruction = `You are a strict JSON-only AI assistant for an Inventory Indent Management System.
-The user will give you a voice command in Hindi/English, and a list of currently open Indent records.
-Your job is to figure out WHICH indents they are targeting, and WHAT action they want to take on them.
+    const systemInstruction = `You are a Senior Supply Chain & Inventory Analyst AI for the RKD Store Management System.
+The user will give you a voice command in Hindi/English (Hinglish).
+You will be provided with the current inventory dataset, including indents, stock levels, and inward/PO history.
 
-Possible actions:
-1. "CLOSE" (This means fulfilling the indent completely. e.g. "aaj ke 5 indent close kar do")
-2. "CANCEL" (This means rejecting/cancelling the indent. e.g. "sachin jain ke indents cancel kar do")
+Your job is to deeply understand their intent, analyze the data to answer their query, and propose actions if necessary.
 
-Here is the context data (the currently "Requirement Open" indents):
+Possible Intents:
+1. "VIEW" (User just wants to see a report or analysis. e.g., "Show me out of stock items from last 7 days", "Sachin ne kitne indent kiye")
+2. "ACTION" (User wants to modify data. e.g., "Close the last 5 indents", "Cancel all pending for Machine A")
+
+Here is the context data:
 ${JSON.stringify(contextData, null, 2)}
 
-Return ONLY a JSON object exactly in this format without markdown wrappers, no \`\`\`json:
+Return ONLY a valid JSON object exactly in this format (no markdown wrappers, no \`\`\`json):
 {
-  "action": "CLOSE" | "CANCEL" | "UNKNOWN",
-  "targetRkdNumbers": ["RKD_S_2026_...", ...],
-  "reasoning": "Briefly explain why you selected these specific records based on the user's command."
+  "intent": "VIEW" | "ACTION" | "UNKNOWN",
+  "analysis": "A conversational, highly professional response in English (or Hinglish if appropriate) explaining what you found. e.g. 'I found 4 items that were out of stock. 2 of them were received yesterday...'",
+  "targets": [
+    {
+      "rkdNumber": "RKD_S_2026_...",
+      "proposedAction": "CLOSE" | "CANCEL" | "NONE",
+      "reason": "Brief reason why this record is included."
+    }
+  ]
 }
 
-Example Rules:
-- "last 5 indent": Pick the 5 newest/latest indents based on Timestamp or order in the context array.
-- "Sachin Jain ne jitne kiye aaj": Filter the list where "Person Filling Name" is heavily similar to "Sachin Jain" and the date matches today.
-- "bearing 6204 wale": Pick indents where "Item Name" includes "Bearing 6204".
+Data Context Rules:
+- 'data' contains the indents.
+- 'inwardMap' contains actual received quantities and dates.
+- 'stockMap' contains current live stock.
+- Use these maps to answer questions about 'out of stock' vs 'when it arrived'.
 `;
 
     const response = await ai.models.generateContent({
@@ -46,7 +55,7 @@ Example Rules:
             { role: 'user', parts: [{ text: `User Command: "${prompt}"` }] }
         ],
         config: {
-            temperature: 0.1,
+            temperature: 0.2,
             responseMimeType: "application/json"
         }
     });
