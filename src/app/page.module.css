@@ -343,7 +343,10 @@
 .dataTable th:nth-child(6), .dataTable td:nth-child(6) { width: 80px; min-width: 80px; text-align: center; } /* Iss Qty */
 .dataTable th:nth-child(7), .dataTable td:nth-child(7) { width: 60px; min-width: 60px; text-align: center; } /* Units */
 .dataTable th:nth-child(10), .dataTable td:nth-child(10) { width: 100px; min-width: 100px; } /* Machine ID */
-.dataTable th:nth-child(12), .dataTable td:nth-child(12) { width: 110px; min-width: 110px; } /* Status */
+.dataTable th:nth-child(11), .dataTable td:nth-child(11) { width: 90px; min-width: 90px; } /* Rate */
+.dataTable th:nth-child(12), .dataTable td:nth-child(12) { width: 100px; min-width: 100px; } /* Stock */
+.dataTable th:nth-child(13), .dataTable td:nth-child(13) { width: 140px; min-width: 140px; } /* Status */
+.dataTable th:nth-child(14), .dataTable td:nth-child(14) { width: 160px; min-width: 160px; } /* Live Status */
 
 .tableScrollArea {
   flex: 1;
@@ -867,10 +870,11 @@
 .dataTable th:nth-child(8) { width: 100px; } /* Dept */
 .dataTable th:nth-child(9) { width: 130px; } /* Machine */
 .dataTable th:nth-child(10) { width: 100px; } /* Machine ID */
-.dataTable th:nth-child(11) { width: 85px;  } /* Stock */
-.dataTable th:nth-child(12) { width: 125px; } /* Status */
-.dataTable th:nth-child(13) { width: 100px; } /* Approval Status */
-.dataTable th:nth-child(14) { width: 70px;  } /* Action */
+.dataTable th:nth-child(11) { width: 90px;  } /* Rate */
+.dataTable th:nth-child(12) { width: 100px; } /* Stock */
+.dataTable th:nth-child(13) { width: 125px; } /* Status */
+.dataTable th:nth-child(14) { width: 160px; } /* Live Status */
+.dataTable th:nth-child(15) { width: 70px;  } /* Action */
 
 .dataTable th {
   background: #334155; /* Dark Slate Grey */
@@ -907,7 +911,8 @@
 .dataTable td:nth-child(6),  /* Issue Qty */
 .dataTable td:nth-child(7),  /* Units */
 .dataTable td:nth-child(10), /* Machine ID */
-.dataTable td:nth-child(11)  /* Stock */ {
+.dataTable td:nth-child(11), /* Rate */
+.dataTable td:nth-child(12)  /* Stock */ {
   white-space: nowrap;
 }
 
