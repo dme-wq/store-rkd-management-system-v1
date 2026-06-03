@@ -793,12 +793,27 @@ ${isApproved
       });
     } else {
       // Default: ISSUE action
-      
-      // Fetch full row to get details for IMS Issue tab
-      const rowDataRes = await sheets.spreadsheets.values.get({
-        spreadsheetId: STORE_SHEET_ID,
-        range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
-      });
+
+      // ── IDEMPOTENCY GUARD ─────────────────────────────────────────────────
+      // Fetch IssueDataBase column B and IMS Issue column B in parallel to
+      // check whether this RKD Number has already been recorded.
+      // This prevents duplicate entries caused by double-clicks, rapid retries,
+      // or race conditions — WITHOUT relying only on the frontend lock.
+      const [issueDbRes, imsIssueRes, rowDataRes] = await Promise.all([
+        sheets.spreadsheets.values.get({
+          spreadsheetId: STORE_SHEET_ID,
+          range: "IssueDataBase!B:B",
+        }),
+        sheets.spreadsheets.values.get({
+          spreadsheetId: IMS_SHEET_ID,
+          range: "Issue!B:B",
+        }),
+        sheets.spreadsheets.values.get({
+          spreadsheetId: STORE_SHEET_ID,
+          range: `StoreDataEntry!A${rowNumber}:T${rowNumber}`,
+        }),
+      ]);
+
       const rowValues = rowDataRes.data.values?.[0] || [];
       const personFilling = rowValues[3] || "";
       const requireQty = rowValues[5] || "";
@@ -806,34 +821,53 @@ ${isApproved
       const machineName = rowValues[10] || "";
       const machineId = rowValues[11] || "";
 
-      // Run StoreDataEntry update + IssueDataBase append + IMS Issue append in PARALLEL
-      await Promise.all([
-        sheets.spreadsheets.values.update({
+      // Check for existing entry in IssueDataBase
+      const issueDbList = issueDbRes.data.values || [];
+      const alreadyInIssueDb = issueDbList.some((r: any) => (r[0] || "").trim() === rkdNumber.trim());
+
+      // Check for existing entry in IMS Issue sheet
+      const imsIssueList = imsIssueRes.data.values || [];
+      const alreadyInImsIssue = imsIssueList.some((r: any) => (r[0] || "").trim() === rkdNumber.trim());
+
+      if (alreadyInIssueDb || alreadyInImsIssue) {
+        // Duplicate detected — only update the StoreDataEntry row status, skip appends
+        console.warn(`[ISSUE] Duplicate detected for RKD ${rkdNumber}. IssueDB:${alreadyInIssueDb}, IMS:${alreadyInImsIssue}. Skipping append.`);
+        await sheets.spreadsheets.values.update({
           spreadsheetId: STORE_SHEET_ID,
           range: `StoreDataEntry!H${rowNumber}:I${rowNumber}`,
           valueInputOption: "USER_ENTERED",
-          requestBody: {
-            values: [[issueQty, status]]
-          }
-        }),
-        sheets.spreadsheets.values.append({
-          spreadsheetId: STORE_SHEET_ID,
-          range: "IssueDataBase!A:E",
-          valueInputOption: "USER_ENTERED",
-          requestBody: {
-            values: [[formattedDate, rkdNumber, issueQty, rate, itemName]]
-          }
-        }),
-        // Add to IMS sheet's "Issue" tab
-        sheets.spreadsheets.values.append({
-          spreadsheetId: IMS_SHEET_ID,
-          range: "Issue!A:I",
-          valueInputOption: "USER_ENTERED",
-          requestBody: {
-            values: [[formattedDate, rkdNumber, personFilling, itemName, requireQty, units, issueQty, machineName, machineId]]
-          }
-        })
-      ]);
+          requestBody: { values: [[issueQty, status]] }
+        });
+      } else {
+        // First-time issue — run StoreDataEntry update + both appends in PARALLEL
+        await Promise.all([
+          sheets.spreadsheets.values.update({
+            spreadsheetId: STORE_SHEET_ID,
+            range: `StoreDataEntry!H${rowNumber}:I${rowNumber}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+              values: [[issueQty, status]]
+            }
+          }),
+          sheets.spreadsheets.values.append({
+            spreadsheetId: STORE_SHEET_ID,
+            range: "IssueDataBase!A:E",
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+              values: [[formattedDate, rkdNumber, issueQty, rate, itemName]]
+            }
+          }),
+          // Add to IMS sheet's "Issue" tab
+          sheets.spreadsheets.values.append({
+            spreadsheetId: IMS_SHEET_ID,
+            range: "Issue!A:I",
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+              values: [[formattedDate, rkdNumber, personFilling, itemName, requireQty, units, issueQty, machineName, machineId]]
+            }
+          })
+        ]);
+      }
     }
 
     return NextResponse.json({ success: true });

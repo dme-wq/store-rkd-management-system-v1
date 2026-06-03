@@ -31,7 +31,7 @@ function parseCustomDate(dateStr: string): Date {
     // Find Year (4 digits or 2 digits)
     let yearIdx = parts.findIndex(p => p.length === 4 && !isNaN(parseInt(p, 10)));
     if (yearIdx === -1) yearIdx = parts.findIndex(p => p.length === 2 && parseInt(p, 10) > 20);
-    
+
     if (yearIdx !== -1) {
       year = parseInt(parts[yearIdx], 10);
       if (year < 100) year += 2000;
@@ -65,7 +65,7 @@ function parseCustomDate(dateStr: string): Date {
       return new Date(year, month, day);
     }
   }
-  return new Date(0); 
+  return new Date(0);
 }
 
 const makeSelectStyles = (minW = 160) => ({
@@ -559,15 +559,15 @@ function getLiveStatus(
   inwardMap: Record<string, { inwardQty: string; inwardDate: string }>
 ): StatusStep[] {
   const steps: StatusStep[] = [];
-  const rkdNumber   = String(row["Store RKD Number"] || "").trim();
-  const status      = String(row["Status"] || "").trim();
-  const issueQty    = parseFloat(row["Issue Qty"]  || "0") || 0;
-  const reqQty      = parseFloat(row["Require Qty"] || "0") || 0;
+  const rkdNumber = String(row["Store RKD Number"] || "").trim();
+  const status = String(row["Status"] || "").trim();
+  const issueQty = parseFloat(row["Issue Qty"] || "0") || 0;
+  const reqQty = parseFloat(row["Require Qty"] || "0") || 0;
   const approvalReq = String(row["Approval Require?"] || "").trim().toLowerCase();
   const approvedQty = parseFloat(row["Approved Quantity"] || "0") || 0;
-  const itemKey     = (row["Item Name"] || "").trim().toLowerCase();
+  const itemKey = (row["Item Name"] || "").trim().toLowerCase();
   const imsStockStr = stockMap[itemKey];
-  const imsStock    = imsStockStr !== undefined ? parseFloat(imsStockStr) || 0 : NaN;
+  const imsStock = imsStockStr !== undefined ? parseFloat(imsStockStr) || 0 : NaN;
 
   // Step 1: Always show base state first
   steps.push({ label: "Indent Done", emoji: "📋", color: "#ffffff", bg: "rgba(148,163,184,0.3)", border: "rgba(255,255,255,0.4)" });
@@ -671,7 +671,7 @@ export default function Home() {
   const [modalData, setModalData] = useState<any>(null);
   const [miscMap, setMiscMap] = useState<Record<string, { vendor: string, rate: string }>>({});
   const [poMap, setPoMap] = useState<Record<string, { poNumber: string; poDate: string; vendorName: string }>>({});
-  const [inwardMap, setInwardMap] = useState<Record<string, { inwardQty: string; inwardDate: string }>>({}); 
+  const [inwardMap, setInwardMap] = useState<Record<string, { inwardQty: string; inwardDate: string }>>({});
   const hasLoadedOnce = useRef(false); // track if we ever got real data
   const fullDataLoaded = useRef(false); // track if full dataset has been fetched
   const isProcessingRef = useRef(false); // prevent double clicking
@@ -732,7 +732,7 @@ export default function Home() {
       if (json.success) {
         setMetaOpts({ units: json.units || [], vendors: json.vendors || [] });
       }
-    } catch(e) {}
+    } catch (e) { }
     setIsMetaLoading(false);
   };
 
@@ -831,7 +831,7 @@ export default function Home() {
           }
           const parts = normalized.split(' ')[0].split('-');
           if (parts.length === 3) {
-            const d1 = new Date(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
+            const d1 = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
             if (!isNaN(d1.getTime())) return d1;
             const d2 = new Date(`${parts[1]} ${parts[0]}, ${parts[2]}`);
             if (!isNaN(d2.getTime())) return d2;
@@ -916,20 +916,20 @@ export default function Home() {
         ...(needsInward && { inwardHistory: compressedInwards }),
         ...(needsPO && { poHistory: compressedPos }),
       };
-      
+
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: finalPrompt, contextData })
       });
       const resData = await res.json();
-      
+
       if (!resData.success) {
         throw new Error(resData.message || resData.error || "Unknown Error");
       }
 
       const { intent, analysis, targets } = resData.result;
-      
+
       if (!intent || intent === "UNKNOWN") {
         showAlert("AI could not understand the command.", "warning");
         return;
@@ -938,7 +938,7 @@ export default function Home() {
       // Map targets back to real rows — handle both short (32485) and full (RKD_S_2026_32485) formats
       const enrichedTargets = (targets || []).map((t: any) => {
         const rkdNum = t.rkdNumber || "";
-        const row = data.find(r => 
+        const row = data.find(r =>
           r["Store RKD Number"] === rkdNum ||                          // exact full match
           r["Store RKD Number"]?.endsWith(`_${rkdNum}`) ||            // suffix match: 32485
           r["Store RKD Number"]?.replace(/^RKD_S_\d{4}_/, '') === rkdNum.replace(/^RKD_S_\d{4}_/, '') // normalize both
@@ -989,7 +989,7 @@ export default function Home() {
     }
 
     setAiReviewOpen(false);
-    
+
     // Filter only those that actually have an action
     const actionTargets = validTargets.filter(t => t._aiProposedAction === "CLOSE" || t._aiProposedAction === "CANCEL");
     if (actionTargets.length === 0) {
@@ -999,12 +999,12 @@ export default function Home() {
     }
 
     setAiExecutionProgress({ current: 0, total: actionTargets.length, active: true });
-    
+
     let successCount = 0;
     for (let i = 0; i < actionTargets.length; i++) {
       const row = actionTargets[i];
       setAiExecutionProgress(p => ({ ...p, current: i + 1 }));
-      
+
       try {
         if (row._aiProposedAction === "CLOSE") {
           await fetch("/api/sheets", {
@@ -1013,10 +1013,10 @@ export default function Home() {
             body: JSON.stringify({
               action: "ISSUE",
               rkdNumber: row["Store RKD Number"],
-              issueQty: row["Require Qty"], 
+              issueQty: row["Require Qty"],
               status: "Requirement Closed",
               itemName: row["Item Name"],
-              rate: "0" 
+              rate: "0"
             })
           });
         } else if (row._aiProposedAction === "CANCEL") {
@@ -1038,7 +1038,7 @@ export default function Home() {
         console.error("Failed AI action for RKD:", row["Store RKD Number"]);
       }
     }
-    
+
     setAiExecutionProgress({ current: 0, total: 0, active: false });
     setAiPayload(null);
     showAlert(`Successfully processed ${successCount} / ${actionTargets.length} entries.`, "success");
@@ -1168,7 +1168,7 @@ export default function Home() {
       await fetchData(true); // silent, no loading spinner
       if (rowId !== undefined) recentlyWrittenIds.current.delete(rowId);
     }, 1500);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDirectIssue = async (row: any) => {
@@ -1180,6 +1180,7 @@ export default function Home() {
 
     if (!rkdNumber) {
       showAlert("Error: RKD Number not found for this row.", "error");
+      isProcessingRef.current = false;
       return;
     }
 
@@ -1198,6 +1199,7 @@ export default function Home() {
         available: currentStock
       });
       setIsModalOpen(true);
+      isProcessingRef.current = false;
       return;
     }
 
@@ -1262,6 +1264,7 @@ export default function Home() {
         available: "N/A (Max Allowed)"
       });
       setIsModalOpen(true);
+      isProcessingRef.current = false;
       return;
     }
 
@@ -1275,6 +1278,7 @@ export default function Home() {
         available: currentStock
       });
       setIsModalOpen(true);
+      isProcessingRef.current = false;
       return;
     }
 
@@ -1607,9 +1611,9 @@ export default function Home() {
     // Build table rows
     const rows = filteredData.map((row, idx) => {
       const issueQty = parseFloat(row["Issue Qty"] || "0") || 0;
-      const rate     = parseFloat(row["Price"]     || "0") || 0;
-      const total    = issueQty * rate;
-      
+      const rate = parseFloat(row["Price"] || "0") || 0;
+      const total = issueQty * rate;
+
       // Extract date part from Timestamp (e.g., "07-May-2026 11:30" -> "07-May-2026")
       const fullTs = row["Timestamp"] || "-";
       let dateOnly = fullTs !== "-" ? fullTs.split(" ")[0] : "-";
@@ -1626,14 +1630,14 @@ export default function Home() {
       return [
         idx + 1,
         dateOnly,
-        row["Store RKD Number"]  || "-",
-        row["Department"]        || "-",
-        row["Item Name"]         || "-",
-        row["Machine Name"]      || "-",
-        row["Machine ID"]        || "-",
+        row["Store RKD Number"] || "-",
+        row["Department"] || "-",
+        row["Item Name"] || "-",
+        row["Machine Name"] || "-",
+        row["Machine ID"] || "-",
         row["Person Filling Name"] || "-",
-        row["Vendor Name"]       || "-",
-        row["Require Qty"]       || "0",
+        row["Vendor Name"] || "-",
+        row["Require Qty"] || "0",
         issueQty > 0 ? issueQty : "0",
         rate > 0 ? `Rs. ${rate.toFixed(2)}` : "-",
         total > 0 ? `Rs. ${total.toFixed(2)}` : "-",
@@ -1642,8 +1646,8 @@ export default function Home() {
 
     // Grand Total
     const grandTotal = filteredData.reduce((sum, row) => {
-      const qty  = parseFloat(row["Issue Qty"] || "0") || 0;
-      const rate = parseFloat(row["Price"]     || "0") || 0;
+      const qty = parseFloat(row["Issue Qty"] || "0") || 0;
+      const rate = parseFloat(row["Price"] || "0") || 0;
       return sum + qty * rate;
     }, 0);
 
@@ -1666,16 +1670,16 @@ export default function Home() {
       footStyles: { fillColor: [240, 240, 240], textColor: [30, 30, 30], fontSize: 8 },
       alternateRowStyles: { fillColor: [252, 252, 255] },
       columnStyles: {
-        0:  { cellWidth: 10 },
-        1:  { cellWidth: 21 },
-        2:  { cellWidth: 26 },
-        3:  { cellWidth: 22 },
-        4:  { cellWidth: 30 },
-        5:  { cellWidth: 22 },
-        6:  { cellWidth: 18 },
-        7:  { cellWidth: 22 },
-        8:  { cellWidth: 24 },
-        9:  { cellWidth: 14, halign: "center" },
+        0: { cellWidth: 10 },
+        1: { cellWidth: 21 },
+        2: { cellWidth: 26 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 22 },
+        6: { cellWidth: 18 },
+        7: { cellWidth: 22 },
+        8: { cellWidth: 24 },
+        9: { cellWidth: 14, halign: "center" },
         10: { cellWidth: 14, halign: "center" },
         11: { cellWidth: 18, halign: "right" },
         12: { cellWidth: 20, halign: "right" },
@@ -1831,6 +1835,10 @@ export default function Home() {
                     <BarChart3 size={16} />
                     <span>IMS</span>
                   </button>
+                  <button onClick={() => { setIsNavigating(true); router.push("/report"); }} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #7f1d1d, #dc2626)', boxShadow: '0 4px 14px rgba(220,38,38,0.4)' }}>
+                    <span style={{ fontSize: '1rem' }}>📊</span>
+                    <span>Issue Report</span>
+                  </button>
                   <button
                     onClick={generateIssuePDF}
                     className={styles.dribbbleBtnPrimary}
@@ -1904,12 +1912,12 @@ export default function Home() {
             {/* Smart Filters — Unified Row */}
             <div className={styles.filterRow} style={{ flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: isListening ? '100%' : '350px', transition: 'min-width 0.3s ease' }}>
-                
+
                 {/* ── GEMINI VOICE ASSIST BAR ── */}
-                <div style={{ 
-                  flex: 1, 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
                   position: 'relative',
                   background: '#ffffff',
                   borderRadius: '24px',
@@ -1932,21 +1940,21 @@ export default function Home() {
                     }}></div>
                   )}
 
-                  <div style={{ 
-                    flex: 1, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    background: '#ffffff', 
-                    borderRadius: '22px', 
+                  <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: '#ffffff',
+                    borderRadius: '22px',
                     padding: '4px 8px',
                     gap: '4px'
                   }}>
-                    <button 
-                      onClick={isListening ? undefined : startListening} 
-                      style={{ 
-                        border: 'none', 
-                        cursor: isListening ? 'default' : 'pointer', 
-                        display: 'flex', 
+                    <button
+                      onClick={isListening ? undefined : startListening}
+                      style={{
+                        border: 'none',
+                        cursor: isListening ? 'default' : 'pointer',
+                        display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         width: '36px',
@@ -1954,7 +1962,7 @@ export default function Home() {
                         borderRadius: '50%',
                         transition: 'all 0.3s ease',
                         background: isListening ? 'rgba(66, 133, 244, 0.1)' : 'transparent'
-                      }} 
+                      }}
                       title="Gemini Voice Command"
                     >
                       {isListening ? (
@@ -1968,19 +1976,19 @@ export default function Home() {
                       ) : (
                         /* Gemini Sparkle SVG */
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M19.3 18.2C18.6 18.7 18 19.3 17.5 20L16.4 21.6C16.2 21.9 15.8 21.9 15.6 21.6L14.5 20C14 19.3 13.4 18.7 12.7 18.2L11.1 17.1C10.8 16.9 10.8 16.5 11.1 16.3L12.7 15.2C13.4 14.7 14 14.1 14.5 13.4L15.6 11.8C15.8 11.5 16.2 11.5 16.4 11.8L17.5 13.4C18 14.1 18.6 14.7 19.3 15.2L20.9 16.3C21.2 16.5 21.2 16.9 20.9 17.1L19.3 18.2ZM11.4 10.7C10.2 11.6 9 12.6 8.2 13.9L6.5 16.6C6.1 17.2 5.2 17.2 4.8 16.6L3.1 13.9C2.3 12.6 1.1 11.6 -0.1 10.7L-2.8 8.8C-3.4 8.4 -3.4 7.6 -2.8 7.2L-0.1 5.3C1.1 4.4 2.3 3.4 3.1 2.1L4.8 -0.6C5.2 -1.2 6.1 -1.2 6.5 -0.6L8.2 2.1C9 3.4 10.2 4.4 11.4 5.3L14.1 7.2C14.7 7.6 14.7 8.4 14.1 8.8L11.4 10.7Z" fill="url(#geminiGradientFill)"/>
+                          <path d="M19.3 18.2C18.6 18.7 18 19.3 17.5 20L16.4 21.6C16.2 21.9 15.8 21.9 15.6 21.6L14.5 20C14 19.3 13.4 18.7 12.7 18.2L11.1 17.1C10.8 16.9 10.8 16.5 11.1 16.3L12.7 15.2C13.4 14.7 14 14.1 14.5 13.4L15.6 11.8C15.8 11.5 16.2 11.5 16.4 11.8L17.5 13.4C18 14.1 18.6 14.7 19.3 15.2L20.9 16.3C21.2 16.5 21.2 16.9 20.9 17.1L19.3 18.2ZM11.4 10.7C10.2 11.6 9 12.6 8.2 13.9L6.5 16.6C6.1 17.2 5.2 17.2 4.8 16.6L3.1 13.9C2.3 12.6 1.1 11.6 -0.1 10.7L-2.8 8.8C-3.4 8.4 -3.4 7.6 -2.8 7.2L-0.1 5.3C1.1 4.4 2.3 3.4 3.1 2.1L4.8 -0.6C5.2 -1.2 6.1 -1.2 6.5 -0.6L8.2 2.1C9 3.4 10.2 4.4 11.4 5.3L14.1 7.2C14.7 7.6 14.7 8.4 14.1 8.8L11.4 10.7Z" fill="url(#geminiGradientFill)" />
                           <defs>
                             <linearGradient id="geminiGradientFill" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-                              <stop stopColor="#4285f4"/>
-                              <stop offset="0.33" stopColor="#9b72cb"/>
-                              <stop offset="0.66" stopColor="#d96570"/>
-                              <stop offset="1" stopColor="#f4b400"/>
+                              <stop stopColor="#4285f4" />
+                              <stop offset="0.33" stopColor="#9b72cb" />
+                              <stop offset="0.66" stopColor="#d96570" />
+                              <stop offset="1" stopColor="#f4b400" />
                             </linearGradient>
                           </defs>
                         </svg>
                       )}
                     </button>
-                    
+
                     <textarea
                       placeholder={isListening ? "Listening to your request..." : "Ask Gemini to manage your inventory..."}
                       className={styles.searchInput}
@@ -1993,15 +2001,15 @@ export default function Home() {
                           e.target.style.height = e.target.scrollHeight + 'px';
                         }
                       }}
-                      onKeyDown={(e) => { 
-                        if(e.key === 'Enter' && !e.shiftKey) { 
-                          e.preventDefault(); 
-                          processAiCommand(); 
-                        } 
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          processAiCommand();
+                        }
                       }}
-                      style={{ 
+                      style={{
                         flex: 1,
-                        border: 'none', 
+                        border: 'none',
                         background: 'transparent',
                         outline: 'none',
                         color: '#1e293b',
@@ -2014,21 +2022,21 @@ export default function Home() {
                         padding: '2px 4px',
                       }}
                     />
-                    
+
                     {/* Send Button — always visible, outside the floating textarea layer */}
                     {isAiParsing ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 300, position: 'relative' }}>
                         <Loader2 size={20} style={{ color: '#4285f4', animation: 'spin 1s linear infinite' }} />
                       </div>
                     ) : (
-                      <button 
-                        onClick={() => processAiCommand()} 
+                      <button
+                        onClick={() => processAiCommand()}
                         disabled={!aiPrompt.trim()}
-                        style={{ 
+                        style={{
                           background: aiPrompt.trim() ? 'linear-gradient(135deg, #4285f4, #9b72cb)' : '#f1f5f9',
-                          border: 'none', 
-                          cursor: aiPrompt.trim() ? 'pointer' : 'default', 
-                          display: 'flex', 
+                          border: 'none',
+                          cursor: aiPrompt.trim() ? 'pointer' : 'default',
+                          display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '32px',
@@ -2039,7 +2047,7 @@ export default function Home() {
                           zIndex: 300,
                           position: 'relative',
                           boxShadow: aiPrompt.trim() ? '0 2px 8px rgba(66,133,244,0.4)' : 'none'
-                        }} 
+                        }}
                         title="Send to Gemini"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={aiPrompt.trim() ? '#fff' : '#cbd5e1'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2063,8 +2071,8 @@ export default function Home() {
                 </div>
               </div>
 
-              <button 
-                className={styles.dribbbleBtnSecondary} 
+              <button
+                className={styles.dribbbleBtnSecondary}
                 style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 600, border: '1px dashed #cbd5e1' }}
                 onClick={() => {
                   setSearchTerm("");
@@ -2103,12 +2111,12 @@ export default function Home() {
             </div>
 
             {/* Table */}
-            <div 
+            <div
               ref={fullScreenRef}
               style={isFullScreen ? {
-                backgroundColor: '#f1f5f9', 
+                backgroundColor: '#f1f5f9',
                 padding: '24px',
-                display: 'flex', 
+                display: 'flex',
                 flexDirection: 'column',
                 width: '100vw',
                 height: '100vh',
@@ -2126,695 +2134,695 @@ export default function Home() {
                 </div>
               )}
               <div className={styles.tableScrollArea} style={isFullScreen ? { flex: 1, maxHeight: 'none', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' } : {}}>
-              {loading ? (
-                <div className={styles.loaderCenter}>
-                  <Loader2 className={styles.spinnerIcon} size={32} />
-                  <p>Syncing Database...</p>
-                </div>
-              ) : (
-                <table className={styles.dataTable}>
-                  <thead>
-                    <tr>
-                      <th className={styles.stickyCol}>Timestamp</th>
-                      <th>Store RKD Number</th>
-                      <th>Person Filling Name</th>
-                      <th>Item Name</th>
-                      <th>Require Qty</th>
-                      <th>Issue Qty</th>
-                      <th>Units</th>
-                      <th>Department</th>
-                      <th>Machine Name</th>
-                      <th>Machine ID</th>
-                      <th>Rate (₹)</th>
-                      <th>Stock in Store</th>
-                      <th>Status</th>
-                      <th>Live Status</th>
-                      {(!statusFilter || statusFilter === "Requirement Open") && <th className={styles.actionCol}>Action</th>}
-                    </tr>
-                  </thead>
-                  <tbody className={styles.dataTableBody}>
-                    {filteredData.map((row, idx) => {
-                      const itemKey = (row["Item Name"] || "").trim().toLowerCase();
-                      const imsStock = stockMap[itemKey];
-                      const stockNum = imsStock !== undefined ? Number(imsStock) : NaN;
-                      const reqNum = Number(row["Require Qty"]) || 0;
-                      const isLow = !isNaN(stockNum) && stockNum < reqNum;
-                      const isUnknown = imsStock === undefined;
+                {loading ? (
+                  <div className={styles.loaderCenter}>
+                    <Loader2 className={styles.spinnerIcon} size={32} />
+                    <p>Syncing Database...</p>
+                  </div>
+                ) : (
+                  <table className={styles.dataTable}>
+                    <thead>
+                      <tr>
+                        <th className={styles.stickyCol}>Timestamp</th>
+                        <th>Store RKD Number</th>
+                        <th>Person Filling Name</th>
+                        <th>Item Name</th>
+                        <th>Require Qty</th>
+                        <th>Issue Qty</th>
+                        <th>Units</th>
+                        <th>Department</th>
+                        <th>Machine Name</th>
+                        <th>Machine ID</th>
+                        <th>Rate (₹)</th>
+                        <th>Stock in Store</th>
+                        <th>Status</th>
+                        <th>Live Status</th>
+                        {(!statusFilter || statusFilter === "Requirement Open") && <th className={styles.actionCol}>Action</th>}
+                      </tr>
+                    </thead>
+                    <tbody className={styles.dataTableBody}>
+                      {filteredData.map((row, idx) => {
+                        const itemKey = (row["Item Name"] || "").trim().toLowerCase();
+                        const imsStock = stockMap[itemKey];
+                        const stockNum = imsStock !== undefined ? Number(imsStock) : NaN;
+                        const reqNum = Number(row["Require Qty"]) || 0;
+                        const isLow = !isNaN(stockNum) && stockNum < reqNum;
+                        const isUnknown = imsStock === undefined;
 
-                      const status = String(row["Status"] || "").trim();
-                      let statusClass = "";
-                      if (status === "Requirement Open") statusClass = styles.rowOpen;
-                      else if (status === "Requirement Closed") statusClass = styles.rowClosed;
-                      else if (status === "Requirement Cancelled") statusClass = styles.rowCancelled;
+                        const status = String(row["Status"] || "").trim();
+                        let statusClass = "";
+                        if (status === "Requirement Open") statusClass = styles.rowOpen;
+                        else if (status === "Requirement Closed") statusClass = styles.rowClosed;
+                        else if (status === "Requirement Cancelled") statusClass = styles.rowCancelled;
 
-                      return (
-                        <tr
-                          key={idx}
-                          style={{ animationDelay: idx < 50 ? `${(idx % 50) * 0.02}s` : '0s' }}
-                          className={`${idx < 50 ? styles.tableRowFadeIn : ""} ${statusClass}`}
-                        >
-                          <td className={statusClass ? styles.colWhite : styles.colMuted}>{row["Timestamp"] || "-"}</td>
-                          <td onClick={() => {
-                            if (status === "Requirement Open") {
-                              const itemKey = (row["Item Name"] || "").trim().toLowerCase();
-                              const misc = miscMap[itemKey] || { vendor: "", rate: "" };
-                              setEditMasterRow(row);
-                              setEmUnit(row["Units"] || "");
-                              setEmPrice(misc.rate || "");
-                              setEmVendor(misc.vendor || "");
-                              setEmMinQty("");
-                              setEmSafety("");
-                              setEmGst("");
-                              setEmRack("");
-                              setIsEditMasterOpen(true);
-                              fetchMetaOpts();
-                            }
-                          }}>
-                            <span 
-                              className={`${styles.pillId} ${(isLow && status === "Requirement Open") ? styles.pillIdLowStock : ""}`}
-                              style={{ cursor: status === "Requirement Open" ? "pointer" : "default" }}
-                              title={status === "Requirement Open" ? "Edit Item Master Data" : ""}
-                            >
-                              {row["Store RKD Number"] || "-"}
-                            </span>
-                          </td>
-                          <td>{row["Person Filling Name"] || "-"}</td>
-                          <td className={styles.colBold}>{row["Item Name"] || "-"}</td>
-                          <td><span className={styles.pillReq}>{row["Require Qty"] || "0"}</span></td>
-                          <td><span className={styles.pillIss}>{row["Issue Qty"] || "0"}</span></td>
-                          <td className={styles.colMuted}>{row["Units"] || "-"}</td>
-                          <td>{row["Department"] || "-"}</td>
-                          <td>{row["Machine Name"] || "-"}</td>
-                          <td className={styles.colMuted}>{row["Machine ID"] || "-"}</td>
-                          <td className={styles.colMuted}>{row["Price"] || "-"}</td>
-                          <td>
-                            <span className={`${styles.pillStock} ${isUnknown ? styles.stockUnknown : isLow ? styles.stockDanger : styles.stockSafe}`}>
-                              {isUnknown ? "No Stock" : imsStock}
-                            </span>
-                          </td>
-                          <td className={styles.colBold}>{row["Status"] || "-"}</td>
-                          <td>
-                            {(() => {
-                              const steps = getLiveStatus(row, stockMap, poMap, inwardMap);
-                              return (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '120px' }}>
-                                  {steps.map((ls, i) => (
-                                    <span key={i} style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      padding: '2px 8px',
-                                      borderRadius: '20px',
-                                      fontSize: '0.68rem',
-                                      fontWeight: 700,
-                                      letterSpacing: '0.2px',
-                                      background: ls.bg,
-                                      border: `1px solid ${ls.border}`,
-                                      color: ls.color,
-                                      whiteSpace: 'nowrap',
-                                    }}>
-                                      <span style={{ fontSize: '0.7rem' }}>{ls.emoji}</span>
-                                      <span>{ls.label}</span>
-                                    </span>
-                                  ))}
-                                </div>
-                              );
-                            })()}
-                          </td>
-                          {(!statusFilter || statusFilter === "Requirement Open") && (
-                            <td className={styles.actionCell}>
-                              {row["Status"] === "Requirement Open" && (
-                                <>
-                                  <div className={styles.actionGroup}>
-                                    <span className={styles.groupLabel}>Issue</span>
-                                    <div className={styles.groupButtons}>
-                                      <button
-                                        className={styles.directIssueBtn}
-                                        onClick={() => handleDirectIssue(row)}
-                                        disabled={updatingRowId === row._id}
-                                        title="Instant Issue"
-                                      >
-                                        {updatingRowId === row._id ? (
-                                          <Loader2 className={styles.btnSpin} size={14} />
-                                        ) : (
-                                          <Zap size={14} fill="currentColor" />
-                                        )}
-                                      </button>
-                                      <button
-                                        className={styles.manualIssueBtn}
-                                        onClick={() => { setManualRow(row); setIsManualModalOpen(true); }}
-                                        disabled={updatingRowId === row._id}
-                                        title="Manual Issue"
-                                      >
-                                        <Send size={14} fill="currentColor" />
-                                      </button>
-                                      <button
-                                        className={styles.manualIssueBtn}
-                                        style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', marginLeft: '4px' }}
-                                        onClick={() => handleRowRefresh(row)}
-                                        disabled={updatingRowId === row._id}
-                                        title="Refresh Vendor Rate"
-                                      >
-                                        <RefreshCw size={14} />
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {(() => {
-                                    const appReq = String(row["Approval Require?"] || "").trim().toLowerCase();
-                                    const appQty = parseFloat(String(row["Approved Quantity"] || "0"));
-                                    const isApprovalDone = (appReq === "no" || appReq === "नहीं") || ((appReq === "yes" || appReq === "हाँ") && appQty > 0);
-                                    
-                                    if (isApprovalDone) return null;
-
-                                    return (
-                                      <div className={styles.actionGroup}>
-                                        <span className={styles.groupLabel}>Approval</span>
-                                        <div className={styles.groupButtons}>
-                                          <button
-                                            className={styles.instantApprovalBtn}
-                                            onClick={() => handleInstantApproval(row)}
-                                            disabled={updatingRowId === row._id}
-                                            title="Instant Approval"
-                                          >
-                                            {updatingRowId === row._id ? (
-                                              <Loader2 className={styles.btnSpin} size={14} />
-                                            ) : (
-                                              <CheckCircle size={14} />
-                                            )}
-                                          </button>
-                                          <button
-                                            className={styles.manualApprovalBtn}
-                                            onClick={() => {
-                                              setManualRow(row);
-                                              setIsManualApprovalModalOpen(true);
-                                            }}
-                                            disabled={updatingRowId === row._id}
-                                            title="Manual Approval"
-                                          >
-                                            <UserCheck size={14} />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
-                                </>
-                              )}
+                        return (
+                          <tr
+                            key={idx}
+                            style={{ animationDelay: idx < 50 ? `${(idx % 50) * 0.02}s` : '0s' }}
+                            className={`${idx < 50 ? styles.tableRowFadeIn : ""} ${statusClass}`}
+                          >
+                            <td className={statusClass ? styles.colWhite : styles.colMuted}>{row["Timestamp"] || "-"}</td>
+                            <td onClick={() => {
+                              if (status === "Requirement Open") {
+                                const itemKey = (row["Item Name"] || "").trim().toLowerCase();
+                                const misc = miscMap[itemKey] || { vendor: "", rate: "" };
+                                setEditMasterRow(row);
+                                setEmUnit(row["Units"] || "");
+                                setEmPrice(misc.rate || "");
+                                setEmVendor(misc.vendor || "");
+                                setEmMinQty("");
+                                setEmSafety("");
+                                setEmGst("");
+                                setEmRack("");
+                                setIsEditMasterOpen(true);
+                                fetchMetaOpts();
+                              }
+                            }}>
+                              <span
+                                className={`${styles.pillId} ${(isLow && status === "Requirement Open") ? styles.pillIdLowStock : ""}`}
+                                style={{ cursor: status === "Requirement Open" ? "pointer" : "default" }}
+                                title={status === "Requirement Open" ? "Edit Item Master Data" : ""}
+                              >
+                                {row["Store RKD Number"] || "-"}
+                              </span>
                             </td>
-                          )}
+                            <td>{row["Person Filling Name"] || "-"}</td>
+                            <td className={styles.colBold}>{row["Item Name"] || "-"}</td>
+                            <td><span className={styles.pillReq}>{row["Require Qty"] || "0"}</span></td>
+                            <td><span className={styles.pillIss}>{row["Issue Qty"] || "0"}</span></td>
+                            <td className={styles.colMuted}>{row["Units"] || "-"}</td>
+                            <td>{row["Department"] || "-"}</td>
+                            <td>{row["Machine Name"] || "-"}</td>
+                            <td className={styles.colMuted}>{row["Machine ID"] || "-"}</td>
+                            <td className={styles.colMuted}>{row["Price"] || "-"}</td>
+                            <td>
+                              <span className={`${styles.pillStock} ${isUnknown ? styles.stockUnknown : isLow ? styles.stockDanger : styles.stockSafe}`}>
+                                {isUnknown ? "No Stock" : imsStock}
+                              </span>
+                            </td>
+                            <td className={styles.colBold}>{row["Status"] || "-"}</td>
+                            <td>
+                              {(() => {
+                                const steps = getLiveStatus(row, stockMap, poMap, inwardMap);
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '120px' }}>
+                                    {steps.map((ls, i) => (
+                                      <span key={i} style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 8px',
+                                        borderRadius: '20px',
+                                        fontSize: '0.68rem',
+                                        fontWeight: 700,
+                                        letterSpacing: '0.2px',
+                                        background: ls.bg,
+                                        border: `1px solid ${ls.border}`,
+                                        color: ls.color,
+                                        whiteSpace: 'nowrap',
+                                      }}>
+                                        <span style={{ fontSize: '0.7rem' }}>{ls.emoji}</span>
+                                        <span>{ls.label}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                            {(!statusFilter || statusFilter === "Requirement Open") && (
+                              <td className={styles.actionCell}>
+                                {row["Status"] === "Requirement Open" && (
+                                  <>
+                                    <div className={styles.actionGroup}>
+                                      <span className={styles.groupLabel}>Issue</span>
+                                      <div className={styles.groupButtons}>
+                                        <button
+                                          className={styles.directIssueBtn}
+                                          onClick={() => handleDirectIssue(row)}
+                                          disabled={updatingRowId === row._id}
+                                          title="Instant Issue"
+                                        >
+                                          {updatingRowId === row._id ? (
+                                            <Loader2 className={styles.btnSpin} size={14} />
+                                          ) : (
+                                            <Zap size={14} fill="currentColor" />
+                                          )}
+                                        </button>
+                                        <button
+                                          className={styles.manualIssueBtn}
+                                          onClick={() => { setManualRow(row); setIsManualModalOpen(true); }}
+                                          disabled={updatingRowId === row._id}
+                                          title="Manual Issue"
+                                        >
+                                          <Send size={14} fill="currentColor" />
+                                        </button>
+                                        <button
+                                          className={styles.manualIssueBtn}
+                                          style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', marginLeft: '4px' }}
+                                          onClick={() => handleRowRefresh(row)}
+                                          disabled={updatingRowId === row._id}
+                                          title="Refresh Vendor Rate"
+                                        >
+                                          <RefreshCw size={14} />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {(() => {
+                                      const appReq = String(row["Approval Require?"] || "").trim().toLowerCase();
+                                      const appQty = parseFloat(String(row["Approved Quantity"] || "0"));
+                                      const isApprovalDone = (appReq === "no" || appReq === "नहीं") || ((appReq === "yes" || appReq === "हाँ") && appQty > 0);
+
+                                      if (isApprovalDone) return null;
+
+                                      return (
+                                        <div className={styles.actionGroup}>
+                                          <span className={styles.groupLabel}>Approval</span>
+                                          <div className={styles.groupButtons}>
+                                            <button
+                                              className={styles.instantApprovalBtn}
+                                              onClick={() => handleInstantApproval(row)}
+                                              disabled={updatingRowId === row._id}
+                                              title="Instant Approval"
+                                            >
+                                              {updatingRowId === row._id ? (
+                                                <Loader2 className={styles.btnSpin} size={14} />
+                                              ) : (
+                                                <CheckCircle size={14} />
+                                              )}
+                                            </button>
+                                            <button
+                                              className={styles.manualApprovalBtn}
+                                              onClick={() => {
+                                                setManualRow(row);
+                                                setIsManualApprovalModalOpen(true);
+                                              }}
+                                              disabled={updatingRowId === row._id}
+                                              title="Manual Approval"
+                                            >
+                                              <UserCheck size={14} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+                                  </>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                      {/* Connecting / Retry State — show spinner not error */}
+                      {apiError && (apiError.includes("retry") || apiError.includes("Connecting") || apiError.includes("Slow")) && filteredData.length === 0 && (
+                        <tr>
+                          <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell}>
+                            <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: '#ec4899' }} />
+                            <p style={{ color: '#64748b', marginTop: 8 }}>{apiError}</p>
+                          </td>
                         </tr>
-                      );
-                    })}
-                    {/* Connecting / Retry State — show spinner not error */}
-                    {apiError && (apiError.includes("retry") || apiError.includes("Connecting") || apiError.includes("Slow")) && filteredData.length === 0 && (
-                      <tr>
-                        <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell}>
-                          <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: '#ec4899' }} />
-                          <p style={{ color: '#64748b', marginTop: 8 }}>{apiError}</p>
-                        </td>
-                      </tr>
-                    )}
-                    {/* Hard Error — show only if not a retry and no data */}
-                    {apiError && !apiError.includes("retry") && !apiError.includes("Connecting") && !apiError.includes("Slow") && filteredData.length === 0 && (
-                      <tr>
-                        <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell} style={{ color: '#ef4444' }}>
-                          <p>⚠️ {apiError}</p>
-                          <button onClick={() => fetchData(true)} className={styles.statusBtn} style={{ marginTop: '10px' }}>Retry</button>
-                        </td>
-                      </tr>
-                    )}
-                    {/* Empty state — only after first successful load */}
-                    {!apiError && hasLoadedOnce.current && filteredData.length === 0 && (
-                      <tr>
-                        <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell}>
-                          <Filter size={32} />
-                          <p>No matching records found.</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              )}
+                      )}
+                      {/* Hard Error — show only if not a retry and no data */}
+                      {apiError && !apiError.includes("retry") && !apiError.includes("Connecting") && !apiError.includes("Slow") && filteredData.length === 0 && (
+                        <tr>
+                          <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell} style={{ color: '#ef4444' }}>
+                            <p>⚠️ {apiError}</p>
+                            <button onClick={() => fetchData(true)} className={styles.statusBtn} style={{ marginTop: '10px' }}>Retry</button>
+                          </td>
+                        </tr>
+                      )}
+                      {/* Empty state — only after first successful load */}
+                      {!apiError && hasLoadedOnce.current && filteredData.length === 0 && (
+                        <tr>
+                          <td colSpan={(!statusFilter || statusFilter === "Requirement Open") ? 13 : 12} className={styles.noDataCell}>
+                            <Filter size={32} />
+                            <p>No matching records found.</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
-      {/* Modern Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={modalTitle}
-        message={modalMsg}
-        data={modalData}
-      />
-
-      {/* Manual Issue Modal */}
-      <ManualIssueModal
-        isOpen={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
-        row={manualRow}
-        onSubmit={handleManualSubmit}
-        updating={updatingRowId !== null && manualRow && updatingRowId === manualRow._id}
-        stockMap={stockMap}
-      />
-
-      {/* Manual Approval Modal */}
-      <ManualApprovalModal
-        isOpen={isManualApprovalModalOpen}
-        onClose={() => setIsManualApprovalModalOpen(false)}
-        row={manualRow}
-        onSubmit={handleManualApprovalSubmit}
-        updating={updatingRowId !== null && manualRow && updatingRowId === manualRow._id}
-        miscMap={miscMap}
-        isRefreshing={updatingRowId === manualRow?._id}
-        onRefresh={() => handleRowRefresh(manualRow)}
-      />
-
-      {/* Instant Approval Modal */}
-      <InstantApprovalModal
-        isOpen={isInstantApproveModalOpen}
-        onClose={() => setIsInstantApproveModalOpen(false)}
-        row={instantApproveRow}
-        onSubmit={submitInstantApproval}
-        updating={updatingRowId !== null && instantApproveRow && updatingRowId === instantApproveRow._id}
-        iaVendor={iaVendor}
-        setIaVendor={setIaVendor}
-        iaRate={iaRate}
-        setIaRate={setIaRate}
-        isRefreshing={updatingRowId === instantApproveRow?._id}
-        onRefresh={() => handleRowRefresh(instantApproveRow)}
-      />
-
-      {/* ─── Debit Note Modal ─── */}
-      {isDebitNoteOpen && (
-        <div className={styles.modalOverlay} onClick={() => setIsDebitNoteOpen(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalIconBox} style={{ background: 'linear-gradient(135deg,#fee2e2,#fecaca)', color: '#dc2626' }}>
-                <span style={{ fontSize: '2rem' }}>📄</span>
-              </div>
-            </div>
-            <h3 className={styles.modalTitle}>Debit Note Entry</h3>
-            <p className={styles.modalMessage}>Select RKD Number and enter Debit Note Qty <span style={{ color: '#dc2626', fontWeight: 700 }}>(≤ Required Qty)</span></p>
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{ color: '#dc2626', fontSize: '0.75rem' }}>(Requirement Closed only)</span></label>
-              <SearchableRKDSelect
-                data={data}
-                value={dnSelectedRKD}
-                onChange={(row: any) => { setDnSelectedRKD(row); setDnQty(row["Debit Note Qty"] || ""); }}
-                placeholder="Search RKD Number or Item..."
+              {/* Modern Modal */}
+              <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title={modalTitle}
+                message={modalMsg}
+                data={modalData}
               />
-            </div>
 
-            {dnSelectedRKD && (
-              <div className={styles.formInfoBox} style={{ margin: '0 0 16px 0' }}>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span><span className={styles.modalValue}>{dnSelectedRKD["Item Name"]}</span></div>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span><span className={styles.modalValue}>{dnSelectedRKD["Person Filling Name"]}</span></div>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{ color: '#dc2626', fontWeight: 700 }}>{dnSelectedRKD["Require Qty"]} {dnSelectedRKD["Units"]}</span></div>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Issue Qty:</span><span className={styles.modalValue}>{dnSelectedRKD["Issue Qty"] || "—"}</span></div>
-              </div>
-            )}
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>✏️ Debit Note Qty <span style={{ color: '#dc2626', fontSize: '0.75rem' }}>(Max: {dnSelectedRKD?.["Require Qty"] || "—"})</span></label>
-              <input
-                type="number"
-                className={styles.formInput}
-                value={dnQty}
-                onChange={e => setDnQty(e.target.value)}
-                placeholder="Enter debit note quantity"
-                max={dnSelectedRKD?.["Require Qty"]}
-                disabled={!dnSelectedRKD}
+              {/* Manual Issue Modal */}
+              <ManualIssueModal
+                isOpen={isManualModalOpen}
+                onClose={() => setIsManualModalOpen(false)}
+                row={manualRow}
+                onSubmit={handleManualSubmit}
+                updating={updatingRowId !== null && manualRow && updatingRowId === manualRow._id}
+                stockMap={stockMap}
               />
-            </div>
 
-            <button
-              className={styles.dribbbleBtnPrimary}
-              style={{ width: '100%', justifyContent: 'center' }}
-              disabled={columnUpdating || !dnSelectedRKD || !dnQty}
-              onClick={() => handleColumnUpdate(dnSelectedRKD["Store RKD Number"], "S", dnQty, dnSelectedRKD["Require Qty"])}
-            >
-              {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : <span>💾</span>}
-              <span>Save Debit Note</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Reverse Entry Modal ─── */}
-      {isReverseEntryOpen && (
-        <div className={styles.modalOverlay} onClick={() => setIsReverseEntryOpen(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalIconBox} style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', color: '#7c3aed' }}>
-                <span style={{ fontSize: '2rem' }}>↩️</span>
-              </div>
-            </div>
-            <h3 className={styles.modalTitle}>Reverse Entry</h3>
-            <p className={styles.modalMessage}>Select RKD Number and enter Reverse Entry Qty <span style={{ color: '#7c3aed', fontWeight: 700 }}>(≤ Required Qty)</span></p>
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{ color: '#7c3aed', fontSize: '0.75rem' }}>(Requirement Closed only)</span></label>
-              <SearchableRKDSelect
-                data={data}
-                value={reSelectedRKD}
-                onChange={(row: any) => { setReSelectedRKD(row); setReQty(row["Reverse Entry Qty"] || ""); }}
-                placeholder="Search RKD Number or Item..."
+              {/* Manual Approval Modal */}
+              <ManualApprovalModal
+                isOpen={isManualApprovalModalOpen}
+                onClose={() => setIsManualApprovalModalOpen(false)}
+                row={manualRow}
+                onSubmit={handleManualApprovalSubmit}
+                updating={updatingRowId !== null && manualRow && updatingRowId === manualRow._id}
+                miscMap={miscMap}
+                isRefreshing={updatingRowId === manualRow?._id}
+                onRefresh={() => handleRowRefresh(manualRow)}
               />
-            </div>
 
-            {reSelectedRKD && (
-              <div className={styles.formInfoBox} style={{ margin: '0 0 16px 0' }}>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span><span className={styles.modalValue}>{reSelectedRKD["Item Name"]}</span></div>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span><span className={styles.modalValue}>{reSelectedRKD["Person Filling Name"]}</span></div>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{ color: '#7c3aed', fontWeight: 700 }}>{reSelectedRKD["Require Qty"]} {reSelectedRKD["Units"]}</span></div>
-                <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Issue Qty:</span><span className={styles.modalValue}>{reSelectedRKD["Issue Qty"] || "—"}</span></div>
-              </div>
-            )}
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>✏️ Reverse Entry Qty <span style={{ color: '#7c3aed', fontSize: '0.75rem' }}>(Max: {reSelectedRKD?.["Require Qty"] || "—"})</span></label>
-              <input
-                type="number"
-                className={styles.formInput}
-                value={reQty}
-                onChange={e => setReQty(e.target.value)}
-                placeholder="Enter reverse entry quantity"
-                max={reSelectedRKD?.["Require Qty"]}
-                disabled={!reSelectedRKD}
+              {/* Instant Approval Modal */}
+              <InstantApprovalModal
+                isOpen={isInstantApproveModalOpen}
+                onClose={() => setIsInstantApproveModalOpen(false)}
+                row={instantApproveRow}
+                onSubmit={submitInstantApproval}
+                updating={updatingRowId !== null && instantApproveRow && updatingRowId === instantApproveRow._id}
+                iaVendor={iaVendor}
+                setIaVendor={setIaVendor}
+                iaRate={iaRate}
+                setIaRate={setIaRate}
+                isRefreshing={updatingRowId === instantApproveRow?._id}
+                onRefresh={() => handleRowRefresh(instantApproveRow)}
               />
-            </div>
 
-            <button
-              className={styles.dribbbleBtnPrimary}
-              style={{ width: '100%', justifyContent: 'center' }}
-              disabled={columnUpdating || !reSelectedRKD || !reQty}
-              onClick={() => handleColumnUpdate(reSelectedRKD["Store RKD Number"], "T", reQty, reSelectedRKD["Require Qty"])}
-            >
-              {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : <span>💾</span>}
-              <span>Save Reverse Entry</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Edit Item Master Modal ── */}
-      {isEditMasterOpen && editMasterRow && (
-        <div className={styles.modalOverlay} onClick={() => setIsEditMasterOpen(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalIconBox} style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
-                📦
-              </div>
-              <div>
-                <h3 className={styles.modalTitle}>Edit Master Data</h3>
-                <p className={styles.modalSubtitle}>Update item details in Data tab</p>
-              </div>
-              <button className={styles.modalCloseBtn} onClick={() => setIsEditMasterOpen(false)}>×</button>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Item Name <span style={{fontSize:'0.75rem', color:'#94a3b8'}}>(Read-only)</span></label>
-              <input type="text" className={styles.formInput} value={editMasterRow["Item Name"]} disabled style={{ background:'#f1f5f9', color:'#64748b' }} />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                <label className={styles.formLabel}>Unit</label>
-                <input type="text" list="emUnitsList" className={styles.formInput} value={emUnit} onChange={e => setEmUnit(e.target.value)} placeholder="Select/Add" />
-                <datalist id="emUnitsList">{metaOpts.units.map(u => <option key={u} value={u}/>)}</datalist>
-              </div>
-              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                <label className={styles.formLabel}>Price Per Unit (₹)</label>
-                <input type="number" className={styles.formInput} value={emPrice} onChange={e => setEmPrice(e.target.value)} placeholder="0.00" />
-              </div>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Party Name (Vendor)</label>
-              <input type="text" list="emVendorsList" className={styles.formInput} value={emVendor} onChange={e => setEmVendor(e.target.value)} placeholder="Select/Add Vendor" />
-              <datalist id="emVendorsList">{metaOpts.vendors.map(v => <option key={v} value={v}/>)}</datalist>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                <label className={styles.formLabel}>Min Qty</label>
-                <input type="number" className={styles.formInput} value={emMinQty} onChange={e => setEmMinQty(e.target.value)} placeholder="0" />
-              </div>
-              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                <label className={styles.formLabel}>Safety Factor</label>
-                <input type="number" className={styles.formInput} value={emSafety} onChange={e => setEmSafety(e.target.value)} placeholder="0" />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                <label className={styles.formLabel}>GST</label>
-                <select className={styles.formInput} value={emGst} onChange={e => setEmGst(e.target.value)}>
-                  <option value="">Select</option>
-                  <option value="0%">0%</option>
-                  <option value="5%">5%</option>
-                  <option value="12%">12%</option>
-                  <option value="18%">18%</option>
-                  <option value="28%">28%</option>
-                </select>
-              </div>
-              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                <label className={styles.formLabel}>Rack No</label>
-                <input type="text" className={styles.formInput} value={emRack} onChange={e => setEmRack(e.target.value)} placeholder="Rack No" />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className={styles.dribbbleBtnPrimary} style={{ flex: 1, justifyContent: 'center' }} disabled={emSubmitting} onClick={handleEditMasterSave}>
-                {emSubmitting ? <Loader2 className={styles.btnSpin} size={18} /> : <span>💾</span>}
-                <span>Save Master Data</span>
-              </button>
-            </div>
-            <div style={{ marginTop: '16px', textAlign: 'center' }}>
-               <a href="/indent" target="_blank" style={{ fontSize: '0.85rem', color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
-                 + Add New Item to Master
-               </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── AI Agent Interface Modal (Gemini Theme) ── */}
-      {aiReviewOpen && aiPayload && (
-        <div className={styles.modalOverlay} onClick={() => setAiReviewOpen(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ 
-            maxWidth: '900px', 
-            width: '90%', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            maxHeight: '90vh',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.95) 100%)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.5)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 20px rgba(66, 133, 244, 0.1)',
-            overflow: 'hidden'
-          }}>
-            {/* Top Gemini Gradient Line */}
-            <div style={{ height: '4px', width: '100%', background: 'linear-gradient(90deg, #4285f4, #9b72cb, #d96570, #f4b400)', position: 'absolute', top: 0, left: 0 }}></div>
-
-            <div className={styles.modalHeader} style={{ borderBottom: 'none', paddingBottom: '0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19.3 18.2C18.6 18.7 18 19.3 17.5 20L16.4 21.6C16.2 21.9 15.8 21.9 15.6 21.6L14.5 20C14 19.3 13.4 18.7 12.7 18.2L11.1 17.1C10.8 16.9 10.8 16.5 11.1 16.3L12.7 15.2C13.4 14.7 14 14.1 14.5 13.4L15.6 11.8C15.8 11.5 16.2 11.5 16.4 11.8L17.5 13.4C18 14.1 18.6 14.7 19.3 15.2L20.9 16.3C21.2 16.5 21.2 16.9 20.9 17.1L19.3 18.2ZM11.4 10.7C10.2 11.6 9 12.6 8.2 13.9L6.5 16.6C6.1 17.2 5.2 17.2 4.8 16.6L3.1 13.9C2.3 12.6 1.1 11.6 -0.1 10.7L-2.8 8.8C-3.4 8.4 -3.4 7.6 -2.8 7.2L-0.1 5.3C1.1 4.4 2.3 3.4 3.1 2.1L4.8 -0.6C5.2 -1.2 6.1 -1.2 6.5 -0.6L8.2 2.1C9 3.4 10.2 4.4 11.4 5.3L14.1 7.2C14.7 7.6 14.7 8.4 14.1 8.8L11.4 10.7Z" fill="url(#geminiGradientModal)"/>
-                  <defs>
-                    <linearGradient id="geminiGradientModal" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#4285f4"/>
-                      <stop offset="0.33" stopColor="#9b72cb"/>
-                      <stop offset="0.66" stopColor="#d96570"/>
-                      <stop offset="1" stopColor="#f4b400"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600, background: 'linear-gradient(90deg, #1e293b, #334155)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>Gemini Store Analyst</h3>
-                </div>
-              </div>
-              <button className={styles.modalCloseBtn} onClick={() => setAiReviewOpen(false)}>×</button>
-            </div>
-
-            {/* User Prompt Bubble */}
-            <div style={{ alignSelf: 'flex-end', background: '#f1f5f9', padding: '10px 16px', borderRadius: '20px 20px 0 20px', margin: '16px 0', maxWidth: '80%', fontSize: '0.9rem', color: '#1e293b' }}>
-              {aiPayload.originalText}
-            </div>
-
-            {/* AI Analysis Bubble */}
-            <div style={{ alignSelf: 'flex-start', background: 'transparent', padding: '0 0 16px 8px', maxWidth: '100%', fontSize: '0.95rem', color: '#334155', lineHeight: 1.6, animation: 'fadeIn 0.5s ease' }}>
-              {aiPayload.analysis}
-              {aiPayload.suggestedFilters && Object.values(aiPayload.suggestedFilters).some(v => v !== null && v !== "") && (
-                <div style={{ marginTop: '12px' }}>
-                  <button 
-                    onClick={() => {
-                      const f = aiPayload.suggestedFilters;
-                      if (f?.dateFilter && f.dateFilter !== "null") setSelDateFilter({ label: f.dateFilter, value: f.dateFilter });
-                      if (f?.statusFilter && f.statusFilter !== "null") setStatusFilter(f.statusFilter);
-                      if (f?.personFilter && f.personFilter !== "null") setSelPerson({ label: f.personFilter, value: f.personFilter });
-                      setAiReviewOpen(false);
-                    }}
-                    style={{
-                      background: 'rgba(66, 133, 244, 0.1)', border: '1px solid rgba(66, 133, 244, 0.3)',
-                      color: '#4285f4', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem',
-                      fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
-                      gap: '6px', transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(66, 133, 244, 0.2)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(66, 133, 244, 0.1)'; }}
-                  >
-                    🎯 View Results in Main Table
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* AI Scorecard Panel — shown when AI returns aggregate data */}
-            {(aiPayload as any).scorecard && (aiPayload as any).scorecard.total > 0 && (
-              <div style={{ marginBottom: '16px', animation: 'fadeIn 0.5s ease' }}>
-                {/* Stat Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '14px' }}>
-                  {[
-                    { label: 'Total', value: (aiPayload as any).scorecard.total, color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-                    { label: 'Open', value: (aiPayload as any).scorecard.open, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
-                    { label: 'Closed', value: (aiPayload as any).scorecard.closed, color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
-                    { label: 'Cancelled', value: (aiPayload as any).scorecard.cancelled, color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
-                  ].map(sc => (
-                    <div key={sc.label} style={{ background: sc.bg, border: `1px solid ${sc.color}33`, borderRadius: '10px', padding: '10px 14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: sc.color, lineHeight: 1 }}>{sc.value}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: 600 }}>{sc.label}</div>
+              {/* ─── Debit Note Modal ─── */}
+              {isDebitNoteOpen && (
+                <div className={styles.modalOverlay} onClick={() => setIsDebitNoteOpen(false)}>
+                  <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+                    <div className={styles.modalHeader}>
+                      <div className={styles.modalIconBox} style={{ background: 'linear-gradient(135deg,#fee2e2,#fecaca)', color: '#dc2626' }}>
+                        <span style={{ fontSize: '2rem' }}>📄</span>
+                      </div>
                     </div>
-                  ))}
+                    <h3 className={styles.modalTitle}>Debit Note Entry</h3>
+                    <p className={styles.modalMessage}>Select RKD Number and enter Debit Note Qty <span style={{ color: '#dc2626', fontWeight: 700 }}>(≤ Required Qty)</span></p>
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{ color: '#dc2626', fontSize: '0.75rem' }}>(Requirement Closed only)</span></label>
+                      <SearchableRKDSelect
+                        data={data}
+                        value={dnSelectedRKD}
+                        onChange={(row: any) => { setDnSelectedRKD(row); setDnQty(row["Debit Note Qty"] || ""); }}
+                        placeholder="Search RKD Number or Item..."
+                      />
+                    </div>
+
+                    {dnSelectedRKD && (
+                      <div className={styles.formInfoBox} style={{ margin: '0 0 16px 0' }}>
+                        <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span><span className={styles.modalValue}>{dnSelectedRKD["Item Name"]}</span></div>
+                        <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span><span className={styles.modalValue}>{dnSelectedRKD["Person Filling Name"]}</span></div>
+                        <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{ color: '#dc2626', fontWeight: 700 }}>{dnSelectedRKD["Require Qty"]} {dnSelectedRKD["Units"]}</span></div>
+                        <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Issue Qty:</span><span className={styles.modalValue}>{dnSelectedRKD["Issue Qty"] || "—"}</span></div>
+                      </div>
+                    )}
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>✏️ Debit Note Qty <span style={{ color: '#dc2626', fontSize: '0.75rem' }}>(Max: {dnSelectedRKD?.["Require Qty"] || "—"})</span></label>
+                      <input
+                        type="number"
+                        className={styles.formInput}
+                        value={dnQty}
+                        onChange={e => setDnQty(e.target.value)}
+                        placeholder="Enter debit note quantity"
+                        max={dnSelectedRKD?.["Require Qty"]}
+                        disabled={!dnSelectedRKD}
+                      />
+                    </div>
+
+                    <button
+                      className={styles.dribbbleBtnPrimary}
+                      style={{ width: '100%', justifyContent: 'center' }}
+                      disabled={columnUpdating || !dnSelectedRKD || !dnQty}
+                      onClick={() => handleColumnUpdate(dnSelectedRKD["Store RKD Number"], "S", dnQty, dnSelectedRKD["Require Qty"])}
+                    >
+                      {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : <span>💾</span>}
+                      <span>Save Debit Note</span>
+                    </button>
+                  </div>
                 </div>
-                {/* Top People & Items */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  {(aiPayload as any).scorecard.byPerson && Object.keys((aiPayload as any).scorecard.byPerson).length > 0 && (
-                    <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Top Persons</div>
-                      {Object.entries((aiPayload as any).scorecard.byPerson).map(([name, count]: any) => (
-                        <div key={name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#334155', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
-                          <span>{name}</span><span style={{ fontWeight: 700, color: '#6366f1' }}>{count}</span>
+              )}
+
+              {/* ─── Reverse Entry Modal ─── */}
+              {isReverseEntryOpen && (
+                <div className={styles.modalOverlay} onClick={() => setIsReverseEntryOpen(false)}>
+                  <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+                    <div className={styles.modalHeader}>
+                      <div className={styles.modalIconBox} style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', color: '#7c3aed' }}>
+                        <span style={{ fontSize: '2rem' }}>↩️</span>
+                      </div>
+                    </div>
+                    <h3 className={styles.modalTitle}>Reverse Entry</h3>
+                    <p className={styles.modalMessage}>Select RKD Number and enter Reverse Entry Qty <span style={{ color: '#7c3aed', fontWeight: 700 }}>(≤ Required Qty)</span></p>
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>🔖 Select RKD Store Number <span style={{ color: '#7c3aed', fontSize: '0.75rem' }}>(Requirement Closed only)</span></label>
+                      <SearchableRKDSelect
+                        data={data}
+                        value={reSelectedRKD}
+                        onChange={(row: any) => { setReSelectedRKD(row); setReQty(row["Reverse Entry Qty"] || ""); }}
+                        placeholder="Search RKD Number or Item..."
+                      />
+                    </div>
+
+                    {reSelectedRKD && (
+                      <div className={styles.formInfoBox} style={{ margin: '0 0 16px 0' }}>
+                        <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Item:</span><span className={styles.modalValue}>{reSelectedRKD["Item Name"]}</span></div>
+                        <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Person:</span><span className={styles.modalValue}>{reSelectedRKD["Person Filling Name"]}</span></div>
+                        <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Required Qty:</span><span className={styles.modalValue} style={{ color: '#7c3aed', fontWeight: 700 }}>{reSelectedRKD["Require Qty"]} {reSelectedRKD["Units"]}</span></div>
+                        <div className={styles.modalInfoItem}><span className={styles.modalLabel}>Issue Qty:</span><span className={styles.modalValue}>{reSelectedRKD["Issue Qty"] || "—"}</span></div>
+                      </div>
+                    )}
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>✏️ Reverse Entry Qty <span style={{ color: '#7c3aed', fontSize: '0.75rem' }}>(Max: {reSelectedRKD?.["Require Qty"] || "—"})</span></label>
+                      <input
+                        type="number"
+                        className={styles.formInput}
+                        value={reQty}
+                        onChange={e => setReQty(e.target.value)}
+                        placeholder="Enter reverse entry quantity"
+                        max={reSelectedRKD?.["Require Qty"]}
+                        disabled={!reSelectedRKD}
+                      />
+                    </div>
+
+                    <button
+                      className={styles.dribbbleBtnPrimary}
+                      style={{ width: '100%', justifyContent: 'center' }}
+                      disabled={columnUpdating || !reSelectedRKD || !reQty}
+                      onClick={() => handleColumnUpdate(reSelectedRKD["Store RKD Number"], "T", reQty, reSelectedRKD["Require Qty"])}
+                    >
+                      {columnUpdating ? <Loader2 className={styles.btnSpin} size={18} /> : <span>💾</span>}
+                      <span>Save Reverse Entry</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Edit Item Master Modal ── */}
+              {isEditMasterOpen && editMasterRow && (
+                <div className={styles.modalOverlay} onClick={() => setIsEditMasterOpen(false)}>
+                  <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                    <div className={styles.modalHeader}>
+                      <div className={styles.modalIconBox} style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
+                        📦
+                      </div>
+                      <div>
+                        <h3 className={styles.modalTitle}>Edit Master Data</h3>
+                        <p className={styles.modalSubtitle}>Update item details in Data tab</p>
+                      </div>
+                      <button className={styles.modalCloseBtn} onClick={() => setIsEditMasterOpen(false)}>×</button>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Item Name <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>(Read-only)</span></label>
+                      <input type="text" className={styles.formInput} value={editMasterRow["Item Name"]} disabled style={{ background: '#f1f5f9', color: '#64748b' }} />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                      <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                        <label className={styles.formLabel}>Unit</label>
+                        <input type="text" list="emUnitsList" className={styles.formInput} value={emUnit} onChange={e => setEmUnit(e.target.value)} placeholder="Select/Add" />
+                        <datalist id="emUnitsList">{metaOpts.units.map(u => <option key={u} value={u} />)}</datalist>
+                      </div>
+                      <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                        <label className={styles.formLabel}>Price Per Unit (₹)</label>
+                        <input type="number" className={styles.formInput} value={emPrice} onChange={e => setEmPrice(e.target.value)} placeholder="0.00" />
+                      </div>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Party Name (Vendor)</label>
+                      <input type="text" list="emVendorsList" className={styles.formInput} value={emVendor} onChange={e => setEmVendor(e.target.value)} placeholder="Select/Add Vendor" />
+                      <datalist id="emVendorsList">{metaOpts.vendors.map(v => <option key={v} value={v} />)}</datalist>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                      <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                        <label className={styles.formLabel}>Min Qty</label>
+                        <input type="number" className={styles.formInput} value={emMinQty} onChange={e => setEmMinQty(e.target.value)} placeholder="0" />
+                      </div>
+                      <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                        <label className={styles.formLabel}>Safety Factor</label>
+                        <input type="number" className={styles.formInput} value={emSafety} onChange={e => setEmSafety(e.target.value)} placeholder="0" />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                      <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                        <label className={styles.formLabel}>GST</label>
+                        <select className={styles.formInput} value={emGst} onChange={e => setEmGst(e.target.value)}>
+                          <option value="">Select</option>
+                          <option value="0%">0%</option>
+                          <option value="5%">5%</option>
+                          <option value="12%">12%</option>
+                          <option value="18%">18%</option>
+                          <option value="28%">28%</option>
+                        </select>
+                      </div>
+                      <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                        <label className={styles.formLabel}>Rack No</label>
+                        <input type="text" className={styles.formInput} value={emRack} onChange={e => setEmRack(e.target.value)} placeholder="Rack No" />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button className={styles.dribbbleBtnPrimary} style={{ flex: 1, justifyContent: 'center' }} disabled={emSubmitting} onClick={handleEditMasterSave}>
+                        {emSubmitting ? <Loader2 className={styles.btnSpin} size={18} /> : <span>💾</span>}
+                        <span>Save Master Data</span>
+                      </button>
+                    </div>
+                    <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                      <a href="/indent" target="_blank" style={{ fontSize: '0.85rem', color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
+                        + Add New Item to Master
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── AI Agent Interface Modal (Gemini Theme) ── */}
+              {aiReviewOpen && aiPayload && (
+                <div className={styles.modalOverlay} onClick={() => setAiReviewOpen(false)}>
+                  <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{
+                    maxWidth: '900px',
+                    width: '90%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '90vh',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.95) 100%)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.5)',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 20px rgba(66, 133, 244, 0.1)',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Top Gemini Gradient Line */}
+                    <div style={{ height: '4px', width: '100%', background: 'linear-gradient(90deg, #4285f4, #9b72cb, #d96570, #f4b400)', position: 'absolute', top: 0, left: 0 }}></div>
+
+                    <div className={styles.modalHeader} style={{ borderBottom: 'none', paddingBottom: '0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M19.3 18.2C18.6 18.7 18 19.3 17.5 20L16.4 21.6C16.2 21.9 15.8 21.9 15.6 21.6L14.5 20C14 19.3 13.4 18.7 12.7 18.2L11.1 17.1C10.8 16.9 10.8 16.5 11.1 16.3L12.7 15.2C13.4 14.7 14 14.1 14.5 13.4L15.6 11.8C15.8 11.5 16.2 11.5 16.4 11.8L17.5 13.4C18 14.1 18.6 14.7 19.3 15.2L20.9 16.3C21.2 16.5 21.2 16.9 20.9 17.1L19.3 18.2ZM11.4 10.7C10.2 11.6 9 12.6 8.2 13.9L6.5 16.6C6.1 17.2 5.2 17.2 4.8 16.6L3.1 13.9C2.3 12.6 1.1 11.6 -0.1 10.7L-2.8 8.8C-3.4 8.4 -3.4 7.6 -2.8 7.2L-0.1 5.3C1.1 4.4 2.3 3.4 3.1 2.1L4.8 -0.6C5.2 -1.2 6.1 -1.2 6.5 -0.6L8.2 2.1C9 3.4 10.2 4.4 11.4 5.3L14.1 7.2C14.7 7.6 14.7 8.4 14.1 8.8L11.4 10.7Z" fill="url(#geminiGradientModal)" />
+                          <defs>
+                            <linearGradient id="geminiGradientModal" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                              <stop stopColor="#4285f4" />
+                              <stop offset="0.33" stopColor="#9b72cb" />
+                              <stop offset="0.66" stopColor="#d96570" />
+                              <stop offset="1" stopColor="#f4b400" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                        <div>
+                          <h3 style={{ fontSize: '1.25rem', fontWeight: 600, background: 'linear-gradient(90deg, #1e293b, #334155)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>Gemini Store Analyst</h3>
                         </div>
+                      </div>
+                      <button className={styles.modalCloseBtn} onClick={() => setAiReviewOpen(false)}>×</button>
+                    </div>
+
+                    {/* User Prompt Bubble */}
+                    <div style={{ alignSelf: 'flex-end', background: '#f1f5f9', padding: '10px 16px', borderRadius: '20px 20px 0 20px', margin: '16px 0', maxWidth: '80%', fontSize: '0.9rem', color: '#1e293b' }}>
+                      {aiPayload.originalText}
+                    </div>
+
+                    {/* AI Analysis Bubble */}
+                    <div style={{ alignSelf: 'flex-start', background: 'transparent', padding: '0 0 16px 8px', maxWidth: '100%', fontSize: '0.95rem', color: '#334155', lineHeight: 1.6, animation: 'fadeIn 0.5s ease' }}>
+                      {aiPayload.analysis}
+                      {aiPayload.suggestedFilters && Object.values(aiPayload.suggestedFilters).some(v => v !== null && v !== "") && (
+                        <div style={{ marginTop: '12px' }}>
+                          <button
+                            onClick={() => {
+                              const f = aiPayload.suggestedFilters;
+                              if (f?.dateFilter && f.dateFilter !== "null") setSelDateFilter({ label: f.dateFilter, value: f.dateFilter });
+                              if (f?.statusFilter && f.statusFilter !== "null") setStatusFilter(f.statusFilter);
+                              if (f?.personFilter && f.personFilter !== "null") setSelPerson({ label: f.personFilter, value: f.personFilter });
+                              setAiReviewOpen(false);
+                            }}
+                            style={{
+                              background: 'rgba(66, 133, 244, 0.1)', border: '1px solid rgba(66, 133, 244, 0.3)',
+                              color: '#4285f4', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem',
+                              fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                              gap: '6px', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(66, 133, 244, 0.2)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(66, 133, 244, 0.1)'; }}
+                          >
+                            🎯 View Results in Main Table
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* AI Scorecard Panel — shown when AI returns aggregate data */}
+                    {(aiPayload as any).scorecard && (aiPayload as any).scorecard.total > 0 && (
+                      <div style={{ marginBottom: '16px', animation: 'fadeIn 0.5s ease' }}>
+                        {/* Stat Cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '14px' }}>
+                          {[
+                            { label: 'Total', value: (aiPayload as any).scorecard.total, color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+                            { label: 'Open', value: (aiPayload as any).scorecard.open, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+                            { label: 'Closed', value: (aiPayload as any).scorecard.closed, color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
+                            { label: 'Cancelled', value: (aiPayload as any).scorecard.cancelled, color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+                          ].map(sc => (
+                            <div key={sc.label} style={{ background: sc.bg, border: `1px solid ${sc.color}33`, borderRadius: '10px', padding: '10px 14px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: sc.color, lineHeight: 1 }}>{sc.value}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: 600 }}>{sc.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Top People & Items */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                          {(aiPayload as any).scorecard.byPerson && Object.keys((aiPayload as any).scorecard.byPerson).length > 0 && (
+                            <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Top Persons</div>
+                              {Object.entries((aiPayload as any).scorecard.byPerson).map(([name, count]: any) => (
+                                <div key={name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#334155', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
+                                  <span>{name}</span><span style={{ fontWeight: 700, color: '#6366f1' }}>{count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {(aiPayload as any).scorecard.byItem && Object.keys((aiPayload as any).scorecard.byItem).length > 0 && (
+                            <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📦 Top Items</div>
+                              {Object.entries((aiPayload as any).scorecard.byItem).map(([item, count]: any) => (
+                                <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#334155', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '130px' }}>{item}</span>
+                                  <span style={{ fontWeight: 700, color: '#6366f1' }}>{count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* For ACTION queries only: show the review table */}
+                    {aiPayload.intent === "ACTION" && aiPayload.targets.length > 0 && (
+                      <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(226, 232, 240, 0.6)', borderRadius: '12px', marginBottom: '20px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                          <thead style={{ background: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)', position: 'sticky', top: 0, zIndex: 1 }}>
+                            <tr>
+                              <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>RKD Number</th>
+                              <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Item Name</th>
+                              <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Status</th>
+                              <th style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Action</th>
+                              <th style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Exclude</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {aiPayload.targets.map(row => (
+                              <tr key={row["Store RKD Number"]} style={{ borderBottom: '1px solid #f8fafc' }}>
+                                <td style={{ padding: '10px 16px', color: '#475569', fontSize: '0.8rem' }}>{row["Store RKD Number"]}</td>
+                                <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1e293b' }}>{row["Item Name"]}</td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  <span style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>{row["Status"]}</span>
+                                </td>
+                                <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                                  <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, background: row._aiProposedAction === "CLOSE" ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: row._aiProposedAction === "CLOSE" ? '#16a34a' : '#dc2626' }}>
+                                    {row._aiProposedAction}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                                  <button onClick={() => setAiPayload({ ...aiPayload, targets: aiPayload.targets.filter(r => r["Store RKD Number"] !== row["Store RKD Number"]) })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.1rem' }} title="Remove">🗑️</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(226, 232, 240, 0.5)' }}>
+                      <button
+                        onClick={() => setAiReviewOpen(false)}
+                        style={{ background: 'transparent', border: '1px solid #cbd5e1', padding: '10px 20px', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        {aiPayload.intent === "VIEW" ? "Done" : "Cancel"}
+                      </button>
+                      {aiPayload.intent === "ACTION" && (
+                        <button
+                          disabled={aiPayload.targets.length === 0}
+                          onClick={executeAiBulkAction}
+                          style={{
+                            background: aiPayload.targets.length === 0 ? '#cbd5e1' : 'linear-gradient(90deg, #4285f4, #9b72cb, #d96570)',
+                            border: 'none', padding: '10px 24px', borderRadius: '8px', color: '#fff', fontWeight: 600,
+                            cursor: aiPayload.targets.length === 0 ? 'not-allowed' : 'pointer',
+                            boxShadow: aiPayload.targets.length === 0 ? 'none' : '0 4px 12px rgba(155, 114, 203, 0.3)',
+                            transition: 'all 0.2s', opacity: aiPayload.targets.length === 0 ? 0.7 : 1
+                          }}
+                        >
+                          Execute Actions ({aiPayload.targets.length})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ✨ AI Processing "Please Wait" Overlay */}
+              {isAiParsing && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 99998, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+                  <div style={{ background: '#fff', borderRadius: '20px', padding: '40px 48px', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,0.2)', maxWidth: '340px', width: '90%' }}>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '24px' }}>
+                      {['#4285f4', '#ea4335', '#fbbc05', '#34a853'].map((c, i) => (
+                        <div key={c} style={{ width: '14px', height: '14px', borderRadius: '50%', background: c, animation: 'geminiPulse 1s ease-in-out infinite alternate', animationDelay: `${i * 0.2}s` }} />
                       ))}
                     </div>
-                  )}
-                  {(aiPayload as any).scorecard.byItem && Object.keys((aiPayload as any).scorecard.byItem).length > 0 && (
-                    <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📦 Top Items</div>
-                      {Object.entries((aiPayload as any).scorecard.byItem).map(([item, count]: any) => (
-                        <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#334155', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '130px' }}>{item}</span>
-                          <span style={{ fontWeight: 700, color: '#6366f1' }}>{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1e293b', margin: '0 0 8px' }}>Gemini is Analyzing...</h3>
+                    <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>Processing your command against the last 60 days of store data.</p>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* For ACTION queries only: show the review table */}
-            {aiPayload.intent === "ACTION" && aiPayload.targets.length > 0 && (
-            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(226, 232, 240, 0.6)', borderRadius: '12px', marginBottom: '20px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead style={{ background: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <tr>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>RKD Number</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Item Name</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Status</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Action</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 }}>Exclude</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {aiPayload.targets.map(row => (
-                    <tr key={row["Store RKD Number"]} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '10px 16px', color: '#475569', fontSize: '0.8rem' }}>{row["Store RKD Number"]}</td>
-                      <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1e293b' }}>{row["Item Name"]}</td>
-                      <td style={{ padding: '10px 16px' }}>
-                        <span style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>{row["Status"]}</span>
-                      </td>
-                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                        <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, background: row._aiProposedAction === "CLOSE" ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: row._aiProposedAction === "CLOSE" ? '#16a34a' : '#dc2626' }}>
-                          {row._aiProposedAction}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 16px', textAlign: 'right' }}>
-                        <button onClick={() => setAiPayload({ ...aiPayload, targets: aiPayload.targets.filter(r => r["Store RKD Number"] !== row["Store RKD Number"]) })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.1rem' }} title="Remove">🗑️</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(226, 232, 240, 0.5)' }}>
-              <button 
-                onClick={() => setAiReviewOpen(false)}
-                style={{ background: 'transparent', border: '1px solid #cbd5e1', padding: '10px 20px', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                {aiPayload.intent === "VIEW" ? "Done" : "Cancel"}
-              </button>
-              {aiPayload.intent === "ACTION" && (
-                <button 
-                  disabled={aiPayload.targets.length === 0} 
-                  onClick={executeAiBulkAction}
-                  style={{ 
-                    background: aiPayload.targets.length === 0 ? '#cbd5e1' : 'linear-gradient(90deg, #4285f4, #9b72cb, #d96570)', 
-                    border: 'none', padding: '10px 24px', borderRadius: '8px', color: '#fff', fontWeight: 600, 
-                    cursor: aiPayload.targets.length === 0 ? 'not-allowed' : 'pointer',
-                    boxShadow: aiPayload.targets.length === 0 ? 'none' : '0 4px 12px rgba(155, 114, 203, 0.3)',
-                    transition: 'all 0.2s', opacity: aiPayload.targets.length === 0 ? 0.7 : 1
-                  }}
-                >
-                  Execute Actions ({aiPayload.targets.length})
-                </button>
               )}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* ✨ AI Processing "Please Wait" Overlay */}
-      {isAiParsing && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 99998, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
-          <div style={{ background: '#fff', borderRadius: '20px', padding: '40px 48px', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,0.2)', maxWidth: '340px', width: '90%' }}>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '24px' }}>
-              {['#4285f4', '#ea4335', '#fbbc05', '#34a853'].map((c, i) => (
-                <div key={c} style={{ width: '14px', height: '14px', borderRadius: '50%', background: c, animation: 'geminiPulse 1s ease-in-out infinite alternate', animationDelay: `${i * 0.2}s` }} />
-              ))}
-            </div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1e293b', margin: '0 0 8px' }}>Gemini is Analyzing...</h3>
-            <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>Processing your command against the last 60 days of store data.</p>
-          </div>
-        </div>
-      )}
+              {/* ── AI Background Execution Overlay ── */}
+              {aiExecutionProgress.active && (
 
-      {/* ── AI Background Execution Overlay ── */}
-      {aiExecutionProgress.active && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.8)', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+                  <Loader2 className={styles.btnSpin} size={48} style={{ color: '#8b5cf6', marginBottom: 16 }} />
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>AI Executing Action</h2>
+                  <p style={{ fontSize: '1rem', color: '#64748b', marginTop: 8 }}>
+                    Processing entry {aiExecutionProgress.current} of {aiExecutionProgress.total}...
+                  </p>
+                  <div style={{ width: '300px', height: '8px', background: '#e2e8f0', borderRadius: '4px', marginTop: '24px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: '#8b5cf6', width: `${(aiExecutionProgress.current / aiExecutionProgress.total) * 100}%`, transition: 'width 0.3s' }}></div>
+                  </div>
+                </div>
+              )}
 
-         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.8)', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-            <Loader2 className={styles.btnSpin} size={48} style={{ color: '#8b5cf6', marginBottom: 16 }} />
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>AI Executing Action</h2>
-            <p style={{ fontSize: '1rem', color: '#64748b', marginTop: 8 }}>
-              Processing entry {aiExecutionProgress.current} of {aiExecutionProgress.total}...
-            </p>
-            <div style={{ width: '300px', height: '8px', background: '#e2e8f0', borderRadius: '4px', marginTop: '24px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: '#8b5cf6', width: `${(aiExecutionProgress.current / aiExecutionProgress.total) * 100}%`, transition: 'width 0.3s' }}></div>
-            </div>
-         </div>
-      )}
-
-      {/* Modern Alert Modal — replaces all browser alert() */}
-      <AlertModal
-        isOpen={alertModal.open}
-        onClose={() => setAlertModal(a => ({ ...a, open: false }))}
-        message={alertModal.msg}
-        type={alertModal.type}
-      />
+              {/* Modern Alert Modal — replaces all browser alert() */}
+              <AlertModal
+                isOpen={alertModal.open}
+                onClose={() => setAlertModal(a => ({ ...a, open: false }))}
+                message={alertModal.msg}
+                type={alertModal.type}
+              />
 
             </div>
           </div>
