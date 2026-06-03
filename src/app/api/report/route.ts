@@ -34,19 +34,24 @@ const HEADERS = [
   "Debit Note Qty", "Reverse Entry Qty"
 ];
 
-let cachedReportData: any = null;
-let lastReportFetch = 0;
-const REPORT_CACHE_DURATION = 60000; // 1 minute cache
+let cachedReportData: Map<number, any> = new Map();
+let lastReportFetch: Map<number, number> = new Map();
+const REPORT_CACHE_DURATION = 60000; // 1 minute per year
 
 export async function GET(req: Request) {
   const now = Date.now();
-
-  // Bust cache if ?refresh=1
   const url = new URL(req.url);
   const forceRefresh = url.searchParams.get("refresh") === "1";
 
-  if (!forceRefresh && cachedReportData && (now - lastReportFetch < REPORT_CACHE_DURATION)) {
-    return NextResponse.json(cachedReportData);
+  // Year filter — default to current year
+  const yearParam = url.searchParams.get("year");
+  const filterYear = yearParam ? parseInt(yearParam) : new Date().getFullYear();
+
+  // Serve from cache if fresh
+  if (!forceRefresh
+    && cachedReportData.has(filterYear)
+    && (now - (lastReportFetch.get(filterYear) ?? 0)) < REPORT_CACHE_DURATION) {
+    return NextResponse.json(cachedReportData.get(filterYear));
   }
 
   if (!STORE_SHEET_ID) {
@@ -65,47 +70,47 @@ export async function GET(req: Request) {
     const countRows = batchRes.data.valueRanges?.[0]?.values || [];
     const allRows = batchRes.data.valueRanges?.[1]?.values || [];
 
-    // Map rows to objects
+    // Map rows to objects, filter by year + status
     const data = allRows
       .map((row: any, idx: number) => {
         const obj: any = { _rowIdx: idx + 1 };
-        HEADERS.forEach((h, i) => {
-          obj[h] = row[i] !== undefined ? String(row[i]) : "";
-        });
+        HEADERS.forEach((h, i) => { obj[h] = row[i] !== undefined ? String(row[i]) : ""; });
         return obj;
       })
       .filter((r: any) => {
-        // Only include valid RKD rows that are Requirement Closed with Issue Qty > 0
-        const rkd = String(r["Store RKD Number"] || "").trim();
-        const status = String(r["Status"] || "").trim();
-        const issueQty = parseFloat(r["Issue Qty"] || "0") || 0;
-        return rkd.startsWith("RKD") && status === "Requirement Closed" && issueQty > 0;
+        const rkd      = String(r["Store RKD Number"] || "").trim();
+        const status   = String(r["Status"]           || "").trim();
+        const issueQty = parseFloat(r["Issue Qty"]    || "0") || 0;
+        const ts       = String(r["Timestamp"]        || "");
+        // Extract year from timestamp with regex (handles "2 June 2026 4:35 PM" etc.)
+        const yearMatch = ts.match(/\b(20\d{2})\b/);
+        const rowYear   = yearMatch ? parseInt(yearMatch[1]) : 0;
+        return rkd.startsWith("RKD") && status === "Requirement Closed" && issueQty > 0 && rowYear === filterYear;
       })
       .map((r: any) => {
         const issueQty = parseFloat(r["Issue Qty"] || "0") || 0;
-        const price = parseFloat(r["Price"] || "0") || 0;
-        return {
-          ...r,
-          "Total Price": (issueQty * price).toFixed(2),
-        };
+        const price    = parseFloat(r["Price"]     || "0") || 0;
+        return { ...r, "Total Price": (issueQty * price).toFixed(2) };
       });
 
     const responseData = {
       success: true,
       data,
+      year: filterYear,
       totalRows: countRows.length,
       fetchedAt: new Date().toISOString(),
     };
 
-    cachedReportData = responseData;
-    lastReportFetch = now;
+    cachedReportData.set(filterYear, responseData);
+    lastReportFetch.set(filterYear, now);
 
     return new NextResponse(JSON.stringify(responseData), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
   } catch (error: any) {
     console.error("[Report API] Error:", error.message);
-    if (cachedReportData) return NextResponse.json({ ...cachedReportData, stale: true });
+    const stale = cachedReportData.get(filterYear);
+    if (stale) return NextResponse.json({ ...stale, stale: true });
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
