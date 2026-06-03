@@ -119,7 +119,7 @@ function parseDate(ts: string): Date {
 function fmtCurrency(val: any) {
   const n = toNum(val);
   if (n === 0) return "—";
-  return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  return "\u20B9" + n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
 function fmtNum(val: any) {
   const n = toNum(val);
@@ -127,10 +127,16 @@ function fmtNum(val: any) {
   return n % 1 === 0 ? n.toLocaleString("en-IN") : n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
 function fmtShort(val: number): string {
-  if (val >= 10000000) return "₹" + (val / 10000000).toFixed(1) + "Cr";
-  if (val >= 100000)   return "₹" + (val / 100000).toFixed(1) + "L";
-  if (val >= 1000)     return "₹" + (val / 1000).toFixed(1) + "K";
+  if (val >= 10000000) return "\u20B9" + (val / 10000000).toFixed(1) + "Cr";
+  if (val >= 100000)   return "\u20B9" + (val / 100000).toFixed(1) + "L";
+  if (val >= 1000)     return "\u20B9" + (val / 1000).toFixed(1) + "K";
   return fmtCurrency(val);
+}
+// PDF-safe currency — jsPDF Helvetica doesn't support \u20B9 (₹), use Rs. instead
+function fmtPDF(val: any) {
+  const n = toNum(val);
+  if (n === 0) return "-";
+  return "Rs." + n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -262,12 +268,12 @@ export default function ReportPage() {
       body: filteredData.map((r,i) => [
         i+1, r["Timestamp"], r["Department"], r["Item Name"],
         r["Machine Name"], r["Machine ID"], r["Store RKD Number"], r["Person Filling Name"],
-        fmtNum(r["Require Qty"]), fmtNum(r["Issue Qty"]), fmtCurrency(r["Price"]), fmtCurrency(r["Total Price"]),
+        fmtNum(r["Require Qty"]), fmtNum(r["Issue Qty"]), fmtPDF(r["Price"]), fmtPDF(r["Total Price"]),
       ]),
       headStyles: { fillColor:[28,28,30], textColor:255, fontStyle:"bold", fontSize:7 },
       bodyStyles: { fontSize:7, textColor:[30,41,59] },
       alternateRowStyles: { fillColor:[252,252,246] },
-      foot: [["","","","","","","","TOTAL", fmtNum(kpis.totalIndentQty), fmtNum(kpis.totalIssueQty), "", fmtCurrency(kpis.totalPrice)]],
+      foot: [["","","","","","","","TOTAL", fmtNum(kpis.totalIndentQty), fmtNum(kpis.totalIssueQty), "", fmtPDF(kpis.totalPrice)]],
       footStyles: { fillColor:[245,197,32], textColor:[28,28,30], fontStyle:"bold", fontSize:7.5 },
       margin: { left:5, right:5 },
     });
