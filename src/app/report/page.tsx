@@ -30,9 +30,24 @@ type IssueRow = {
 
 // ── Month lookup ───────────────────────────────────────────────────────────
 const MONTH_MAP: Record<string, number> = {
+  // English full
   january:0, february:1, march:2, april:3, may:4, june:5,
   july:6, august:7, september:8, october:9, november:10, december:11,
+  // English short
   jan:0, feb:1, mar:2, apr:3, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11,
+  // Hindi / Devanagari (Google Sheets Indian locale)
+  '\u091C\u0928\u0935\u0930\u0940':0,  // जनवरी
+  '\u092B\u0930\u0935\u0930\u0940':1,  // फरवरी
+  '\u092E\u093E\u0930\u094D\u091A':2,  // मार्च
+  '\u0905\u092A\u094D\u0930\u0948\u0932':3, // अप्रैल
+  '\u092E\u0908':4,                    // मई
+  '\u091C\u0942\u0928':5,              // जून
+  '\u091C\u0941\u0932\u093E\u0908':6, // जुलाई
+  '\u0905\u0917\u0938\u094D\u0924':7, // अगस्त
+  '\u0938\u093F\u0924\u0902\u092C\u0930':8, // सितंबर
+  '\u0905\u0915\u094D\u0924\u0942\u092C\u0930':9, // अक्तूबर
+  '\u0928\u0935\u0902\u092C\u0930':10, // नवंबर
+  '\u0926\u093F\u0938\u0902\u092C\u0930':11, // दिसंबर
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -71,26 +86,31 @@ function parseDate(ts: string): Date {
   }
   if (day >= 1 && day <= 31 && month >= 0 && year >= 2000) return new Date(year, month, day);
 
-  // 3. Numeric formats: DD/MM/YYYY or MM/DD/YYYY or DD-MM-YYYY (Google Sheets Indian locale)
-  //    e.g. "29/5/2026 16:35:00"  or  "29-05-2026"
+  // 3. DD/MM/YYYY or MM/DD/YYYY or DD-MM-YYYY (numeric, Google Sheets Indian locale)
+  //    e.g. "29/5/2026 16:35:00"  →  assume DD/MM/YYYY for India
   const numMatch = ts.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
   if (numMatch) {
     const a = parseInt(numMatch[1]), b = parseInt(numMatch[2]), y = parseInt(numMatch[3]);
-    if (y >= 2000 && b >= 1 && b <= 12) {
-      // a > 12 → definitely DD/MM; otherwise assume Indian DD/MM
-      return new Date(y, b - 1, a);
-    }
-    if (y >= 2000 && a >= 1 && a <= 12) {
-      // Must be MM/DD/YYYY
-      return new Date(y, a - 1, b);
-    }
+    if (y >= 2000 && b >= 1 && b <= 12) return new Date(y, b - 1, a); // DD/MM/YYYY
+    if (y >= 2000 && a >= 1 && a <= 12) return new Date(y, a - 1, b); // MM/DD/YYYY
   }
 
-  // 4. YYYY/MM/DD or YYYY-MM-DD fallback
+  // 4. YYYY-MM-DD or YYYY/MM/DD fallback
   const isoNum = ts.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
   if (isoNum) {
     const y = parseInt(isoNum[1]), m = parseInt(isoNum[2]), d = parseInt(isoNum[3]);
     if (y >= 2000 && m >= 1 && m <= 12 && d >= 1 && d <= 31) return new Date(y, m - 1, d);
+  }
+
+  // 5. DD-MonthName-YYYY (Google Sheets Hindi locale: "01-\u0905\u092A\u094D\u0930\u0948\u0932-2026 10:16")
+  //    Also handles English: "14-March-2026 17:31:51"
+  const dashMatch = ts.match(/(\d{1,2})-([^\d\-\/]+)-(\d{4})/u);
+  if (dashMatch) {
+    const d = parseInt(dashMatch[1]);
+    const rawMonth = dashMatch[2].trim();
+    const y = parseInt(dashMatch[3]);
+    const m = MONTH_MAP[rawMonth] ?? MONTH_MAP[rawMonth.toLowerCase()];
+    if (y >= 2000 && d >= 1 && d <= 31 && m !== undefined) return new Date(y, m, d);
   }
 
   return new Date(0);
@@ -181,8 +201,8 @@ export default function ReportPage() {
       const e = dateEnd   ? new Date(dateEnd   + "T23:59:59") : new Date(8640000000000000);
       r = r.filter(x => {
         const d = parseDate(x["Timestamp"]);
-        // If timestamp can't be parsed → include the record (don't silently drop it)
-        if (d.getTime() === 0) return true;
+        // If timestamp couldn't be parsed at all, exclude it when a date range is active
+        if (d.getTime() === 0) return false;
         return d >= s && d <= e;
       });
     }
