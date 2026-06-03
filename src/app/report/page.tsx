@@ -139,6 +139,45 @@ function fmtPDF(val: any) {
   return "Rs." + n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
 
+// PDF-safe month names (ASCII only — Helvetica can't render Devanagari)
+const PDF_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/**
+ * Convert any Google Sheets timestamp (Hindi Devanagari or English) to clean
+ * ASCII "DD-MMM-YYYY HH:MM" for PDF rendering.
+ * e.g. "01-अप्रैल-2026 10:16" → "01-Apr-2026 10:16"
+ *      "30-May-2026 16:35"    → "30-May-2026 16:35"
+ */
+function fmtTimestampPDF(ts: string): string {
+  if (!ts) return "-";
+  const d = parseDate(ts);
+  if (d.getTime() === 0) return ts.replace(/[^\x00-\x7F\s]/g, "?").trim().slice(0, 22);
+
+  const dd  = String(d.getDate()).padStart(2, "0");
+  const mon = PDF_MONTHS[d.getMonth()];
+  const yr  = d.getFullYear();
+
+  // Try to extract time from the original string (digits after year or after space)
+  const timeMatch = ts.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AaPp][Mm])?)\s*$/);
+  const timePart  = timeMatch ? " " + timeMatch[1].trim() : "";
+  return `${dd}-${mon}-${yr}${timePart}`;
+}
+
+/** Current date-time in IST formatted for PDF header (ASCII-only) */
+function fmtNowIST(): string {
+  const now = new Date();
+  // Convert to IST (UTC+5:30)
+  const ist = new Date(now.getTime() + (5 * 60 + 30) * 60000);
+  const dd  = String(ist.getUTCDate()).padStart(2, "0");
+  const mon = PDF_MONTHS[ist.getUTCMonth()];
+  const yr  = ist.getUTCFullYear();
+  const hh  = ist.getUTCHours();
+  const mm  = String(ist.getUTCMinutes()).padStart(2, "0");
+  const ampm = hh >= 12 ? "PM" : "AM";
+  const h12  = hh % 12 || 12;
+  return `${dd}-${mon}-${yr}, ${h12}:${mm} ${ampm} IST`;
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 export default function ReportPage() {
   const router = useRouter();
@@ -254,7 +293,7 @@ export default function ReportPage() {
     const autoTable  = (await import("jspdf-autotable")).default;
     const doc        = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pageW      = doc.internal.pageSize.getWidth();
-    const now        = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    const now        = fmtNowIST();
 
     doc.setFillColor(28,28,30); doc.rect(0,0,pageW,18,"F");
     doc.setTextColor(255,255,255); doc.setFontSize(13); doc.setFont("helvetica","bold");
@@ -266,7 +305,7 @@ export default function ReportPage() {
       startY: 22,
       head: [["#","Timestamp","Department","Item Name","Machine","Machine ID","RKD Number","Person","Indent Qty","Issue Qty","Rate","Total Price"]],
       body: filteredData.map((r,i) => [
-        i+1, r["Timestamp"], r["Department"], r["Item Name"],
+        i+1, fmtTimestampPDF(r["Timestamp"]), r["Department"], r["Item Name"],
         r["Machine Name"], r["Machine ID"], r["Store RKD Number"], r["Person Filling Name"],
         fmtNum(r["Require Qty"]), fmtNum(r["Issue Qty"]), fmtPDF(r["Price"]), fmtPDF(r["Total Price"]),
       ]),
