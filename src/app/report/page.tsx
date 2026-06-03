@@ -43,9 +43,12 @@ function toNum(v: any) {
 
 function parseDate(ts: string): Date {
   if (!ts) return new Date(0);
+
+  // 1. Try native first (handles ISO 8601, RFC 2822, US "M/D/YYYY H:MM:SS" etc.)
   const native = new Date(ts);
   if (!isNaN(native.getTime())) return native;
 
+  // 2. Named-month format: "29 March 2026 5:48 PM" / "14 Mar 2026, 17:31:51"
   const clean = ts.replace(/,/g, " ").replace(/\s+/g, " ").trim();
   const parts = clean.split(" ");
   let day = -1, month = -1, year = -1;
@@ -66,7 +69,31 @@ function parseDate(ts: string): Date {
       else if (i < parts.length - 1 && /^\d{1,2}$/.test(parts[i + 1])) day = parseInt(parts[i + 1]);
     }
   }
-  return (day >= 1 && day <= 31 && month >= 0 && year >= 2000) ? new Date(year, month, day) : new Date(0);
+  if (day >= 1 && day <= 31 && month >= 0 && year >= 2000) return new Date(year, month, day);
+
+  // 3. Numeric formats: DD/MM/YYYY or MM/DD/YYYY or DD-MM-YYYY (Google Sheets Indian locale)
+  //    e.g. "29/5/2026 16:35:00"  or  "29-05-2026"
+  const numMatch = ts.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (numMatch) {
+    const a = parseInt(numMatch[1]), b = parseInt(numMatch[2]), y = parseInt(numMatch[3]);
+    if (y >= 2000 && b >= 1 && b <= 12) {
+      // a > 12 → definitely DD/MM; otherwise assume Indian DD/MM
+      return new Date(y, b - 1, a);
+    }
+    if (y >= 2000 && a >= 1 && a <= 12) {
+      // Must be MM/DD/YYYY
+      return new Date(y, a - 1, b);
+    }
+  }
+
+  // 4. YYYY/MM/DD or YYYY-MM-DD fallback
+  const isoNum = ts.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (isoNum) {
+    const y = parseInt(isoNum[1]), m = parseInt(isoNum[2]), d = parseInt(isoNum[3]);
+    if (y >= 2000 && m >= 1 && m <= 12 && d >= 1 && d <= 31) return new Date(y, m - 1, d);
+  }
+
+  return new Date(0);
 }
 
 function fmtCurrency(val: any) {
@@ -154,7 +181,9 @@ export default function ReportPage() {
       const e = dateEnd   ? new Date(dateEnd   + "T23:59:59") : new Date(8640000000000000);
       r = r.filter(x => {
         const d = parseDate(x["Timestamp"]);
-        return d.getTime() > 0 && d >= s && d <= e;
+        // If timestamp can't be parsed → include the record (don't silently drop it)
+        if (d.getTime() === 0) return true;
+        return d >= s && d <= e;
       });
     }
 
