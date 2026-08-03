@@ -68,15 +68,16 @@ function parseCustomDate(dateStr: string): Date {
   return new Date(0);
 }
 
-const makeSelectStyles = (minW = 160) => ({
+const makeSelectStyles = (minW = 110) => ({
   control: (base: any, state: any) => ({
     ...base,
-    padding: "2px 4px",
+    padding: "0px 2px",
+    minHeight: "34px",
     borderRadius: "10px",
     borderColor: state.isFocused ? "#3b82f6" : "#e2e8f0",
     boxShadow: state.isFocused ? "0 0 0 3px rgba(59,130,246,0.1)" : "none",
     "&:hover": { borderColor: "#3b82f6" },
-    fontSize: "0.85rem",
+    fontSize: "0.8rem",
     minWidth: `${minW}px`,
     cursor: "pointer",
   }),
@@ -680,6 +681,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const sidebarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [filtersVisible, setFiltersVisible] = useState(true);
 
   const toggleFullScreen = async () => {
     if (!document.fullscreenElement) {
@@ -1742,7 +1744,7 @@ export default function Home() {
     };
   }, [data]);
 
-  const ss = makeSelectStyles(150);
+  const ss = makeSelectStyles(100);
 
   return (
     <div className={styles.pageContainer}>
@@ -1889,23 +1891,47 @@ export default function Home() {
                   <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 800 }}>⚠️ {apiError}</div>
                 )}
 
-                {/* Scorecards */}
+                {/* Pastel Scorecards */}
                 <div className={styles.appMetricsInline} style={{ gap: '10px' }}>
-                  <div className={styles.dribbbleScorecard}>
-                    <div className={styles.dribbbleScorecardValue}>{scorecards.todayIndent}</div>
+                  {/* Today Indent - Lavender */}
+                  <div className={styles.dribbbleScorecard} data-color="lavender">
+                    <span className={styles.dribbbleScorecardDot} />
                     <div className={styles.dribbbleScorecardLabel}>Today Indent</div>
+                    <div className={styles.dribbbleScorecardValue}>{scorecards.todayIndent}</div>
+                    <div className={styles.dribbbleScorecardRow}>
+                      <span className={styles.dribbbleScorecardSuffix}>Indents</span>
+                      <span className={styles.dribbbleScorecardArrow}>»</span>
+                    </div>
                   </div>
-                  <div className={styles.dribbbleScorecard}>
-                    <div className={styles.dribbbleScorecardValue}>{scorecards.todayIssue}</div>
+                  {/* Today Issue - Sage */}
+                  <div className={styles.dribbbleScorecard} data-color="sage">
+                    <span className={styles.dribbbleScorecardDot} />
                     <div className={styles.dribbbleScorecardLabel}>Today Issue</div>
+                    <div className={styles.dribbbleScorecardValue}>{scorecards.todayIssue}</div>
+                    <div className={styles.dribbbleScorecardRow}>
+                      <span className={styles.dribbbleScorecardSuffix}>Issues</span>
+                      <span className={styles.dribbbleScorecardArrow}>»</span>
+                    </div>
                   </div>
-                  <div className={styles.dribbbleScorecard}>
-                    <div className={styles.dribbbleScorecardValue}>{scorecards.monthIndent}</div>
+                  {/* Monthly Indent - Peach */}
+                  <div className={styles.dribbbleScorecard} data-color="peach">
+                    <span className={styles.dribbbleScorecardDot} />
                     <div className={styles.dribbbleScorecardLabel}>Monthly Indent</div>
+                    <div className={styles.dribbbleScorecardValue}>{scorecards.monthIndent}</div>
+                    <div className={styles.dribbbleScorecardRow}>
+                      <span className={styles.dribbbleScorecardSuffix}>This Month</span>
+                      <span className={styles.dribbbleScorecardArrow}>»</span>
+                    </div>
                   </div>
-                  <div className={styles.dribbbleScorecard}>
-                    <div className={styles.dribbbleScorecardValue}>{scorecards.monthIssue}</div>
+                  {/* Monthly Issue - Sky */}
+                  <div className={styles.dribbbleScorecard} data-color="sky">
+                    <span className={styles.dribbbleScorecardDot} />
                     <div className={styles.dribbbleScorecardLabel}>Monthly Issue</div>
+                    <div className={styles.dribbbleScorecardValue}>{scorecards.monthIssue}</div>
+                    <div className={styles.dribbbleScorecardRow}>
+                      <span className={styles.dribbbleScorecardSuffix}>This Month</span>
+                      <span className={styles.dribbbleScorecardArrow}>»</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1936,8 +1962,21 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Filter Toggle Bar */}
+            <div className={styles.filterToggleBar}>
+              <span style={{ flex: 1, fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
+                {filtersVisible ? 'Filters visible — collapse to gain table space' : 'Filters hidden — more table rows visible'}
+              </span>
+              <button
+                className={`${styles.filterToggleBtn} ${!filtersVisible ? styles.filterToggleBtnActive : ''}`}
+                onClick={() => setFiltersVisible(v => !v)}
+              >
+                <span>{filtersVisible ? '🔼 Hide Filters' : '🔽 Show Filters'}</span>
+              </button>
+            </div>
+
             {/* Smart Filters — Unified Row */}
-            <div className={styles.filterRow} style={{ flexWrap: 'wrap' }}>
+            <div className={`${styles.filterRow} ${!filtersVisible ? styles.filterRowCollapsed : ''}`}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: isListening ? '100%' : '350px', transition: 'min-width 0.3s ease' }}>
 
                 {/* ── GEMINI VOICE ASSIST BAR ── */}
@@ -2117,7 +2156,7 @@ export default function Home() {
                 options={dateOptions}
                 value={selDateFilter}
                 onChange={setSelDateFilter}
-                styles={makeSelectStyles(160)}
+                styles={makeSelectStyles(110)}
                 isSearchable={false}
                 className={styles.selectWrap}
               />

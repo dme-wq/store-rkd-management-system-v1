@@ -730,22 +730,74 @@
 
 /* Filter rows inside card */
 .filterRow {
-  padding: 0 1.5rem 0.75rem 1.5rem;
+  padding: 0 1.5rem 0.6rem 1.5rem;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
   border-bottom: 1px solid #f1f5f9;
+  overflow: hidden;
+  max-height: 60px;
+  transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), padding 0.35s ease, opacity 0.3s ease;
+  opacity: 1;
+}
+
+.filterRowCollapsed {
+  max-height: 0 !important;
+  padding-bottom: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+  border-bottom-color: transparent;
 }
 
 .filterRow:first-of-type {
   padding-top: 0;
 }
 
+/* Filter Toggle Bar */
+.filterToggleBar {
+  padding: 4px 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.filterToggleBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filterToggleBtn:hover {
+  background: #F0247A;
+  color: white;
+  border-color: #F0247A;
+  box-shadow: 0 3px 10px rgba(240,36,122,0.3);
+}
+
+.filterToggleBtnActive {
+  background: #F0247A;
+  color: white;
+  border-color: #F0247A;
+}
+
 .selectWrap {
   flex: 1;
-  min-width: 140px;
-  max-width: 220px;
+  min-width: 100px;
+  max-width: 155px;
   z-index: 20;
 }
 
@@ -1262,28 +1314,110 @@
   color: #4f46e5;
 }
 
+/* ═══════════════════════════════════════════
+   NEW PASTEL SCORECARD — Matches Reference
+═══════════════════════════════════════════ */
 .dribbbleScorecard {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 10px 16px;
+  position: relative;
+  border-radius: 16px;
+  padding: 12px 14px 10px;
+  min-width: 115px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  min-width: 90px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  gap: 2px;
+  overflow: hidden;
+  cursor: default;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
-.dribbbleScorecardValue {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #F0247A;
+
+.dribbbleScorecard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.13);
 }
+
+/* Blob decoration in bottom-right */
+.dribbbleScorecard::after {
+  content: '';
+  position: absolute;
+  bottom: -18px;
+  right: -14px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  pointer-events: none;
+}
+
+/* Colour themes via data-color attribute set inline */
+.dribbbleScorecard[data-color="lavender"] { background: linear-gradient(135deg, #c4b5fd, #a78bfa); }
+.dribbbleScorecard[data-color="sage"]     { background: linear-gradient(135deg, #a7f3d0, #6ee7b7); }
+.dribbbleScorecard[data-color="peach"]   { background: linear-gradient(135deg, #fde68a, #fbbf24); }
+.dribbbleScorecard[data-color="sky"]     { background: linear-gradient(135deg, #bae6fd, #7dd3fc); }
+
+/* Dot indicator */
+.dribbbleScorecardDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
+/* Label on top */
 .dribbbleScorecardLabel {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-weight: 500;
-  margin-top: 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   line-height: 1.2;
+  margin: 0;
+}
+
+/* Big count */
+.dribbbleScorecardValue {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+  margin: 2px 0 4px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+/* Row with suffix text + arrow */
+.dribbbleScorecardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.dribbbleScorecardSuffix {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.75);
+}
+
+.dribbbleScorecardArrow {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.9);
+  font-weight: 900;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.dribbbleScorecard:hover .dribbbleScorecardArrow {
+  background: rgba(255,255,255,0.5);
 }
 
 /* Floating Action Button for Indent */
@@ -1341,18 +1475,18 @@
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 35%, #1a1035 65%, #0f172a 100%);
-  box-shadow: 6px 0 40px rgba(0, 0, 0, 0.4), 2px 0 0 rgba(240, 36, 122, 0.3);
+  background: linear-gradient(160deg, #fdf4ff 0%, #fce7f3 30%, #ede9fe 65%, #f0f9ff 100%);
+  box-shadow: 6px 0 40px rgba(240, 36, 122, 0.18), 2px 0 0 rgba(240, 36, 122, 0.15);
   transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  border-right: 1px solid rgba(240, 36, 122, 0.25);
+  border-right: 1px solid rgba(240, 36, 122, 0.2);
 }
 
 .sidebar::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(160deg, rgba(240,36,122,0.06) 0%, transparent 40%, rgba(99,102,241,0.06) 100%);
+  background: linear-gradient(160deg, rgba(240,36,122,0.04) 0%, rgba(167,139,250,0.05) 50%, rgba(56,189,248,0.04) 100%);
   pointer-events: none;
 }
 
@@ -1375,7 +1509,7 @@
 /* Sidebar header */
 .sidebarHeader {
   padding: 20px 20px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(240,36,122,0.12);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1391,14 +1525,14 @@
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
-  box-shadow: 0 4px 12px rgba(240,36,122,0.4);
+  box-shadow: 0 4px 12px rgba(240,36,122,0.3);
   flex-shrink: 0;
 }
 
 .sidebarHeaderText {
   font-size: 0.78rem;
   font-weight: 700;
-  color: rgba(255,255,255,0.5);
+  color: #C41861;
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
@@ -1415,7 +1549,7 @@
 
 .sidebarNav::-webkit-scrollbar { width: 4px; }
 .sidebarNav::-webkit-scrollbar-track { background: transparent; }
-.sidebarNav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+.sidebarNav::-webkit-scrollbar-thumb { background: rgba(196,24,97,0.2); border-radius: 4px; }
 
 /* Sidebar section label */
 .sidebarSection {
@@ -1423,7 +1557,8 @@
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.3);
+  color: #C41861;
+  opacity: 0.6;
   padding: 8px 6px 4px;
 }
 
@@ -1432,10 +1567,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   border-radius: 12px;
   border: 1px solid transparent;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.55);
   cursor: pointer;
   transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
@@ -1443,6 +1578,7 @@
   position: relative;
   overflow: hidden;
   font-family: 'Inter', system-ui, sans-serif;
+  backdrop-filter: blur(4px);
 }
 
 .sidebarBtn::before {
@@ -1456,8 +1592,9 @@
 
 .sidebarBtn:hover {
   transform: translateX(4px);
-  border-color: rgba(255,255,255,0.12);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  border-color: rgba(240,36,122,0.2);
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 4px 14px rgba(240,36,122,0.12);
 }
 
 .sidebarBtn:hover::before {
@@ -1469,16 +1606,16 @@
 }
 
 .sidebarBtnIcon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.95rem;
   flex-shrink: 0;
   transition: transform 0.22s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .sidebarBtn:hover .sidebarBtnIcon {
@@ -1486,21 +1623,21 @@
 }
 
 .sidebarBtnLabel {
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.85);
+  color: #374151;
   white-space: nowrap;
   transition: color 0.2s;
 }
 
 .sidebarBtn:hover .sidebarBtnLabel {
-  color: #ffffff;
+  color: #C41861;
 }
 
 /* Sidebar footer - Sync Now */
 .sidebarFooter {
   padding: 14px;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(240,36,122,0.12);
   flex-shrink: 0;
 }
 
@@ -1512,10 +1649,10 @@
   width: 100%;
   padding: 11px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(240,36,122,0.4);
-  background: rgba(240,36,122,0.1);
+  border: 1.5px solid rgba(240,36,122,0.35);
+  background: rgba(240,36,122,0.08);
   cursor: pointer;
-  color: rgba(255,255,255,0.85);
+  color: #C41861;
   font-size: 0.85rem;
   font-weight: 700;
   font-family: 'Inter', system-ui, sans-serif;
@@ -1523,10 +1660,10 @@
 }
 
 .sidebarSyncBtn:hover {
-  background: rgba(240,36,122,0.22);
-  border-color: rgba(240,36,122,0.7);
+  background: #F0247A;
+  border-color: #F0247A;
   color: #ffffff;
-  box-shadow: 0 4px 16px rgba(240,36,122,0.3);
+  box-shadow: 0 4px 16px rgba(240,36,122,0.35);
   transform: translateY(-1px);
 }
 
