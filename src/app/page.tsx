@@ -677,6 +677,9 @@ export default function Home() {
   const isProcessingRef = useRef(false); // prevent double clicking
   const [isFullScreen, setIsFullScreen] = useState(false);
   const fullScreenRef = useRef<HTMLDivElement>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const sidebarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggleFullScreen = async () => {
     if (!document.fullscreenElement) {
@@ -1769,6 +1772,91 @@ export default function Home() {
       <div className={styles.bgBottomShape}></div>
       <div className={styles.glassOrb}></div>
 
+      {/* ─── Auto-Hide Left Sidebar ─── */}
+      {/* Invisible trigger strip */}
+      <div
+        className={styles.sidebarTrigger}
+        onMouseEnter={() => { if (sidebarTimerRef.current) clearTimeout(sidebarTimerRef.current); setSidebarOpen(true); }}
+      />
+      {/* Sidebar panel */}
+      <div
+        ref={sidebarRef}
+        className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}
+        onMouseLeave={() => { sidebarTimerRef.current = setTimeout(() => setSidebarOpen(false), 300); }}
+        onMouseEnter={() => { if (sidebarTimerRef.current) clearTimeout(sidebarTimerRef.current); }}
+      >
+        {/* Sidebar Header */}
+        <div className={styles.sidebarHeader}>
+          <div className={styles.sidebarHeaderIcon}>🏪</div>
+          <span className={styles.sidebarHeaderText}>Quick Access</span>
+        </div>
+
+        {/* Navigation Buttons */}
+        <nav className={styles.sidebarNav}>
+          <div className={styles.sidebarSection}>Actions</div>
+
+          <button onClick={() => { setIsDebitNoteOpen(true); setDnSelectedRKD(null); setDnQty(""); setSidebarOpen(false); }} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #475569, #334155)' }}>📄</span>
+            <span className={styles.sidebarBtnLabel}>Debit Note</span>
+          </button>
+
+          <button onClick={() => { setIsReverseEntryOpen(true); setReSelectedRKD(null); setReQty(""); setSidebarOpen(false); }} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>↩️</span>
+            <span className={styles.sidebarBtnLabel}>Reverse Entry</span>
+          </button>
+
+          <div className={styles.sidebarSection}>Navigation</div>
+
+          <button onClick={() => { setIsNavigating(true); router.push("/po"); }} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}><FileText size={16} color="white" /></span>
+            <span className={styles.sidebarBtnLabel}>Purchase Order</span>
+          </button>
+
+          <button onClick={() => { setIsNavigating(true); router.push("/inward"); }} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #0891b2, #0e7490)' }}>📥</span>
+            <span className={styles.sidebarBtnLabel}>Inward Entry</span>
+          </button>
+
+          <button onClick={() => { setIsNavigating(true); router.push("/ims"); }} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}><BarChart3 size={16} color="white" /></span>
+            <span className={styles.sidebarBtnLabel}>IMS</span>
+          </button>
+
+          <button onClick={() => { setIsNavigating(true); router.push("/report"); }} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)' }}>📊</span>
+            <span className={styles.sidebarBtnLabel}>Issue Report</span>
+          </button>
+
+          <button onClick={generateIssuePDF} className={styles.sidebarBtn} title={`Download Issue Report PDF (${filteredData.length} records)`}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #0f766e, #0369a1)' }}><Download size={16} color="white" /></span>
+            <span className={styles.sidebarBtnLabel}>Issue Report PDF</span>
+          </button>
+
+          <button onClick={() => window.open('/indent', '_blank')} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>📱</span>
+            <span className={styles.sidebarBtnLabel}>New Indent</span>
+          </button>
+
+          <button onClick={() => { setIsNavigating(true); router.push("/approval"); }} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>✅</span>
+            <span className={styles.sidebarBtnLabel}>Approval Entries</span>
+          </button>
+
+          <button onClick={toggleFullScreen} className={styles.sidebarBtn}>
+            <span className={styles.sidebarBtnIcon} style={{ background: 'linear-gradient(135deg, #64748b, #475569)' }}>⛶</span>
+            <span className={styles.sidebarBtnLabel}>Full Screen</span>
+          </button>
+        </nav>
+
+        {/* Footer: Sync Now */}
+        <div className={styles.sidebarFooter}>
+          <button onClick={() => fetchData(false, false)} className={styles.sidebarSyncBtn}>
+            <RefreshCw size={15} className={loading ? styles.btnSpin : ''} />
+            <span>Sync Now</span>
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <header className={styles.topHeader}>
         <div className={styles.headerLeft}>
@@ -1778,15 +1866,12 @@ export default function Home() {
           <DigitalClock />
         </div>
         <div className={styles.headerRight}>
-          <div className={styles.liveIndicator}>
-            <div className={styles.liveDot}></div>
-            <span className={styles.liveText}>LIVE</span>
-          </div>
-          <div className={styles.logoSquare}>
-            <span className={styles.logoTextR}>R</span>
-            <span className={styles.logoTextK}>K</span>
-            <span className={styles.logoTextD}>D</span>
-          </div>
+          {/* RKD Logo Image */}
+          <img
+            src="https://static.wixstatic.com/media/68b92a_d71e34133826499983234774dea1945b~mv2.png/v1/fill/w_186,h_156,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/RKD-Logo.png"
+            alt="RKD Logo"
+            className={styles.rkdLogoImg}
+          />
         </div>
       </header>
 
@@ -1798,69 +1883,11 @@ export default function Home() {
             {/* App Card Header */}
             <div className={styles.appHeader} style={{ padding: '1rem 1.5rem', flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
 
-              {/* Top Row: Title, 4 Buttons, Scorecards */}
+              {/* Top Row: Scorecards + Error notice only */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <div className={styles.appHeaderTitles}>
-                  <h2 className={styles.liveTitle} style={{ fontSize: '1.2rem', margin: 0 }}>Live Data</h2>
-                  {apiError && <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 800, marginTop: '4px' }}>⚠️ {apiError}</div>}
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px', display: 'flex', gap: '10px' }}>
-                    <span>Last Sync: {lastUpdated || "Never"}</span>
-                    <a href="/api/debug-sheet" target="_blank" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Run Diagnostics</a>
-                  </div>
-                  <button onClick={() => fetchData(false, false)} className={styles.dribbbleBtnSecondary} style={{ padding: '6px 12px', marginTop: '6px', fontSize: '0.8rem', gap: '4px' }}>
-                    <RefreshCw size={14} className={loading ? styles.btnSpin : ""} />
-                    <span>Sync Now</span>
-                  </button>
-                </div>
-
-                {/* 4 Action Buttons */}
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <button onClick={() => { setIsDebitNoteOpen(true); setDnSelectedRKD(null); setDnQty(""); }} className={styles.dribbbleBtnSecondary}>
-                    <span style={{ fontSize: '1rem' }}>📄</span>
-                    <span>Debit Note</span>
-                  </button>
-                  <button onClick={() => { setIsReverseEntryOpen(true); setReSelectedRKD(null); setReQty(""); }} className={styles.dribbbleBtnSecondary}>
-                    <span style={{ fontSize: '1rem' }}>↩️</span>
-                    <span>Reverse Entry</span>
-                  </button>
-                  <button onClick={() => { setIsNavigating(true); router.push("/po"); }} className={styles.dribbbleBtnPrimary}>
-                    <FileText size={16} />
-                    <span>Purchase Order</span>
-                  </button>
-                  <button onClick={() => { setIsNavigating(true); router.push("/inward"); }} className={styles.dribbbleBtnPrimary}>
-                    <span style={{ fontSize: '1rem' }}>📥</span>
-                    <span>Inward Entry</span>
-                  </button>
-                  <button onClick={() => { setIsNavigating(true); router.push("/ims"); }} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)', boxShadow: '0 4px 14px rgba(124,58,237,0.4)' }}>
-                    <BarChart3 size={16} />
-                    <span>IMS</span>
-                  </button>
-                  <button onClick={() => { setIsNavigating(true); router.push("/report"); }} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #7f1d1d, #dc2626)', boxShadow: '0 4px 14px rgba(220,38,38,0.4)' }}>
-                    <span style={{ fontSize: '1rem' }}>📊</span>
-                    <span>Issue Report</span>
-                  </button>
-                  <button
-                    onClick={generateIssuePDF}
-                    className={styles.dribbbleBtnPrimary}
-                    style={{ background: 'linear-gradient(135deg, #0f766e, #0369a1)', boxShadow: '0 4px 14px rgba(15,118,110,0.4)', gap: '6px' }}
-                    title={`Download Issue Report PDF (${filteredData.length} records)`}
-                  >
-                    <Download size={15} />
-                    <span>Issue Report PDF</span>
-                  </button>
-                  <button onClick={() => window.open('/indent', '_blank')} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
-                    <span>📱</span>
-                    <span>New Indent</span>
-                  </button>
-                  <button onClick={() => { setIsNavigating(true); router.push("/approval"); }} className={styles.dribbbleBtnPrimary} style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 14px rgba(245,158,11,0.4)' }}>
-                    <span>✅</span>
-                    <span>Approval Entries</span>
-                  </button>
-                  <button onClick={toggleFullScreen} className={styles.dribbbleBtnSecondary}>
-                    <span>⛶</span>
-                    <span>Full Screen</span>
-                  </button>
-                </div>
+                {apiError && (
+                  <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 800 }}>⚠️ {apiError}</div>
+                )}
 
                 {/* Scorecards */}
                 <div className={styles.appMetricsInline} style={{ gap: '10px' }}>
