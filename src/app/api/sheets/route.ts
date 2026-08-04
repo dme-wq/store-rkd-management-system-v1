@@ -291,9 +291,9 @@ export async function GET(req: Request) {
 
     let storeRows = batchRes.data.valueRanges?.[1]?.values || [];
 
-    // If speculation missed (too few RKD rows returned), do one targeted refetch
+    // If speculation missed (too few RKD rows returned, or we missed the newest rows at the bottom), do one targeted refetch
     const validCount = storeRows.filter((r: any) => String(r[1] || "").startsWith("RKD")).length;
-    if (validCount < 5 && totalRows > 10) {
+    if ((totalRows > speculativeEnd || validCount < 5) && totalRows > 10) {
       const actualStart = Math.max(2, totalRows - FETCH_LIMIT + 1);
       const refetch = await sheets.spreadsheets.values.get({
         spreadsheetId: STORE_SHEET_ID,

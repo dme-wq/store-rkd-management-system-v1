@@ -21,9 +21,6 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "Store Management System",
   description: "Premium Store Management Dashboard",
-  icons: {
-    icon: "/favicon.png",
-  },
 };
 
 export default function RootLayout({
