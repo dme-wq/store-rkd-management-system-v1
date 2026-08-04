@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import styles from "./report.module.css";
 import {
   ArrowLeft, RefreshCw, Search, FileText,
-  Download, Filter, Loader2, BarChart3, Maximize2, Minimize2
+  Download, Filter, Loader2, BarChart3, Maximize2, Minimize2,
+  Home as HomeIcon, Plus, Layers, ListTodo, PieChart, Database, CheckCircle, Maximize
 } from "lucide-react";
+import mainStyles from "../page.module.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type IssueRow = {
@@ -187,6 +189,21 @@ export default function ReportPage() {
   const [lastSync, setLastSync] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error("Error attempting to enable fullscreen:", err);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
 
   const CURRENT_YEAR = new Date().getFullYear();
   const [selYear, setSelYear]           = useState(String(CURRENT_YEAR));
@@ -339,124 +356,114 @@ export default function ReportPage() {
     <>
       {/* ── KPI Strip ── */}
       <div className={styles.kpiStrip}>
-        <div className={`${styles.kpiChip} ${styles.kpiChipWhite}`}>
-          <span className={styles.chipBadge + " " + styles.chipBadgeGreen}>CLOSED</span>
-          <span className={styles.chipEmoji}>📋</span>
-          <div className={styles.chipBody}>
-            <div className={`${styles.chipValue} ${styles.chipValueW}`}>{kpis.count.toLocaleString("en-IN")}</div>
-            <div className={`${styles.chipLabel} ${styles.chipLabelW}`}>Total Entries</div>
+        <div className={mainStyles.kpiWhiteCard}>
+          <div className={mainStyles.kpiWhiteCardIcon} style={{ background: '#e0e7ff', color: '#4f46e5' }}><FileText size={18} /></div>
+          <div className={mainStyles.kpiWhiteCardContent}>
+            <div className={mainStyles.kpiWhiteCardValue}>{kpis.count.toLocaleString("en-IN")}</div>
+            <div className={mainStyles.kpiWhiteCardLabel}>Total Entries</div>
           </div>
         </div>
-        <div className={`${styles.kpiChip} ${styles.kpiChipYellow}`}>
-          <span className={styles.chipBadge + " " + styles.chipBadgeDark}>ISSUED</span>
-          <span className={styles.chipEmoji}>📦</span>
-          <div className={styles.chipBody}>
-            <div className={`${styles.chipValue} ${styles.chipValueY}`}>{kpis.totalIssueQty.toLocaleString("en-IN")}</div>
-            <div className={`${styles.chipLabel} ${styles.chipLabelY}`}>Total Issue Qty</div>
+        <div className={mainStyles.kpiWhiteCard}>
+          <div className={mainStyles.kpiWhiteCardIcon} style={{ background: '#fef3c7', color: '#d97706' }}><PieChart size={18} /></div>
+          <div className={mainStyles.kpiWhiteCardContent}>
+            <div className={mainStyles.kpiWhiteCardValue}>{kpis.totalIssueQty.toLocaleString("en-IN")}</div>
+            <div className={mainStyles.kpiWhiteCardLabel}>Total Issue Qty</div>
           </div>
         </div>
-        <div className={`${styles.kpiChip} ${styles.kpiChipDark}`}>
-          <span className={styles.chipBadge + " " + styles.chipBadgeWhite}>VALUE</span>
-          <span className={styles.chipEmoji}>💰</span>
-          <div className={styles.chipBody}>
-            <div className={`${styles.chipValue} ${styles.chipValueD}`}>{fmtShort(kpis.totalPrice)}</div>
-            <div className={`${styles.chipLabel} ${styles.chipLabelD}`}>Grand Total Price</div>
-            <div className={`${styles.chipSub} ${styles.chipSubD}`}>{fmtCurrency(kpis.totalPrice)}</div>
+        <div className={mainStyles.kpiWhiteCard}>
+          <div className={mainStyles.kpiWhiteCardIcon} style={{ background: '#d1fae5', color: '#059669' }}><CheckCircle size={18} /></div>
+          <div className={mainStyles.kpiWhiteCardContent}>
+            <div className={mainStyles.kpiWhiteCardValue}>{fmtShort(kpis.totalPrice)}</div>
+            <div className={mainStyles.kpiWhiteCardLabel}>Total Price</div>
           </div>
         </div>
-        <div className={`${styles.kpiChip} ${styles.kpiChipNeutral}`}>
-          <span className={styles.chipBadge + " " + styles.chipBadgeGray}>REQUESTED</span>
-          <span className={styles.chipEmoji}>📝</span>
-          <div className={styles.chipBody}>
-            <div className={`${styles.chipValue} ${styles.chipValueN}`}>{kpis.totalIndentQty.toLocaleString("en-IN")}</div>
-            <div className={`${styles.chipLabel} ${styles.chipLabelN}`}>Total Indent Qty</div>
+        <div className={mainStyles.kpiWhiteCard}>
+          <div className={mainStyles.kpiWhiteCardIcon} style={{ background: '#f3f4f6', color: '#4b5563' }}><ListTodo size={18} /></div>
+          <div className={mainStyles.kpiWhiteCardContent}>
+            <div className={mainStyles.kpiWhiteCardValue}>{kpis.totalIndentQty.toLocaleString("en-IN")}</div>
+            <div className={mainStyles.kpiWhiteCardLabel}>Total Indent Qty</div>
           </div>
         </div>
       </div>
 
       {/* ── Table Card ── */}
-      <div className={styles.tableCard}>
-        <div className={styles.tableHeader}>
-          <div className={styles.tableHeaderTitle}>
-            <FileText size={14} /> Issue Register
-            <span className={styles.tableBadge}>{filteredData.length}</span>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginTop: '16px', background: 'white', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#334155' }}>
+            <FileText size={16} /> <span>Issue Register</span>
+            <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginLeft: '4px' }}>{filteredData.length}</span>
           </div>
-          <div className={styles.tableToolbar}>
-            <div className={styles.searchBox}>
-              <Search size={12} className={styles.searchIcon} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <Search size={14} style={{ color: '#94a3b8' }} />
               <input
                 id="table-search"
                 type="text"
                 placeholder="Search..."
-                className={styles.searchInput}
+                style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '0.85rem', width: '150px' }}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <button
-              className={styles.fullscreenBtn}
-              onClick={() => setIsFullscreen(f => !f)}
-              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-            >
-              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-            </button>
           </div>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={mainStyles.tableScrollArea} style={{ flex: 1, minHeight: 0 }}>
           {loading ? (
-            <div className={styles.loaderCenter}>
-              <Loader2 className={styles.spin} size={28} />
+            <div className={mainStyles.loaderCenter}>
+              <Loader2 className={mainStyles.spinnerIcon} size={28} />
               <p>Loading {selYear} data...</p>
             </div>
           ) : filteredData.length === 0 ? (
-            <div className={styles.emptyState}>
-              <FileText size={36} opacity={0.2} />
-              <p>No records match the selected filters.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', gap: '12px', padding: '40px' }}>
+              <FileText size={36} opacity={0.3} />
+              <p style={{ margin: 0, fontWeight: 500 }}>No records match the selected filters.</p>
             </div>
           ) : (
-            <table className={styles.table}>
+            <table className={mainStyles.dataTable}>
               <thead>
                 <tr>
                   {COLS.map(col => (
                     <th
                       key={col.key}
-                      className={`${styles.th} ${col.key !== "_sno" ? styles.thSort : ""}`}
+                      style={{ cursor: col.key !== "_sno" ? 'pointer' : 'default', userSelect: 'none' }}
                       onClick={col.key !== "_sno" ? () => handleSort(col.key) : undefined}
                     >
-                      {col.label}
-                      {sortCol === col.key && <span className={styles.sortArrow}>{sortAsc ? "↑" : "↓"}</span>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {col.label}
+                        {sortCol === col.key && <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>{sortAsc ? "↑" : "↓"}</span>}
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filteredData.map((row, idx) => (
-                  <tr key={row._rowIdx} className={styles.tr}>
-                    <td className={`${styles.td} ${styles.sno}`}>{idx + 1}</td>
-                    <td className={`${styles.td} ${styles.tdMono}`}>{row["Timestamp"] || "—"}</td>
-                    <td className={styles.td}>{row["Department"] || "—"}</td>
-                    <td className={`${styles.td} ${styles.tdBold} ${styles.tdWide}`}>{row["Item Name"] || "—"}</td>
-                    <td className={styles.td}>{row["Machine Name"] || "—"}</td>
-                    <td className={`${styles.td} ${styles.tdMono} ${styles.tdNarrow}`}>{row["Machine ID"] || "—"}</td>
-                    <td className={styles.td}><span className={styles.tdRkd}>{row["Store RKD Number"] || "—"}</span></td>
-                    <td className={styles.td}>{row["Person Filling Name"] || "—"}</td>
-                    <td className={`${styles.td} ${styles.tdNarrow}`}>{fmtNum(row["Require Qty"])}</td>
-                    <td className={`${styles.td} ${styles.tdQty} ${styles.tdNarrow}`}>{fmtNum(row["Issue Qty"])}</td>
-                    <td className={`${styles.td} ${styles.tdPrice} ${styles.tdNarrow}`}>{fmtCurrency(row["Price"])}</td>
-                    <td className={`${styles.td} ${styles.tdTotal}`}>{fmtCurrency(row["Total Price"])}</td>
+                  <tr key={row._rowIdx}>
+                    <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#64748b' }}>{row["Timestamp"] || "—"}</td>
+                    <td>{row["Department"] || "—"}</td>
+                    <td style={{ fontWeight: 600, color: '#334155' }}>{row["Item Name"] || "—"}</td>
+                    <td>{row["Machine Name"] || "—"}</td>
+                    <td style={{ fontFamily: 'monospace' }}>{row["Machine ID"] || "—"}</td>
+                    <td><span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{row["Store RKD Number"] || "—"}</span></td>
+                    <td>{row["Person Filling Name"] || "—"}</td>
+                    <td style={{ textAlign: 'right' }}>{fmtNum(row["Require Qty"])}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>{fmtNum(row["Issue Qty"])}</td>
+                    <td style={{ textAlign: 'right', color: '#64748b' }}>{fmtCurrency(row["Price"])}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#4f46e5' }}>{fmtCurrency(row["Total Price"])}</td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot>
-                <tr style={{ background:"#FFFBE6", borderTop:"2px solid #F5C520" }}>
-                  <td colSpan={8} className={styles.td} style={{ fontWeight:800, color:"#1C1C1E", fontSize:"0.75rem", fontFamily:"'Outfit',sans-serif" }}>
+              <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 10, background: '#f8fafc', borderTop: '2px solid #e2e8f0', boxShadow: '0 -4px 6px -1px rgba(0,0,0,0.05)' }}>
+                <tr>
+                  <td colSpan={8} style={{ fontWeight:800, color:"#334155", fontSize:"0.75rem", padding: '12px 16px' }}>
                     TOTALS — {filteredData.length} entries · {selYear}
                   </td>
-                  <td className={styles.td} style={{ fontWeight:800, color:"#1C1C1E", fontFamily:"'Outfit',sans-serif" }}>{fmtNum(kpis.totalIndentQty)}</td>
-                  <td className={styles.td} style={{ fontWeight:800, color:"#1C1C1E", fontFamily:"'Outfit',sans-serif" }}>{fmtNum(kpis.totalIssueQty)}</td>
-                  <td className={styles.td} style={{ color:"#999" }}>—</td>
-                  <td className={styles.td} style={{ fontWeight:900, color:"#C9A100", fontFamily:"'Outfit',sans-serif" }}>{fmtCurrency(kpis.totalPrice)}</td>
+                  <td style={{ textAlign: 'right', fontWeight:800, color:"#334155", padding: '12px 16px' }}>{fmtNum(kpis.totalIndentQty)}</td>
+                  <td style={{ textAlign: 'right', fontWeight:800, color:"#334155", padding: '12px 16px' }}>{fmtNum(kpis.totalIssueQty)}</td>
+                  <td style={{ textAlign: 'right', color:"#94a3b8", padding: '12px 16px' }}>—</td>
+                  <td style={{ textAlign: 'right', fontWeight:900, color:"#4f46e5", fontSize: '0.9rem', padding: '12px 16px' }}>{fmtCurrency(kpis.totalPrice)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -467,98 +474,166 @@ export default function ReportPage() {
   );
 
   // ── Filters JSX (shared) ─────────────────────────────────────────────────
+  const filterInputStyle = { padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#334155', background: '#f8fafc', outline: 'none' };
   const FiltersJSX = (
-    <div className={styles.filterPanel}>
-      <div className={styles.filterBar}>
-        <span className={styles.filterLabel}>📅</span>
-        <select id="filter-year" className={styles.filterSelect} value={selYear} onChange={e => { setSelYear(e.target.value); setDateStart(""); setDateEnd(""); }}>
-          {[2024,2025,2026,2027].map(y => <option key={y} value={String(y)}>{y}{y===CURRENT_YEAR?" ★":""}</option>)}
-        </select>
+    <div style={{ display: 'flex', gap: '12px', padding: '16px 20px', flexWrap: 'wrap', alignItems: 'center', background: 'white', borderBottom: '1px solid #f1f5f9', borderTop: '1px solid #f1f5f9' }}>
+      <select style={filterInputStyle} value={selYear} onChange={e => { setSelYear(e.target.value); setDateStart(""); setDateEnd(""); }}>
+        {[2024,2025,2026,2027].map(y => <option key={y} value={String(y)}>{y}{y===CURRENT_YEAR?" ★":""}</option>)}
+      </select>
 
-        <div className={styles.filterDivider} />
+      <div style={{ width: '1px', height: '24px', background: '#e2e8f0', margin: '0 4px' }} />
 
-        <select id="filter-dept" className={styles.filterSelect} value={selDept} onChange={e => setSelDept(e.target.value)}>
-          <option value="__all__">— Department —</option>
-          {deptOpts.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-        <select id="filter-machine" className={styles.filterSelect} value={selMachine} onChange={e => setSelMachine(e.target.value)}>
-          <option value="__all__">— Machine —</option>
-          {machineOpts.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-        <select id="filter-machineid" className={styles.filterSelect} value={selMachineID} onChange={e => setSelMachineID(e.target.value)}>
-          <option value="__all__">— Machine ID —</option>
-          {machineIDOpts.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-        <select id="filter-item" className={styles.filterSelect} value={selItem} onChange={e => setSelItem(e.target.value)}>
-          <option value="__all__">— Item Name —</option>
-          {itemOpts.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-        <select id="filter-person" className={styles.filterSelect} value={selPerson} onChange={e => setSelPerson(e.target.value)}>
-          <option value="__all__">— Person —</option>
-          {personOpts.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-        <select id="filter-rkd" className={styles.filterSelect} value={selRKD} onChange={e => setSelRKD(e.target.value)}>
-          <option value="__all__">— Request No. —</option>
-          {rkdOpts.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
+      <select style={filterInputStyle} value={selDept} onChange={e => setSelDept(e.target.value)}>
+        <option value="__all__">— Department —</option>
+        {deptOpts.map(v => <option key={v} value={v}>{v}</option>)}
+      </select>
+      <select style={filterInputStyle} value={selMachine} onChange={e => setSelMachine(e.target.value)}>
+        <option value="__all__">— Machine —</option>
+        {machineOpts.map(v => <option key={v} value={v}>{v}</option>)}
+      </select>
+      <select style={filterInputStyle} value={selMachineID} onChange={e => setSelMachineID(e.target.value)}>
+        <option value="__all__">— Machine ID —</option>
+        {machineIDOpts.map(v => <option key={v} value={v}>{v}</option>)}
+      </select>
+      <select style={filterInputStyle} value={selItem} onChange={e => setSelItem(e.target.value)}>
+        <option value="__all__">— Item Name —</option>
+        {itemOpts.map(v => <option key={v} value={v}>{v}</option>)}
+      </select>
+      <select style={filterInputStyle} value={selPerson} onChange={e => setSelPerson(e.target.value)}>
+        <option value="__all__">— Person —</option>
+        {personOpts.map(v => <option key={v} value={v}>{v}</option>)}
+      </select>
+      <select style={filterInputStyle} value={selRKD} onChange={e => setSelRKD(e.target.value)}>
+        <option value="__all__">— Request No. —</option>
+        {rkdOpts.map(v => <option key={v} value={v}>{v}</option>)}
+      </select>
 
-        <div className={styles.filterDivider} />
+      <div style={{ width: '1px', height: '24px', background: '#e2e8f0', margin: '0 4px' }} />
 
-        <input id="filter-date-start" type="date" className={styles.filterInput} value={dateStart} onChange={e => setDateStart(e.target.value)} placeholder="From date" title="Date From" />
-        <input id="filter-date-end" type="date" className={styles.filterInput} value={dateEnd} onChange={e => setDateEnd(e.target.value)} placeholder="To date" title="Date To" />
-      </div>
+      <input type="date" style={filterInputStyle} value={dateStart} onChange={e => setDateStart(e.target.value)} title="Date From" />
+      <input type="date" style={filterInputStyle} value={dateEnd} onChange={e => setDateEnd(e.target.value)} title="Date To" />
 
-      <div className={styles.filterActions}>
-        <button id="btn-reset-filters" className={styles.resetBtn} onClick={resetFilters}>↺ Reset</button>
-        <button id="btn-export-pdf" className={styles.exportBtn} onClick={handleExportPDF}>
-          <Download size={13} /> Export PDF
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+        <button onClick={resetFilters} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>↺ Reset</button>
+        <button onClick={handleExportPDF} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: '#0f172a', color: 'white', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Download size={14} /> Export PDF
         </button>
-        <span className={styles.resultCount}>{filteredData.length} records</span>
       </div>
     </div>
   );
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className={styles.page}>
-      {/* ── Header ── */}
-      <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() => router.push("/")}>
-          <ArrowLeft size={13} /> Back
-        </button>
-        <div className={styles.headerCenter}>
-          <BarChart3 size={17} className={styles.headerIcon} />
-          <h1 className={styles.headerTitle}>Store Miscellaneous Issue Report</h1>
-        </div>
-        <div className={styles.headerRight}>
-          <div className={styles.rkdBadge}>
-            <span className={styles.rkdR}>R</span>
-            <span className={styles.rkdK}>K</span>
-            <span className={styles.rkdD}>D</span>
-          </div>
-          <span className={styles.syncTag}>
-            <RefreshCw size={10} className={loading ? styles.spinning : ""} />
-            {lastSync ? `Synced ${lastSync}` : "Loading..."}
-          </span>
-          <button className={styles.refreshBtn} onClick={() => fetchData(false, true)} title="Force Refresh">
-            <RefreshCw size={13} />
-          </button>
-        </div>
-      </header>
+    <div className={mainStyles.pageContainer}>
+      <div className={mainStyles.presentationLayout}>
+        {/* NEW DRIBBBLE SIDEBAR */}
+        <div 
+           className={`${mainStyles.dribbbleSidebar} ${sidebarOpen ? mainStyles.dribbbleSidebarOpen : ''}`}
+           onMouseLeave={() => { sidebarTimerRef.current = setTimeout(() => setSidebarOpen(false), 300); }}
+           onMouseEnter={() => { if (sidebarTimerRef.current) clearTimeout(sidebarTimerRef.current); }}
+        >
+           {/* Sidebar Logo */}
+           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+             <img src="https://static.wixstatic.com/media/68b92a_d71e34133826499983234774dea1945b~mv2.png/v1/fill/w_186,h_156,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/RKD-Logo.png" alt="RKD Logo" style={{ height: '45px', objectFit: 'contain' }} />
+           </div>
 
-      {/* ── Fullscreen Overlay ── */}
-      {isFullscreen ? (
-        <div className={styles.fullscreenOverlay}>
-          {FiltersJSX}
-          {DashboardContent}
+           <div className={mainStyles.dribbbleSidebarMenu}>
+              <div className={mainStyles.dribbbleSidebarItem} onClick={() => router.push("/")}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><HomeIcon size={20} strokeWidth={2.5} /></div>
+                 <span>Home</span>
+              </div>
+              <div className={mainStyles.dribbbleSidebarItemPrimary} onClick={() => window.open('/indent', '_blank')}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                   <div className={mainStyles.dribbbleSidebarIconPrimary}><Plus size={20} strokeWidth={2.5} /></div>
+                   <span>New Indent</span>
+                 </div>
+                 <span style={{ fontSize: '12px', opacity: 0.8 }}> </span>
+              </div>
+              
+              <div className={mainStyles.dribbbleSidebarItem} onClick={() => router.push("/po")}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><Layers size={20} strokeWidth={2.5} /></div>
+                 <span>Purchase Order Entry</span>
+              </div>
+
+              <div className={mainStyles.dribbbleSidebarItem} onClick={() => router.push("/inward")}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><ListTodo size={20} strokeWidth={2.5} /></div>
+                 <span>Inward Entry</span>
+              </div>
+
+              <div className={`${mainStyles.dribbbleSidebarItem} ${mainStyles.dribbbleSidebarItemActive}`}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><PieChart size={20} strokeWidth={2.5} /></div>
+                 <span>Issue Entry</span>
+              </div>
+              
+              <div style={{ height: '1px', background: '#f1f5f9', margin: '16px 0 8px 0' }}></div>
+              
+              <div className={mainStyles.dribbbleSidebarItem} onClick={() => router.push("/ims")}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><Database size={20} strokeWidth={2.5} /></div>
+                 <span>IMS</span>
+              </div>
+              
+              <div className={mainStyles.dribbbleSidebarItem} onClick={() => router.push("/approval")}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><CheckCircle size={20} strokeWidth={2.5} /></div>
+                 <span>Approvals</span>
+              </div>
+              
+              <div className={mainStyles.dribbbleSidebarItem} onClick={handleExportPDF}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><Download size={20} strokeWidth={2.5} /></div>
+                 <span>Download PDF</span>
+              </div>
+              <div className={mainStyles.dribbbleSidebarItem} onClick={toggleFullScreen}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><Maximize size={20} strokeWidth={2.5} /></div>
+                 <span>Full Screen</span>
+              </div>
+
+              <div className={mainStyles.dribbbleSidebarItem} onClick={() => fetchData(false, false)}>
+                 <div className={mainStyles.dribbbleSidebarIcon}><RefreshCw size={20} strokeWidth={2.5} className={loading ? mainStyles.btnSpin : ''} /></div>
+                 <span>Sync Now</span>
+              </div>
+           </div>
         </div>
-      ) : (
-        <div className={styles.content}>
-          {apiError && <div className={styles.errorBanner}>⚠️ {apiError}</div>}
-          {FiltersJSX}
-          {DashboardContent}
+
+        <div className={mainStyles.appCardSide}>
+          <div className={mainStyles.appCard}>
+
+            {/* App Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #f1f5f9', background: '#ffffff', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div 
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                  onMouseEnter={() => setSidebarOpen(true)}
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '16px', height: '2px', background: '#475569', boxShadow: '0 5px 0 #475569, 0 -5px 0 #475569' }}></div>
+                  </div>
+                </div>
+                <div>
+                  <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>Store Miscellaneous System</h1>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>Issue Report / Dashboard</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', padding: '6px 12px', borderRadius: '999px', fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                  <RefreshCw size={12} className={loading ? mainStyles.btnSpin : ''} />
+                  <span>{lastSync ? `Synced ${lastSync}` : 'Loading...'}</span>
+                </div>
+                <button onClick={toggleFullScreen} style={{ background: 'white', border: '1px solid #e2e8f0', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', transition: 'all 0.2s' }}>
+                  <Maximize size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content Area */}
+            <div className={styles.content}>
+              {apiError && <div className={styles.errorBanner}>⚠️ {apiError}</div>}
+              {FiltersJSX}
+              {DashboardContent}
+            </div>
+
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
