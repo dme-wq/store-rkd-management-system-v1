@@ -218,6 +218,23 @@ export default function ReportPage() {
   const [dateEnd, setDateEnd]           = useState("");
   const [sortCol, setSortCol]           = useState("Timestamp");
   const [sortAsc, setSortAsc]           = useState(false);
+  const [filtersVisible, setFiltersVisible] = useState(true);
+  const [isTableFullScreen, setIsTableFullScreen] = useState(false);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleFsChange = () => setIsTableFullScreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const toggleTableFullScreen = () => {
+    if (!document.fullscreenElement) {
+      tableContainerRef.current?.requestFullscreen().catch(err => console.error(err));
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   // ── Fetch ───────────────────────────────────────────────────────────────
   const fetchData = useCallback(async (silent = false, refresh = false) => {
@@ -355,43 +372,65 @@ export default function ReportPage() {
   const DashboardContent = (
     <>
       {/* ── KPI Strip ── */}
-      <div className={styles.kpiStrip}>
-        <div className={mainStyles.kpiWhiteCard}>
-          <div className={mainStyles.kpiWhiteCardIcon} style={{ background: '#e0e7ff', color: '#4f46e5' }}><FileText size={18} /></div>
-          <div className={mainStyles.kpiWhiteCardContent}>
-            <div className={mainStyles.kpiWhiteCardValue}>{kpis.count.toLocaleString("en-IN")}</div>
-            <div className={mainStyles.kpiWhiteCardLabel}>Total Entries</div>
+      <div className={styles.kpiStrip} style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
+        <div className={mainStyles.dribbbleScorecard} data-color="lavender" style={{ flex: 1 }}>
+          <div className={mainStyles.dribbbleScorecardLabel}>Total Entries</div>
+          <div className={mainStyles.dribbbleScorecardValue}>{kpis.count.toLocaleString("en-IN")}</div>
+          <div className={mainStyles.dribbbleScorecardRow}>
+            <div className={mainStyles.dribbbleScorecardSuffix}>Records Found</div>
+            <div className={mainStyles.dribbbleScorecardArrow}><FileText size={12}/></div>
           </div>
         </div>
-        <div className={mainStyles.kpiWhiteCard}>
-          <div className={mainStyles.kpiWhiteCardIcon} style={{ background: '#fef3c7', color: '#d97706' }}><PieChart size={18} /></div>
-          <div className={mainStyles.kpiWhiteCardContent}>
-            <div className={mainStyles.kpiWhiteCardValue}>{kpis.totalIssueQty.toLocaleString("en-IN")}</div>
-            <div className={mainStyles.kpiWhiteCardLabel}>Total Issue Qty</div>
+        <div className={mainStyles.dribbbleScorecard} data-color="peach" style={{ flex: 1 }}>
+          <div className={mainStyles.dribbbleScorecardLabel}>Total Issue Qty</div>
+          <div className={mainStyles.dribbbleScorecardValue}>{kpis.totalIssueQty.toLocaleString("en-IN")}</div>
+          <div className={mainStyles.dribbbleScorecardRow}>
+            <div className={mainStyles.dribbbleScorecardSuffix}>Units Issued</div>
+            <div className={mainStyles.dribbbleScorecardArrow}><PieChart size={12}/></div>
           </div>
         </div>
-        <div className={mainStyles.kpiWhiteCard}>
-          <div className={mainStyles.kpiWhiteCardIcon} style={{ background: '#d1fae5', color: '#059669' }}><CheckCircle size={18} /></div>
-          <div className={mainStyles.kpiWhiteCardContent}>
-            <div className={mainStyles.kpiWhiteCardValue}>{fmtShort(kpis.totalPrice)}</div>
-            <div className={mainStyles.kpiWhiteCardLabel}>Total Price</div>
+        <div className={mainStyles.dribbbleScorecard} data-color="sage" style={{ flex: 1 }}>
+          <div className={mainStyles.dribbbleScorecardLabel}>Total Price</div>
+          <div className={mainStyles.dribbbleScorecardValue}>{fmtShort(kpis.totalPrice)}</div>
+          <div className={mainStyles.dribbbleScorecardRow}>
+            <div className={mainStyles.dribbbleScorecardSuffix}>Total Cost</div>
+            <div className={mainStyles.dribbbleScorecardArrow}><CheckCircle size={12}/></div>
           </div>
         </div>
-        <div className={mainStyles.kpiWhiteCard}>
-          <div className={mainStyles.kpiWhiteCardIcon} style={{ background: '#f3f4f6', color: '#4b5563' }}><ListTodo size={18} /></div>
-          <div className={mainStyles.kpiWhiteCardContent}>
-            <div className={mainStyles.kpiWhiteCardValue}>{kpis.totalIndentQty.toLocaleString("en-IN")}</div>
-            <div className={mainStyles.kpiWhiteCardLabel}>Total Indent Qty</div>
+        <div className={mainStyles.dribbbleScorecard} data-color="sky" style={{ flex: 1 }}>
+          <div className={mainStyles.dribbbleScorecardLabel}>Total Indent Qty</div>
+          <div className={mainStyles.dribbbleScorecardValue}>{kpis.totalIndentQty.toLocaleString("en-IN")}</div>
+          <div className={mainStyles.dribbbleScorecardRow}>
+            <div className={mainStyles.dribbbleScorecardSuffix}>Requested Units</div>
+            <div className={mainStyles.dribbbleScorecardArrow}><ListTodo size={12}/></div>
           </div>
         </div>
       </div>
 
       {/* ── Table Card ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginTop: '16px', background: 'white', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f1f5f9' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#334155' }}>
-            <FileText size={16} /> <span>Issue Register</span>
-            <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginLeft: '4px' }}>{filteredData.length}</span>
+      <div 
+        ref={tableContainerRef}
+        style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          marginTop: '8px', 
+          background: 'white', 
+          borderRadius: isTableFullScreen ? '0' : '16px', 
+          boxShadow: isTableFullScreen ? 'none' : '0 1px 3px rgba(0,0,0,0.05)', 
+          overflow: 'hidden', 
+          border: isTableFullScreen ? 'none' : '1px solid #f1f5f9',
+          padding: isTableFullScreen ? '16px' : '0'
+        }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isTableFullScreen ? '0 0 16px 0' : '16px 20px', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {isTableFullScreen && (
+              <img src="https://static.wixstatic.com/media/68b92a_d71e34133826499983234774dea1945b~mv2.png/v1/fill/w_186,h_156,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/RKD-Logo.png" alt="RKD Logo" style={{ height: '32px', objectFit: 'contain' }} />
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#334155' }}>
+              <FileText size={16} /> <span>Issue Register</span>
+              <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginLeft: '4px' }}>{filteredData.length}</span>
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -405,6 +444,9 @@ export default function ReportPage() {
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
+            <button onClick={toggleTableFullScreen} style={{ background: 'white', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', transition: 'all 0.2s' }}>
+              {isTableFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
           </div>
         </div>
 
@@ -476,7 +518,22 @@ export default function ReportPage() {
   // ── Filters JSX (shared) ─────────────────────────────────────────────────
   const filterInputStyle = { padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#334155', background: '#f8fafc', outline: 'none' };
   const FiltersJSX = (
-    <div style={{ display: 'flex', gap: '12px', padding: '16px 20px', flexWrap: 'wrap', alignItems: 'center', background: 'white', borderBottom: '1px solid #f1f5f9', borderTop: '1px solid #f1f5f9' }}>
+    <>
+      <div className={mainStyles.filterToggleBar} style={{ marginTop: '0', borderBottom: filtersVisible ? 'none' : '1px solid #f1f5f9', background: 'transparent', padding: '8px 4px' }}>
+        <span style={{ flex: 1, fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>FILTER RECORDS</span>
+        <button
+          className={`${mainStyles.filterToggleBtn} ${!filtersVisible ? mainStyles.filterToggleBtnActive : ''}`}
+          onClick={() => setFiltersVisible(!filtersVisible)}
+        >
+          <Filter size={14} /> Filters
+        </button>
+      </div>
+      <div style={{ 
+        display: 'flex', gap: '12px', padding: filtersVisible ? '16px 20px' : '0 20px', flexWrap: 'wrap', alignItems: 'center', 
+        background: 'white', borderBottom: filtersVisible ? '1px solid #f1f5f9' : 'none', borderTop: filtersVisible ? '1px solid #f1f5f9' : 'none',
+        maxHeight: filtersVisible ? '500px' : '0', opacity: filtersVisible ? 1 : 0, overflow: 'hidden', 
+        transition: 'all 0.3s ease', borderRadius: '12px', marginBottom: '8px'
+      }}>
       <select style={filterInputStyle} value={selYear} onChange={e => { setSelYear(e.target.value); setDateStart(""); setDateEnd(""); }}>
         {[2024,2025,2026,2027].map(y => <option key={y} value={String(y)}>{y}{y===CURRENT_YEAR?" ★":""}</option>)}
       </select>
@@ -520,6 +577,7 @@ export default function ReportPage() {
         </button>
       </div>
     </div>
+    </>
   );
 
   // ── Render ───────────────────────────────────────────────────────────────
