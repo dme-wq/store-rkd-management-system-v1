@@ -373,38 +373,47 @@ export default function ReportPage() {
     <>
       {/* ── KPI Strip ── */}
       <div className={styles.kpiStrip} style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-        <div className={mainStyles.dribbbleScorecard} data-color="lavender" style={{ flex: 1 }}>
-          <div className={mainStyles.dribbbleScorecardLabel}>Total Entries</div>
-          <div className={mainStyles.dribbbleScorecardValue}>{kpis.count.toLocaleString("en-IN")}</div>
-          <div className={mainStyles.dribbbleScorecardRow}>
-            <div className={mainStyles.dribbbleScorecardSuffix}>Records Found</div>
-            <div className={mainStyles.dribbbleScorecardArrow}><FileText size={12}/></div>
+        
+        <div className={mainStyles.miniBlobCard} data-color="blue">
+          <div className={mainStyles.miniBlobDot}></div>
+          <div className={mainStyles.miniBlobTitle}>Total Entries</div>
+          <div className={mainStyles.miniBlobSub}>Records Found</div>
+          <div className={mainStyles.miniBlobPill}>
+            <span className={mainStyles.miniBlobPillText}>{kpis.count.toLocaleString("en-IN")}</span>
+            <span className={mainStyles.miniBlobPillArrow}>»</span>
           </div>
         </div>
-        <div className={mainStyles.dribbbleScorecard} data-color="peach" style={{ flex: 1 }}>
-          <div className={mainStyles.dribbbleScorecardLabel}>Total Issue Qty</div>
-          <div className={mainStyles.dribbbleScorecardValue}>{kpis.totalIssueQty.toLocaleString("en-IN")}</div>
-          <div className={mainStyles.dribbbleScorecardRow}>
-            <div className={mainStyles.dribbbleScorecardSuffix}>Units Issued</div>
-            <div className={mainStyles.dribbbleScorecardArrow}><PieChart size={12}/></div>
+
+        <div className={mainStyles.miniBlobCard} data-color="pink">
+          <div className={mainStyles.miniBlobDot}></div>
+          <div className={mainStyles.miniBlobTitle}>Total Issue Qty</div>
+          <div className={mainStyles.miniBlobSub}>Units Issued</div>
+          <div className={mainStyles.miniBlobPill}>
+            <span className={mainStyles.miniBlobPillText}>{kpis.totalIssueQty.toLocaleString("en-IN")}</span>
+            <span className={mainStyles.miniBlobPillArrow}>»</span>
           </div>
         </div>
-        <div className={mainStyles.dribbbleScorecard} data-color="sage" style={{ flex: 1 }}>
-          <div className={mainStyles.dribbbleScorecardLabel}>Total Price</div>
-          <div className={mainStyles.dribbbleScorecardValue}>{fmtShort(kpis.totalPrice)}</div>
-          <div className={mainStyles.dribbbleScorecardRow}>
-            <div className={mainStyles.dribbbleScorecardSuffix}>Total Cost</div>
-            <div className={mainStyles.dribbbleScorecardArrow}><CheckCircle size={12}/></div>
+
+        <div className={mainStyles.miniBlobCard} data-color="yellow">
+          <div className={mainStyles.miniBlobDot}></div>
+          <div className={mainStyles.miniBlobTitle}>Total Price</div>
+          <div className={mainStyles.miniBlobSub}>Total Cost</div>
+          <div className={mainStyles.miniBlobPill}>
+            <span className={mainStyles.miniBlobPillText}>{fmtShort(kpis.totalPrice)}</span>
+            <span className={mainStyles.miniBlobPillArrow}>»</span>
           </div>
         </div>
-        <div className={mainStyles.dribbbleScorecard} data-color="sky" style={{ flex: 1 }}>
-          <div className={mainStyles.dribbbleScorecardLabel}>Total Indent Qty</div>
-          <div className={mainStyles.dribbbleScorecardValue}>{kpis.totalIndentQty.toLocaleString("en-IN")}</div>
-          <div className={mainStyles.dribbbleScorecardRow}>
-            <div className={mainStyles.dribbbleScorecardSuffix}>Requested Units</div>
-            <div className={mainStyles.dribbbleScorecardArrow}><ListTodo size={12}/></div>
+
+        <div className={mainStyles.miniBlobCard} data-color="blue">
+          <div className={mainStyles.miniBlobDot}></div>
+          <div className={mainStyles.miniBlobTitle}>Total Indent Qty</div>
+          <div className={mainStyles.miniBlobSub}>Requested Units</div>
+          <div className={mainStyles.miniBlobPill}>
+            <span className={mainStyles.miniBlobPillText}>{kpis.totalIndentQty.toLocaleString("en-IN")}</span>
+            <span className={mainStyles.miniBlobPillArrow}>»</span>
           </div>
         </div>
+
       </div>
 
       {/* ── Table Card ── */}

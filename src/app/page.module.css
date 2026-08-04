@@ -2008,3 +2008,111 @@
   justify-content: center;
   color: white;
 }
+
+/* ───────────────────────────────────────────────────────────
+   MINI BLOB CARDS - Based on user screenshot
+─────────────────────────────────────────────────────────── */
+.miniBlobCard {
+  position: relative;
+  border-radius: 14px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: white;
+  min-width: 140px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.miniBlobCard[data-color="blue"]   { background-color: #6377b5; }
+.miniBlobCard[data-color="pink"]   { background-color: #e58888; }
+.miniBlobCard[data-color="yellow"] { background-color: #fce4a1; color: #2d3748; }
+.miniBlobCard[data-color="green"]  { background-color: #5ea378; }
+
+.miniBlobCard::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 55px;
+  height: 55px;
+  background: #fde8b1;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.miniBlobCard[data-color="yellow"]::before { background: #6377b5; }
+
+.miniBlobCard[data-color="blue"]::after,
+.miniBlobCard[data-color="pink"]::after,
+.miniBlobCard[data-color="yellow"]::after,
+.miniBlobCard[data-color="green"]::after {
+  content: '';
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 5px;
+  height: 7px;
+  background: #fde8b1;
+  border-radius: 50% 50% 50% 40% / 60% 60% 40% 50%;
+  transform: rotate(20deg);
+  z-index: 1;
+}
+.miniBlobCard[data-color="yellow"]::after { background: #6377b5; }
+
+.miniBlobDot {
+  width: 7px;
+  height: 7px;
+  background: #fde8b1;
+  border-radius: 50%;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+.miniBlobCard[data-color="yellow"] .miniBlobDot { background: #3b4b82; }
+
+.miniBlobTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  z-index: 2;
+  margin-top: 6px;
+  margin-left: 12px;
+}
+
+.miniBlobSub {
+  font-size: 0.6rem;
+  z-index: 2;
+  margin-left: 12px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.miniBlobPill {
+  display: flex;
+  align-items: center;
+  background: #fde8b1;
+  border-radius: 6px;
+  padding: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #3b4b82;
+  z-index: 2;
+  width: max-content;
+  margin-left: 12px;
+  margin-top: auto;
+  overflow: hidden;
+}
+.miniBlobCard[data-color="yellow"] .miniBlobPill { background: #6377b5; color: white; }
+
+.miniBlobPillText {
+  padding: 3px 10px;
+}
+
+.miniBlobPillArrow {
+  background: rgba(0,0,0,0.08);
+  padding: 3px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
