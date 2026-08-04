@@ -2137,10 +2137,10 @@ export default function Home() {
                 </div>
               )}
               <div className={styles.tableScrollArea} style={isFullScreen ? { flex: 1, maxHeight: 'none', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' } : {}}>
-                {loading ? (
+                {(!hasLoadedOnce.current || loading) ? (
                   <div className={styles.loaderCenter}>
                     <Loader2 className={styles.spinnerIcon} size={32} />
-                    <p>Syncing Database...</p>
+                    <p>{apiError && !hasLoadedOnce.current ? apiError : "Syncing Database..."}</p>
                   </div>
                 ) : (
                   <table className={styles.dataTable}>
