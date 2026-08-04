@@ -1807,17 +1807,17 @@ export default function Home() {
               
               <div className={styles.dribbbleSidebarItem} onClick={() => { setIsNavigating(true); router.push("/po"); }}>
                  <div className={styles.dribbbleSidebarIcon}><Layers size={20} strokeWidth={2.5} /></div>
-                 <span>Projects (PO)</span>
+                 <span>Purchase Order Entry</span>
               </div>
 
               <div className={styles.dribbbleSidebarItem} onClick={() => { setIsNavigating(true); router.push("/inward"); }}>
                  <div className={styles.dribbbleSidebarIcon}><ListTodo size={20} strokeWidth={2.5} /></div>
-                 <span>Tasks (Inward)</span>
+                 <span>Inward Entry</span>
               </div>
 
               <div className={styles.dribbbleSidebarItem} onClick={() => { setIsNavigating(true); router.push("/report"); }}>
                  <div className={styles.dribbbleSidebarIcon}><PieChart size={20} strokeWidth={2.5} /></div>
-                 <span>Reporting</span>
+                 <span>Issue Entry</span>
               </div>
               
               <div style={{ height: '1px', background: '#f1f5f9', margin: '16px 0 8px 0' }}></div>
