@@ -2014,13 +2014,13 @@
 ─────────────────────────────────────────────────────────── */
 .miniBlobCard {
   position: relative;
-  border-radius: 14px;
-  padding: 8px 10px;
+  border-radius: 10px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   color: white;
-  min-width: 140px;
+  min-width: 130px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
@@ -2032,10 +2032,10 @@
 .miniBlobCard::before {
   content: '';
   position: absolute;
-  top: -12px;
-  right: -12px;
-  width: 55px;
-  height: 55px;
+  top: -10px;
+  right: -10px;
+  width: 45px;
+  height: 45px;
   background: #fde8b1;
   border-radius: 50%;
   z-index: 1;
@@ -2049,10 +2049,10 @@
 .miniBlobCard[data-color="green"]::after {
   content: '';
   position: absolute;
-  bottom: 12px;
+  bottom: 8px;
   right: 12px;
-  width: 5px;
-  height: 7px;
+  width: 4px;
+  height: 6px;
   background: #fde8b1;
   border-radius: 50% 50% 50% 40% / 60% 60% 40% 50%;
   transform: rotate(20deg);
@@ -2061,57 +2061,57 @@
 .miniBlobCard[data-color="yellow"]::after { background: #6377b5; }
 
 .miniBlobDot {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   background: #fde8b1;
   border-radius: 50%;
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 8px;
+  left: 8px;
   z-index: 2;
 }
 .miniBlobCard[data-color="yellow"] .miniBlobDot { background: #3b4b82; }
 
 .miniBlobTitle {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   z-index: 2;
-  margin-top: 6px;
-  margin-left: 12px;
+  margin-top: 2px;
+  margin-left: 10px;
 }
 
 .miniBlobSub {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   z-index: 2;
-  margin-left: 12px;
+  margin-left: 10px;
   opacity: 0.9;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .miniBlobPill {
   display: flex;
   align-items: center;
   background: #fde8b1;
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 0;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: #3b4b82;
   z-index: 2;
   width: max-content;
-  margin-left: 12px;
+  margin-left: 10px;
   margin-top: auto;
   overflow: hidden;
 }
 .miniBlobCard[data-color="yellow"] .miniBlobPill { background: #6377b5; color: white; }
 
 .miniBlobPillText {
-  padding: 3px 10px;
+  padding: 2px 8px;
 }
 
 .miniBlobPillArrow {
   background: rgba(0,0,0,0.08);
-  padding: 3px 8px;
+  padding: 2px 6px;
   display: flex;
   align-items: center;
   justify-content: center;

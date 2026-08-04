@@ -218,7 +218,7 @@ export default function ReportPage() {
   const [dateEnd, setDateEnd]           = useState("");
   const [sortCol, setSortCol]           = useState("Timestamp");
   const [sortAsc, setSortAsc]           = useState(false);
-  const [filtersVisible, setFiltersVisible] = useState(true);
+  const [filtersVisible, setFiltersVisible] = useState(false);
   const [isTableFullScreen, setIsTableFullScreen] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -372,7 +372,7 @@ export default function ReportPage() {
   const DashboardContent = (
     <>
       {/* ── KPI Strip ── */}
-      <div className={styles.kpiStrip} style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
+      <div className={styles.kpiStrip} style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', justifyContent: 'center' }}>
         
         <div className={mainStyles.miniBlobCard} data-color="blue">
           <div className={mainStyles.miniBlobDot}></div>
