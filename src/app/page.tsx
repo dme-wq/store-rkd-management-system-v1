@@ -1902,7 +1902,6 @@ export default function Home() {
             {/* Filter Toggle Bar */}
             <div className={styles.filterToggleBar}>
               <span style={{ flex: 1, fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
-                {filtersVisible ? 'Filters visible — collapse to gain table space' : 'Filters hidden — more table rows visible'}
               </span>
               <button
                 className={`${styles.filterToggleBtn} ${!filtersVisible ? styles.filterToggleBtnActive : ''}`}

@@ -498,7 +498,7 @@
   -webkit-backdrop-filter: blur(20px);
   border-radius: 20px 20px 0 0; /* Smoother rounded look, flat bottom */
   width: 100%;
-  height: calc(100vh - 80px); /* Fill bottom space */
+  height: 100vh; /* Fill bottom space completely */
   display: flex;
   flex-direction: column;
   overflow: hidden;
