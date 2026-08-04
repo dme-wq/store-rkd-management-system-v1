@@ -1787,6 +1787,11 @@ export default function Home() {
            onMouseLeave={() => { sidebarTimerRef.current = setTimeout(() => setSidebarOpen(false), 300); }}
            onMouseEnter={() => { if (sidebarTimerRef.current) clearTimeout(sidebarTimerRef.current); }}
         >
+           {/* Sidebar Logo */}
+           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+             <img src="https://static.wixstatic.com/media/68b92a_d71e34133826499983234774dea1945b~mv2.png/v1/fill/w_186,h_156,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/RKD-Logo.png" alt="RKD Logo" style={{ height: '45px', objectFit: 'contain' }} />
+           </div>
+
            <div className={styles.dribbbleSidebarMenu}>
               <div className={`${styles.dribbbleSidebarItem} ${styles.dribbbleSidebarItemActive}`}>
                  <div className={styles.dribbbleSidebarIcon}><HomeIcon size={20} strokeWidth={2.5} /></div>
@@ -1855,6 +1860,12 @@ export default function Home() {
 
         <div className={styles.appCardSide}>
           <div className={styles.appCard}>
+
+            {/* App Header with Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #f1f5f9', background: '#ffffff', flexShrink: 0 }}>
+              <img src="https://static.wixstatic.com/media/68b92a_d71e34133826499983234774dea1945b~mv2.png/v1/fill/w_186,h_156,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/RKD-Logo.png" alt="RKD Logo" style={{ height: '36px', objectFit: 'contain', marginRight: '16px' }} />
+              <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#1e293b' }}>Store Miscellaneous System</h2>
+            </div>
 
             {/* Error notice only (moved to top of appCard) */}
             {apiError && (
