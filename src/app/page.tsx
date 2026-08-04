@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText, BarChart3, Download, RefreshCw, Home as HomeIcon, Plus, Layers, ListTodo, PieChart, Database } from "lucide-react";
+import { Search, Loader2, Filter, Package, Hash, Zap, Send, CheckCircle, UserCheck, FileText, BarChart3, Download, RefreshCw, Home as HomeIcon, Plus, Layers, ListTodo, PieChart, Database, Maximize } from "lucide-react";
 import Select from "react-select";
 import { subDays, subMonths, isWithinInterval, startOfDay, endOfDay, isSameDay, isSameMonth } from "date-fns";
 
@@ -1841,7 +1841,11 @@ export default function Home() {
                  <div className={styles.dribbbleSidebarIcon}><Download size={20} strokeWidth={2.5} /></div>
                  <span>Download PDF</span>
               </div>
-              
+              <div className={styles.dribbbleSidebarItem} onClick={toggleFullScreen}>
+                 <div className={styles.dribbbleSidebarIcon}><Maximize size={20} strokeWidth={2.5} /></div>
+                 <span>Full Screen</span>
+              </div>
+
               <div className={styles.dribbbleSidebarItem} onClick={() => fetchData(false, false)}>
                  <div className={styles.dribbbleSidebarIcon}><RefreshCw size={20} strokeWidth={2.5} className={loading ? styles.btnSpin : ''} /></div>
                  <span>Sync Now</span>
@@ -1859,6 +1863,31 @@ export default function Home() {
               </div>
             )}
 
+            {/* Status Filter Cards */}
+            <div style={{ display: 'flex', gap: '12px', padding: '16px 16px 0 16px', flexWrap: 'wrap' }}>
+              <div 
+                className={`${styles.statusFilterCard} ${statusFilter === "Requirement Open" ? styles.statusFilterCardActive : ''}`}
+                onClick={() => setStatusFilter(statusFilter === "Requirement Open" ? null : "Requirement Open")}
+              >
+                <span className={styles.statusFilterNumber}>{scorecards.statusCounts.open}</span>
+                <span className={styles.statusFilterText}>Requirement Open</span>
+              </div>
+              <div 
+                className={`${styles.statusFilterCard} ${statusFilter === "Requirement Closed" ? styles.statusFilterCardActive : ''}`}
+                onClick={() => setStatusFilter(statusFilter === "Requirement Closed" ? null : "Requirement Closed")}
+              >
+                <span className={styles.statusFilterNumber}>{scorecards.statusCounts.closed}</span>
+                <span className={styles.statusFilterText}>Requirement Closed</span>
+              </div>
+              <div 
+                className={`${styles.statusFilterCard} ${statusFilter === "Requirement Cancelled" ? styles.statusFilterCardActive : ''}`}
+                onClick={() => setStatusFilter(statusFilter === "Requirement Cancelled" ? null : "Requirement Cancelled")}
+              >
+                <span className={styles.statusFilterNumber}>{scorecards.statusCounts.cancelled}</span>
+                <span className={styles.statusFilterText}>Requirement Cancelled</span>
+              </div>
+            </div>
+
             {/* Filter Toggle Bar */}
             <div className={styles.filterToggleBar}>
               <span style={{ flex: 1, fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
@@ -1874,7 +1903,7 @@ export default function Home() {
 
             {/* Smart Filters — Unified Row */}
             <div className={`${styles.filterRow} ${!filtersVisible ? styles.filterRowCollapsed : ''}`}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: isListening ? '100%' : '350px', transition: 'min-width 0.3s ease' }}>
+              <div style={{ display: 'none', gap: '8px', alignItems: 'center', flex: 1, minWidth: isListening ? '100%' : '350px', transition: 'min-width 0.3s ease' }}>
 
                 {/* ── GEMINI VOICE ASSIST BAR ── */}
                 <div style={{
