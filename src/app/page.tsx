@@ -1862,9 +1862,26 @@ export default function Home() {
           <div className={styles.appCard}>
 
             {/* App Header with Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #f1f5f9', background: '#ffffff', flexShrink: 0 }}>
-              <img src="https://static.wixstatic.com/media/68b92a_d71e34133826499983234774dea1945b~mv2.png/v1/fill/w_186,h_156,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/RKD-Logo.png" alt="RKD Logo" style={{ height: '36px', objectFit: 'contain', marginRight: '16px' }} />
-              <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#1e293b' }}>Store Miscellaneous System</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #f1f5f9', background: '#ffffff', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <img src="https://static.wixstatic.com/media/68b92a_d71e34133826499983234774dea1945b~mv2.png/v1/fill/w_186,h_156,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/RKD-Logo.png" alt="RKD Logo" style={{ height: '36px', objectFit: 'contain', marginRight: '16px' }} />
+                <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#1e293b' }}>Store Miscellaneous System</h2>
+              </div>
+              <button 
+                onClick={toggleFullScreen} 
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', 
+                  background: '#f8fafc', color: '#475569', 
+                  border: '1px solid #e2e8f0', borderRadius: '8px', 
+                  padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600,
+                  cursor: 'pointer', transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+              >
+                <Maximize size={16} strokeWidth={2.5} />
+                {isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
+              </button>
             </div>
 
             {/* Error notice only (moved to top of appCard) */}
