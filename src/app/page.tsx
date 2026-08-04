@@ -1892,7 +1892,7 @@ export default function Home() {
             )}
 
             {/* Status Filter Cards */}
-            <div style={{ display: 'flex', gap: '12px', padding: '16px 16px 0 16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', padding: '16px 16px 0 16px', flexWrap: 'wrap' }}>
               <div 
                 className={`${styles.statusFilterCard} ${statusFilter === "Requirement Open" ? styles.statusFilterCardActive : ''}`}
                 onClick={() => setStatusFilter(statusFilter === "Requirement Open" ? null : "Requirement Open")}
