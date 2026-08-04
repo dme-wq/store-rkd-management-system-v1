@@ -1775,9 +1775,18 @@ export default function Home() {
       <div className={styles.glassOrb}></div>
 
       {/* Main Layout */}
+      {/* ─── Auto-Hide Left Sidebar Trigger ─── */}
+      <div
+        className={styles.sidebarTrigger}
+        onMouseEnter={() => { if (sidebarTimerRef.current) clearTimeout(sidebarTimerRef.current); setSidebarOpen(true); }}
+      />
       <div className={styles.presentationLayout}>
         {/* NEW DRIBBBLE SIDEBAR */}
-        <div className={styles.dribbbleSidebar}>
+        <div 
+           className={`${styles.dribbbleSidebar} ${sidebarOpen ? styles.dribbbleSidebarOpen : ''}`}
+           onMouseLeave={() => { sidebarTimerRef.current = setTimeout(() => setSidebarOpen(false), 300); }}
+           onMouseEnter={() => { if (sidebarTimerRef.current) clearTimeout(sidebarTimerRef.current); }}
+        >
            <div className={styles.dribbbleSidebarMenu}>
               <div className={`${styles.dribbbleSidebarItem} ${styles.dribbbleSidebarItemActive}`}>
                  <div className={styles.dribbbleSidebarIcon}><HomeIcon size={20} strokeWidth={2.5} /></div>
