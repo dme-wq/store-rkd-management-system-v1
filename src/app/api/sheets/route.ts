@@ -149,15 +149,15 @@ async function refreshStaticCaches(sheets: any) {
   }, 8000);
 
   try {
-    // IMS: B2:B7500 and K2:K7500 — start from row 2 to SKIP the header row
+    // IMS: B2:B and K2:K — start from row 2 to SKIP the header row (unbounded)
     const [imsBatchRes, miscRes, poRes, inwardRes] = await Promise.all([
       sheets.spreadsheets.values.batchGet({
         spreadsheetId: IMS_SHEET_ID,
-        ranges: ["IMS!B2:B7500", "IMS!K2:K7500"],
+        ranges: ["IMS!B2:B", "IMS!K2:K"],
       }),
       sheets.spreadsheets.values.get({ 
         spreadsheetId: MISC_SHEET_ID, 
-        range: "Data!B2:F5000"
+        range: "Data!B2:F"
       }),
       // PO: RESPONSES!E=PONo, F=PODate, C=VendorName, T=RKDNumber
       PO_RESPONSES_SHEET_ID ? sheets.spreadsheets.values.get({
@@ -176,10 +176,15 @@ async function refreshStaticCaches(sheets: any) {
     const namesRaw = imsBatchRes.data.valueRanges?.[0].values || [];
     const stocksRaw = imsBatchRes.data.valueRanges?.[1].values || [];
     namesRaw.forEach((row: any, i: number) => {
-      const name = (row[0] || "").toString().trim().toLowerCase();
-      if (!name) return;
+      const raw = (row[0] || "").toString().trim().toLowerCase();
+      if (!raw) return;
+      const collapsed = raw.replace(/\s+/g, " ");
       const rawVal = (stocksRaw[i]?.[0] ?? "").toString().trim();
-      stockMap[name] = rawVal || "0";
+      const val = rawVal || "0";
+      stockMap[raw] = val;
+      if (collapsed !== raw) {
+        stockMap[collapsed] = val;
+      }
     });
     cachedStockMap = stockMap;
 
@@ -187,8 +192,15 @@ async function refreshStaticCaches(sheets: any) {
     const miscMap: Record<string, { vendor: string, rate: string }> = {};
     const miscRows = miscRes.data.values || [];
     miscRows.forEach((row: any) => {
-      const name = (row[0] || "").trim().toLowerCase();
-      if (name) miscMap[name] = { vendor: row[4] || "", rate: row[3] || "" };
+      const raw = (row[0] || "").trim().toLowerCase();
+      if (raw) {
+        const val = { vendor: row[4] || "", rate: row[3] || "" };
+        miscMap[raw] = val;
+        const collapsed = raw.replace(/\s+/g, " ");
+        if (collapsed !== raw) {
+          miscMap[collapsed] = val;
+        }
+      }
     });
     cachedMiscMap = miscMap;
 
@@ -262,8 +274,10 @@ export async function GET(req: Request) {
     });
   }
 
-  // ── 2. Kick off background IMS/Misc/PO/Inward refresh ─────────────────────
-  if (!cachedStockMap || !cachedMiscMap || (now - lastStaticFetchTime > STATIC_CACHE_DURATION)) {
+  // ── 2. Refresh IMS/Misc/PO/Inward — await on cold start so first response has stockMap ──
+  if (!cachedStockMap || !cachedMiscMap) {
+    await refreshStaticCaches(sheets);
+  } else if (now - lastStaticFetchTime > STATIC_CACHE_DURATION) {
     refreshStaticCaches(sheets).catch(() => {});
   }
 

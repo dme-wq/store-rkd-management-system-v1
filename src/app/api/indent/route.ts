@@ -119,7 +119,7 @@ export async function GET(req: Request) {
       }),
       sheets.spreadsheets.values.batchGet({
         spreadsheetId: IMS_SHEET_ID,
-        ranges: ["IMS!B2:B7500", "IMS!K2:K7500"],
+        ranges: ["IMS!B2:B", "IMS!K2:K"],
       }).catch((e: any) => {
         console.warn("IMS Fetch failed/timed out:", e.message);
         return { data: { valueRanges: [] } };
@@ -195,13 +195,23 @@ export async function GET(req: Request) {
       }
     });
 
-    // IMS stock lookup (row 2 onwards — no header offset)
+    // IMS stock lookup (row 2 onwards — no header offset, case-insensitive & space-insensitive)
+    const itemMapLowerKey: Record<string, string> = {};
+    Object.keys(itemMap).forEach((k) => {
+      const lower = k.toLowerCase();
+      itemMapLowerKey[lower] = k;
+      itemMapLowerKey[lower.replace(/\s+/g, " ")] = k;
+    });
+
     const imsNames = imsBatch.data.valueRanges?.[0]?.values || [];
     const imsStocks = imsBatch.data.valueRanges?.[1]?.values || [];
     imsNames.forEach((row: any, i: number) => {
-      const item = (row[0] || "").trim();
-      if (item && itemMap[item]) {
-        itemMap[item].stock = imsStocks[i]?.[0] || "0";
+      const raw = (row[0] || "").toString().trim();
+      if (!raw) return;
+      const lower = raw.toLowerCase();
+      const targetKey = itemMap[raw] ? raw : (itemMapLowerKey[lower] || itemMapLowerKey[lower.replace(/\s+/g, " ")]);
+      if (targetKey && itemMap[targetKey]) {
+        itemMap[targetKey].stock = (imsStocks[i]?.[0] ?? "").toString().trim() || "0";
       }
     });
 

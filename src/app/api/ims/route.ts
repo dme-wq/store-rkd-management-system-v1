@@ -57,7 +57,7 @@ export async function GET() {
 
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: IMS_SHEET_ID,
-      range: "IMS!B2:M7500", // Skip header row, columns B to M
+      range: "IMS!B2:M", // Skip header row, columns B to M (unbounded)
     });
 
     const rows = res.data.values || [];

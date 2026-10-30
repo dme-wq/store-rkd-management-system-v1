@@ -334,9 +334,16 @@ function ManualIssueModal({ isOpen, onClose, row, onSubmit, updating, stockMap }
           </div>
           <div className={styles.modalInfoItem}>
             <span className={styles.modalLabel}>Current Stock:</span>
-            <span className={styles.modalValue} style={{ color: Number(stockMap[(row["Item Name"] || "").trim().toLowerCase()]) < Number(row["Require Qty"]) ? '#ef4444' : '#166534' }}>
-              {stockMap[(row["Item Name"] || "").trim().toLowerCase()] || "0"}
-            </span>
+            {(() => {
+              const rawKey = (row["Item Name"] || "").trim().toLowerCase();
+              const stockVal = stockMap[rawKey] ?? stockMap[rawKey.replace(/\s+/g, " ")] ?? "0";
+              const isShort = Number(stockVal) < Number(row["Require Qty"]);
+              return (
+                <span className={styles.modalValue} style={{ color: isShort ? '#ef4444' : '#166534' }}>
+                  {stockVal}
+                </span>
+              );
+            })()}
           </div>
         </div>
 
@@ -389,7 +396,7 @@ function ManualApprovalModal({ isOpen, onClose, row, onSubmit, updating, miscMap
   useEffect(() => {
     if (row) {
       const itemName = (row["Item Name"] || "").trim().toLowerCase();
-      const misc = miscMap[itemName] || { vendor: "", rate: "" };
+      const misc = miscMap[itemName] ?? miscMap[itemName.replace(/\s+/g, " ")] ?? { vendor: "", rate: "" };
       setVendor(misc.vendor || "");
       setRate(misc.rate || "");
       setStatus("No");
@@ -568,7 +575,7 @@ function getLiveStatus(
   const approvalReq = String(row["Approval Require?"] || "").trim().toLowerCase();
   const approvedQty = parseFloat(row["Approved Quantity"] || "0") || 0;
   const itemKey = (row["Item Name"] || "").trim().toLowerCase();
-  const imsStockStr = stockMap[itemKey];
+  const imsStockStr = stockMap[itemKey] ?? stockMap[itemKey.replace(/\s+/g, " ")];
   const imsStock = imsStockStr !== undefined ? parseFloat(imsStockStr) || 0 : NaN;
 
   // Step 1: Always show base state first
@@ -889,7 +896,8 @@ export default function Home() {
 
       // For ACTION queries: include IssueQty + StockInStore so AI validates before suggesting CLOSE
       const compressedIndents = activeIndents.map(r => {
-        const stockVal = stockMap[r["Item Name"]] ?? 0;
+        const itemKey = (r["Item Name"] || "").trim().toLowerCase();
+        const stockVal = stockMap[itemKey] ?? stockMap[itemKey.replace(/\s+/g, " ")] ?? 0;
         if (isActionQuery) {
           // Full context: RKD|Item|RequireQty|IssueQty|Stock|Status|Person|Timestamp
           return `${stripRKD(r["Store RKD Number"])}|${r["Item Name"]}|Req:${r["Require Qty"]}|Issued:${r["Issue Qty"] || 0}|Stock:${stockVal}|${abbrevStatus(r["Status"])}|${r["Person Filling Name"]}|${r["Timestamp"]}`;
@@ -910,9 +918,9 @@ export default function Home() {
         .map(([k, v]) => `${stripRKD(k)}|${(v as any).poNumber}|${(v as any).poDate}|${(v as any).vendorName}`) : [];
 
       // Always include stock for ACTION queries so AI can validate CLOSE eligibility
-      const activeItemSet = new Set(activeIndents.map(r => r["Item Name"]));
+      const activeItemSet = new Set(activeIndents.map(r => (r["Item Name"] || "").trim().toLowerCase()));
       const compressedStock = (isActionQuery || needsInward) ? Object.entries(stockMap)
-        .filter(([k]) => activeItemSet.has(k))
+        .filter(([k]) => activeItemSet.has(k) || activeItemSet.has(k.replace(/\s+/g, " ")))
         .map(([k, v]) => `${k}|${v}`) : [];
 
       const contextData = {
@@ -976,7 +984,8 @@ export default function Home() {
       }
       // Rule 2: Cannot CLOSE if stock is 0 AND issue qty is 0
       if (t._aiProposedAction === "CLOSE") {
-        const stock = Number(stockMap[t["Item Name"]] ?? 0);
+        const tKey = (t["Item Name"] || "").trim().toLowerCase();
+        const stock = Number(stockMap[tKey] ?? stockMap[tKey.replace(/\s+/g, " ")] ?? 0);
         const issued = Number(t["Issue Qty"] ?? 0);
         if (stock === 0 && issued === 0) {
           blocked.push(`${t["Item Name"]} (Stock: 0, Issued: 0 — cannot close without issue)`);
@@ -1192,7 +1201,7 @@ export default function Home() {
 
     // Check if stock is sufficient before issuing
     const itemKey = (row["Item Name"] || "").trim().toLowerCase();
-    const currentStockStr = stockMap[itemKey];
+    const currentStockStr = stockMap[itemKey] ?? stockMap[itemKey.replace(/\s+/g, " ")];
     const currentStock = currentStockStr !== undefined ? Number(currentStockStr) : 0;
     const reqQty = Number(requireQty) || 0;
 
@@ -1255,7 +1264,7 @@ export default function Home() {
 
     // Stock Check
     const itemKey = (manualRow["Item Name"] || "").trim().toLowerCase();
-    const currentStockStr = stockMap[itemKey];
+    const currentStockStr = stockMap[itemKey] ?? stockMap[itemKey.replace(/\s+/g, " ")];
     const currentStock = currentStockStr !== undefined ? Number(currentStockStr) : 0;
     const qtyNum = Number(issueQty) || 0;
     const reqNum = Number(manualRow["Require Qty"]) || 0;
@@ -2184,7 +2193,7 @@ export default function Home() {
                     <tbody className={styles.dataTableBody}>
                       {filteredData.map((row, idx) => {
                         const itemKey = (row["Item Name"] || "").trim().toLowerCase();
-                        const imsStock = stockMap[itemKey];
+                        const imsStock = stockMap[itemKey] ?? stockMap[itemKey.replace(/\s+/g, " ")];
                         const stockNum = imsStock !== undefined ? Number(imsStock) : NaN;
                         const reqNum = Number(row["Require Qty"]) || 0;
                         const isLow = !isNaN(stockNum) && stockNum < reqNum;
@@ -2206,7 +2215,7 @@ export default function Home() {
                             <td onClick={() => {
                               if (status === "Requirement Open") {
                                 const itemKey = (row["Item Name"] || "").trim().toLowerCase();
-                                const misc = miscMap[itemKey] || { vendor: "", rate: "" };
+                                const misc = miscMap[itemKey] ?? miscMap[itemKey.replace(/\s+/g, " ")] ?? { vendor: "", rate: "" };
                                 setEditMasterRow(row);
                                 setEmUnit(row["Units"] || "");
                                 setEmPrice(misc.rate || "");
